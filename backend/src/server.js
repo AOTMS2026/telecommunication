@@ -51,6 +51,7 @@ app.use('/api/users', apiLimiter, require('./routes/users'));
 app.use('/api/courses', apiLimiter, require('./routes/courses'));
 app.use('/api/blocklist', apiLimiter, require('./routes/blocklist'));
 app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates'));
+app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 

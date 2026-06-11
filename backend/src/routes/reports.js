@@ -7,54 +7,75 @@ const FollowUp = require('../models/FollowUp');
 const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
-// GET /api/reports/leaderboard?period=day|week|month|year|all
-// FIX BUG-02: added 'all' period support
+// GET /api/reports/leaderboard?period=day|week|month|year|custom&startDate=&endDate=&sortBy=calls|duration|sales
 router.get('/leaderboard', protect, async (req, res) => {
   try {
-    const { period = 'week' } = req.query;
+    const { period = 'week', startDate, endDate, sortBy = 'calls' } = req.query;
     const now = new Date();
-    let start = new Date(0); // default: beginning of time (for 'all')
+    let start = new Date(0);
+    let end = new Date();
 
-    if (period === 'day') { start = new Date(); start.setHours(0, 0, 0, 0); }
-    else if (period === 'week') { start = new Date(); start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0); }
-    else if (period === 'month') { start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0); }
-    else if (period === 'year') { start = new Date(); start.setMonth(0, 1); start.setHours(0, 0, 0, 0); }
-    // 'all' keeps start = new Date(0)
+    if (period === 'custom' && startDate && endDate) {
+      start = new Date(startDate); start.setHours(0, 0, 0, 0);
+      end = new Date(endDate); end.setHours(23, 59, 59, 999);
+    } else if (period === 'day') {
+      start = new Date(); start.setHours(0, 0, 0, 0);
+    } else if (period === 'week') {
+      start = new Date(); start.setDate(now.getDate() - now.getDay()); start.setHours(0, 0, 0, 0);
+    } else if (period === 'month') {
+      start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+    } else if (period === 'year') {
+      start = new Date(); start.setMonth(0, 1); start.setHours(0, 0, 0, 0);
+    }
+
+    const dateMatch = period === 'custom'
+      ? { 'activities.createdAt': { $gte: start, $lte: end } }
+      : { 'activities.createdAt': { $gte: start } };
+
+    const sortField = sortBy === 'duration' ? 'totalDuration' : sortBy === 'sales' ? 'sales' : 'totalCalls';
 
     const stats = await Lead.aggregate([
       { $unwind: '$activities' },
-      { $match: { 'activities.type': 'call', 'activities.createdAt': { $gte: start } } },
+      { $match: { 'activities.type': 'call', ...dateMatch } },
       {
         $group: {
           _id: '$activities.performedBy',
           totalCalls: { $sum: 1 },
           totalDuration: { $sum: '$activities.callDuration' },
-          connectedCalls: { $sum: { $cond: [{ $eq: ['$activities.callStatus', 'connected'] }, 1, 0] } }
+          connectedCalls: { $sum: { $cond: [{ $eq: ['$activities.callStatus', 'connected'] }, 1, 0] } },
+          firstCall: { $min: '$activities.createdAt' },
+          lastCall: { $max: '$activities.createdAt' },
         }
       },
-      { $sort: { totalCalls: -1 } }
     ]);
 
-    // Efficient batch lookup instead of N+1
     const userIds = stats.map(s => s._id).filter(Boolean);
     const users = await User.find({ _id: { $in: userIds } }).select('name email avatar role').lean();
     const userMap = {};
     users.forEach(u => { userMap[u._id.toString()] = u; });
 
+    const salesMatchDate = period === 'custom'
+      ? { status: 'Won', updatedAt: { $gte: start, $lte: end } }
+      : { status: 'Won', updatedAt: { $gte: start } };
     const salesCounts = await Lead.aggregate([
-      { $match: { status: 'Won', updatedAt: { $gte: start } } },
+      { $match: salesMatchDate },
       { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
     ]);
     const salesMap = {};
     salesCounts.forEach(s => { salesMap[s._id?.toString()] = s.count; });
 
-    const populated = stats.map(s => ({
+    let populated = stats.map(s => ({
       ...s,
       user: userMap[s._id?.toString()] || null,
       sales: salesMap[s._id?.toString()] || 0
     })).filter(p => p.user);
 
-    res.json({ leaderboard: populated, period, from: start });
+    // Sort by selected metric
+    if (sortBy === 'duration') populated.sort((a, b) => b.totalDuration - a.totalDuration);
+    else if (sortBy === 'sales') populated.sort((a, b) => b.sales - a.sales);
+    else populated.sort((a, b) => b.totalCalls - a.totalCalls);
+
+    res.json({ leaderboard: populated, period, from: start, to: end });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

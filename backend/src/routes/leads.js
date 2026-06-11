@@ -10,12 +10,15 @@ const router = express.Router();
 // GET /api/leads/export — CSV export
 router.get('/export', protect, async (req, res) => {
   try {
-    const { status, campaign } = req.query;
+    const { status, campaign, filter } = req.query;
     const query = {};
     if (status) query.status = status;
     if (campaign) query.campaign = campaign;
 
+    // Role-based access: callers always restricted to their leads
     if (req.user.role === 'caller') {
+      query.assignedTo = req.user._id;
+    } else if (filter === 'mine' || filter === 'assigned') {
       query.assignedTo = req.user._id;
     }
 
@@ -62,24 +65,28 @@ router.get('/export', protect, async (req, res) => {
   }
 });
 
-// GET /api/leads — get leads (filtered by user role)
+// GET /api/leads — get leads with role-based filtering
+// Admin: filter=all (all leads), filter=mine (admin's own leads), filter=assigned (leads assigned to admin)
+//        filter=<userId> (leads of that specific caller)
+// Caller: filter=mine OR filter=assigned => their own assigned leads ONLY
+//         callers NEVER see "all" leads — always scoped to their own
 router.get('/', protect, async (req, res) => {
   try {
     const { status, source, search, campaign, page = 1, limit = 20, filter } = req.query;
     const query = {};
 
     if (req.user.role === 'caller') {
-      if (filter === 'all') {
-        // Show all leads in system (allows callers to browse)
-      } else {
-        query.assignedTo = req.user._id;
-      }
+      // Callers can ONLY see their assigned leads regardless of filter
+      query.assignedTo = req.user._id;
     } else {
+      // Admin / super admin
       if (filter === 'mine' || filter === 'assigned') {
         query.assignedTo = req.user._id;
       } else if (filter && filter !== 'all') {
+        // filter is a specific user ID (caller selected from sidebar)
         query.assignedTo = filter;
       }
+      // filter === 'all' or no filter => no assignedTo restriction
     }
 
     if (status) query.status = status;
@@ -240,7 +247,6 @@ router.get('/stats', protect, async (req, res) => {
       const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
       const followupMap = {};
       followups.forEach(f => {
-        // FIX: todo tasks have no lead — skip them to avoid f.lead.toString() crash
         if (!f.lead) return;
         const leadId = f.lead.toString();
         if (!followupMap[leadId] || f.scheduledAt < followupMap[leadId].scheduledAt) {
@@ -305,7 +311,6 @@ router.get('/stats', protect, async (req, res) => {
 // POST /api/leads — create lead
 router.post('/', protect, async (req, res) => {
   try {
-    // FIX: Convert empty strings to undefined for ObjectId fields (prevents BSONError)
     const body = { ...req.body };
     if (!body.courseInterest || body.courseInterest === '') body.courseInterest = undefined;
     if (!body.campaign || body.campaign === '') body.campaign = undefined;
@@ -341,18 +346,16 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// PUT /api/leads/:id — FIX BUG-08: ownership guard for callers
+// PUT /api/leads/:id
 router.put('/:id', protect, async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
 
-    // Callers can only edit leads assigned to them
     if (req.user.role === 'caller' && lead.assignedTo?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only update leads assigned to you' });
     }
 
-    // FIX BUG-01: normalize courseInterest
     const body = { ...req.body };
     if (Array.isArray(body.courseInterest)) {
       body.courseInterest = body.courseInterest[0] || undefined;
@@ -456,8 +459,6 @@ router.delete('/:id', protect, authorize('super admin'), async (req, res) => {
 });
 
 // POST /api/leads/:id/initiate-call
-// Sends push notification to caller's mobile app — available to ALL roles
-// Admin sends to assigned caller; caller sends to themselves
 router.post('/:id/initiate-call', protect, async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id).populate('assignedTo', 'name email fcmToken');
@@ -465,10 +466,8 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
 
     let caller;
     if (req.user.role === 'caller') {
-      // Caller sends notification to themselves
       caller = await User.findById(req.user._id).select('name email fcmToken');
     } else {
-      // Admin: send to specified caller or assigned caller
       if (req.body.callerId && req.body.callerId !== lead.assignedTo?._id?.toString()) {
         caller = await User.findById(req.body.callerId).select('name email fcmToken');
       } else {

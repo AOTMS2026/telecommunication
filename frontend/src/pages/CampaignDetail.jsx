@@ -1,236 +1,555 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, RefreshCw, ChevronRight } from 'lucide-react';
 import { campaignsAPI, leadsAPI } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#4F46E5', '#EF4444', '#F59E0B', '#10B981', '#EC4899', '#8B5CF6'];
+// ─── Design tokens ──────────────────────────────────────────────────────────
+const P = '#5b3fc7';
+const P_LIGHT = '#f0ecff';
+const TEXT = '#1a1a3e';
+const MUTED = '#888';
+const BORDER = '#ede9f8';
 
-export default function CampaignDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [campaign, setCampaign] = useState(null);
-  const [leads, setLeads] = useState([]);
-  const [selectedLead, setSelectedLead] = useState(null);
+const STATUS_COLORS = {
+  Fresh: '#6366f1',
+  Connected: '#10b981',
+  'Call Not Responding': '#f59e0b',
+  'Call Back Later': '#ef4444',
+  'Not interested': '#6b7280',
+  'Demo Scheduled': '#8b5cf6',
+  'Demo Done': '#3b82f6',
+  Won: '#22c55e',
+  Lost: '#dc2626',
+  Blocked: '#111827',
+};
+
+const PIE_COLORS = ['#5b3fc7', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6', '#ec4899'];
+
+function Avatar({ name, size = 32, bg = P_LIGHT, color = P }) {
+  const initials = name
+    ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+    : '?';
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: bg, color, fontWeight: 700,
+      fontSize: size * 0.35, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      flexShrink: 0,
+    }}>
+      {initials}
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 120 }}>
+      <div style={{ width: 28, height: 28, border: `3px solid ${P}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+// ─── Status mini-badge ───────────────────────────────────────────────────────
+function MiniStatus({ status }) {
+  const bg = (STATUS_COLORS[status] || '#888') + '22';
+  const color = STATUS_COLORS[status] || '#888';
+  return (
+    <span style={{ background: bg, color, borderRadius: 20, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>
+      {status || '—'}
+    </span>
+  );
+}
+
+// ─── Stat card ───────────────────────────────────────────────────────────────
+function StatCard({ label, value, color = TEXT }) {
+  return (
+    <div style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', border: `1px solid ${BORDER}`, textAlign: 'center' }}>
+      <div style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color }}>{value ?? '—'}</div>
+    </div>
+  );
+}
+
+// ─── Add Leads Modal ─────────────────────────────────────────────────────────
+function AddLeadsModal({ campaignId, onClose, onSuccess }) {
+  const [allLeads, setAllLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(new Set());
+  const [search, setSearch] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [cRes, lRes] = await Promise.all([
-        campaignsAPI.getOne(id),
-        leadsAPI.getAll({ campaign: id, limit: 50 }),
-      ]);
-      setCampaign(cRes.data.campaign);
-      setLeads(lRes.data.leads || []);
-      if (lRes.data.leads?.length > 0) setSelectedLead(lRes.data.leads[0]);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+  useEffect(() => {
+    // Fetch leads NOT already in this campaign (campaign=null or other)
+    leadsAPI.getAll({ limit: 200 })
+      .then(res => {
+        // Show only leads that are not in THIS campaign
+        const all = res.data.leads || [];
+        setAllLeads(all.filter(l => !l.campaign || l.campaign._id !== campaignId));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [campaignId]);
+
+  const filtered = allLeads.filter(l =>
+    !search ||
+    l.name?.toLowerCase().includes(search.toLowerCase()) ||
+    l.phone?.includes(search)
+  );
+
+  const toggle = (id) => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   };
 
-  useEffect(() => { fetchData(); }, [id]);
+  const toggleAll = () => {
+    if (selected.size === filtered.length) setSelected(new Set());
+    else setSelected(new Set(filtered.map(l => l._id)));
+  };
 
-  if (loading) return <div className="flex justify-center items-center h-48"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" /></div>;
-  if (!campaign) return <div className="text-center py-12 text-gray-400">Campaign not found</div>;
-
-  const statusData = campaign.statusBreakdown || [];
-  const lostData = campaign.lostReasons || [];
-  const totalLeads = statusData.reduce((a, b) => a + b.count, 0);
-  const activeLeads = statusData.find(s => s._id === 'Fresh')?.count || 0;
-  const newLeads = totalLeads;
+  const handleAdd = async () => {
+    if (selected.size === 0) return;
+    setSaving(true);
+    try {
+      await campaignsAPI.addLeads(campaignId, [...selected]);
+      onSuccess();
+      onClose();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add leads');
+    } finally { setSaving(false); }
+  };
 
   return (
-    <div className="flex gap-0" style={{ height: 'calc(100vh - 48px)' }}>
-      {/* Left panel */}
-      <div className="w-72 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col">
-        <div className="p-4 border-b border-gray-100">
-          <button onClick={() => navigate('/campaigns')} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 mb-3 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Campaigns
-          </button>
-          {/* Campaign stats card */}
-          <div className="bg-indigo-50 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-indigo-700">@{campaign.name}</span>
-              <button onClick={fetchData} className="text-indigo-400 hover:text-indigo-600"><RefreshCw className="w-3.5 h-3.5" /></button>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-400">Active</p>
-                <p className="text-sm font-bold text-gray-800">{activeLeads}</p>
-              </div>
-              <div className="bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-400">Total</p>
-                <p className="text-sm font-bold text-indigo-700">{newLeads}</p>
-              </div>
-              <div className="bg-white rounded-lg p-2">
-                <p className="text-xs text-gray-400">Callers</p>
-                <p className="text-sm font-bold text-gray-800">{campaign.assignedCallers?.length || 0}</p>
-              </div>
-            </div>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
+        {/* Header */}
+        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Add Students to Campaign</div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Select students from your lead list to assign to this campaign</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '12px 20px', borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f7ff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 12px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or phone..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: TEXT, width: '100%' }} />
           </div>
         </div>
 
-        {/* Leads list */}
-        <div className="flex-1 overflow-y-auto">
-          {leads.map(lead => (
-            <div key={lead._id} onClick={() => setSelectedLead(lead)}
-              className={`p-3.5 border-b border-gray-50 cursor-pointer hover:bg-indigo-50/40 transition-colors ${selectedLead?._id === lead._id ? 'bg-indigo-50 border-l-2 border-l-indigo-600' : ''}`}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">{lead.name}</p>
-                  <p className="text-xs text-gray-400 font-mono">{lead.phone}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" />
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+          {loading ? <Spinner /> : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: MUTED, fontSize: 13 }}>No available students found</div>
+          ) : (
+            <>
+              <div onClick={toggleAll} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid ${BORDER}` }}>
+                <input type="checkbox" readOnly checked={selected.size === filtered.length && filtered.length > 0} style={{ accentColor: P, width: 15, height: 15 }} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: P }}>Select All ({filtered.length})</span>
               </div>
-              <div className="mt-1.5"><StatusBadge status={lead.status} /></div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Middle: Charts */}
-      <div className="w-64 flex-shrink-0 border-r border-gray-100 bg-gray-50 overflow-y-auto">
-        <div className="p-4 space-y-4">
-          {/* Lost reasons */}
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-800">Leads Lost Reason</p>
-              <button className="text-gray-400"><RefreshCw className="w-3.5 h-3.5" /></button>
-            </div>
-            {lostData.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={100}>
-                  <PieChart>
-                    <Pie data={lostData} cx="50%" cy="50%" outerRadius={45} dataKey="count">
-                      {lostData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="space-y-1.5 mt-2">
-                  {lostData.map((d, i) => (
-                    <div key={d._id} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-                        <span className="text-gray-600 truncate max-w-[120px]">{d._id}</span>
-                      </div>
-                      <span className="text-gray-500">({Math.round(d.count / totalLeads * 100) || 0}%)</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-xs text-gray-400">No lost leads yet</p>
-              </div>
-            )}
-          </div>
-
-          {/* Call status */}
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <p className="text-sm font-semibold text-gray-800 mb-3">Calls Status Report</p>
-            {statusData.length > 0 ? (
-              <div className="space-y-2">
-                {statusData.map((s, i) => (
-                  <div key={s._id}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-600 truncate">{s._id}</span>
-                      <span className="font-medium text-gray-800">{s.count}</span>
-                    </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${Math.round(s.count / totalLeads * 100)}%`, background: COLORS[i % COLORS.length] }} />
-                    </div>
+              {filtered.map(lead => (
+                <div key={lead._id} onClick={() => toggle(lead._id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid #f9f8ff` }}>
+                  <input type="checkbox" readOnly checked={selected.has(lead._id)} style={{ accentColor: P, width: 15, height: 15, flexShrink: 0 }} />
+                  <Avatar name={lead.name} size={32} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, truncate: true }}>{lead.name}</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{lead.phone}</div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 text-center py-4">No data</p>
-            )}
+                  <MiniStatus status={lead.status} />
+                  <div style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>{lead.location || ''}</div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: MUTED }}>{selected.size} student{selected.size !== 1 ? 's' : ''} selected</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>Cancel</button>
+            <button onClick={handleAdd} disabled={saving || selected.size === 0}
+              style={{ padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: selected.size === 0 ? 'not-allowed' : 'pointer', background: selected.size === 0 ? '#d4c9f7' : P, color: '#fff' }}>
+              {saving ? 'Adding...' : `Add ${selected.size > 0 ? selected.size : ''} Student${selected.size !== 1 ? 's' : ''}`}
+            </button>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Right: Lead detail */}
-      {selectedLead ? (
-        <div className="flex-1 overflow-y-auto bg-white p-6">
-          <div className="max-w-lg mx-auto space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{selectedLead.name}</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <StatusBadge status={selectedLead.status} size="md" />
-                  <span className="text-xs text-gray-400">{selectedLead.assignedTo?.name}</span>
-                </div>
-              </div>
-              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold">
-                {selectedLead.assignedTo?.name?.[0] || 'U'}
-              </div>
-            </div>
+// ─── Lead Detail Panel ────────────────────────────────────────────────────────
+function LeadDetailPanel({ lead, onAction }) {
+  if (!lead) return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED, flexDirection: 'column', gap: 8 }}>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span style={{ fontSize: 13 }}>Select a student to view details</span>
+    </div>
+  );
 
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Phone', value: selectedLead.phone },
-                { label: 'Email', value: selectedLead.email || 'Empty' },
-                { label: 'Lead Source', value: selectedLead.leadSource || 'Empty' },
-                { label: 'Location', value: selectedLead.location || 'Empty' },
-                { label: 'Preferred Courses', value: selectedLead.preferredCourses?.join(', ') || 'Empty' },
-                { label: 'Budget', value: selectedLead.budget ? `₹${selectedLead.budget.toLocaleString()}` : 'Empty' },
-                { label: 'Last Qualification', value: selectedLead.lastQualification || 'Empty' },
-                { label: 'Total Calls', value: selectedLead.totalCalls || 0 },
-              ].map(({ label, value }) => (
-                <div key={label} className="border border-gray-100 rounded-lg p-3">
-                  <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                  <p className={`text-sm font-medium ${value === 'Empty' ? 'text-gray-300' : 'text-gray-800'}`}>{value}</p>
-                </div>
-              ))}
-            </div>
+  const fields = [
+    { label: 'Mobile Number', value: lead.phone },
+    { label: 'Email Address', value: lead.email || '—' },
+    { label: 'Lead Source', value: lead.leadSource || '—' },
+    { label: 'City / Location', value: lead.location || '—' },
+    { label: 'Course Interest', value: lead.preferredCourses?.join(', ') || '—' },
+    { label: 'Budget', value: lead.budget ? `₹${Number(lead.budget).toLocaleString('en-IN')}` : '—' },
+    { label: 'Qualification', value: lead.lastQualification || '—' },
+    { label: 'Learning Mode', value: lead.mode || '—' },
+    { label: 'Total Calls Made', value: lead.totalCalls ?? 0 },
+    { label: 'Next Follow-up', value: lead.nextFollowupDate ? new Date(lead.nextFollowupDate).toLocaleDateString('en-IN') : '—' },
+  ];
 
-            {/* Actions */}
-            <div className="grid grid-cols-5 gap-2 border border-gray-100 rounded-xl p-3">
-              {[
-                { icon: Phone, label: 'CALL', color: 'text-green-600' },
-                { icon: RefreshCw, label: 'CALL LATER', color: 'text-orange-600' },
-                { icon: Phone, label: 'WHATSAPP', color: 'text-green-500' },
-                { icon: Phone, label: 'SMS', color: 'text-blue-600' },
-                { icon: Phone, label: 'ADD NOTE', color: 'text-indigo-600' },
-              ].map(({ icon: Icon, label, color }) => (
-                <button key={label} className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center ${color}`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="text-xs text-gray-500 text-center leading-tight">{label}</span>
-                </button>
-              ))}
-            </div>
+  const actions = [
+    { label: 'Call', color: '#22c55e', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
+    { label: 'Call Later', color: '#f59e0b', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
+    { label: 'WhatsApp', color: '#25d366', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.554 4.107 1.522 5.836L.057 23.999l6.304-1.654A11.93 11.93 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-4.99-1.364l-.358-.213-3.713.973.99-3.618-.233-.371A9.785 9.785 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg> },
+    { label: 'Send SMS', color: '#3b82f6', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+    { label: 'Add Note', color: P, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
+  ];
 
-            {/* Activity history */}
-            <div className="border border-gray-100 rounded-xl p-4">
-              <p className="text-sm font-semibold text-gray-800 mb-3">Activity History</p>
-              {selectedLead.activities?.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">No activities</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {selectedLead.activities?.slice(0, 8).map((a, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-sm">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${a.type === 'call' ? 'bg-green-100 text-green-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                        <Phone className="w-3 h-3" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs text-gray-700">{a.description || `${a.type} — ${a.callStatus || ''}`}</p>
-                        {a.callDuration > 0 && <p className="text-xs text-gray-400">{Math.floor(a.callDuration / 60)}m {a.callDuration % 60}s</p>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '20px 24px' }}>
+      {/* Student header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar name={lead.name} size={46} />
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT }}>{lead.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <MiniStatus status={lead.status} />
+              {lead.assignedTo?.name && (
+                <span style={{ fontSize: 12, color: MUTED }}>Assigned to: {lead.assignedTo.name}</span>
               )}
             </div>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
-          <p>Select a lead</p>
+        <Avatar name={lead.assignedTo?.name || 'U'} size={34} />
+      </div>
+
+      {/* Fields grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        {fields.map(({ label, value }) => (
+          <div key={label} style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', background: '#faf9ff' }}>
+            <div style={{ fontSize: 11, color: MUTED, marginBottom: 3 }}>{label}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: value === '—' ? '#ccc' : TEXT }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+        {actions.map(({ label, color, icon }) => (
+          <button key={label} onClick={() => onAction?.(label, lead)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: color + '18', color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {icon}
+            </div>
+            <span style={{ fontSize: 10, color: MUTED, textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Activity history */}
+      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Activity History</div>
+        {!lead.activities?.length ? (
+          <div style={{ textAlign: 'center', color: MUTED, fontSize: 12, padding: '16px 0' }}>No activities recorded yet</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {lead.activities.slice(0, 10).map((a, i) => {
+              const isCall = a.type === 'call';
+              return (
+                <div key={i} style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: isCall ? '#dcfce7' : P_LIGHT, color: isCall ? '#16a34a' : P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {isCall
+                      ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    }
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, color: TEXT }}>{a.description || `${a.type}${a.callStatus ? ` — ${a.callStatus}` : ''}`}</div>
+                    <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                      {a.callDuration > 0 && `${Math.floor(a.callDuration / 60)}m ${a.callDuration % 60}s • `}
+                      {a.createdAt ? new Date(a.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function CampaignDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [campaign, setCampaign] = useState(null);
+  const [leads, setLeads] = useState([]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [showAddLeads, setShowAddLeads] = useState(false);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const fetchCampaign = useCallback(async () => {
+    try {
+      const res = await campaignsAPI.getOne(id);
+      setCampaign(res.data.campaign);
+    } catch (err) { console.error(err); }
+  }, [id]);
+
+  const fetchLeads = useCallback(async (pg = 1) => {
+    setLeadsLoading(true);
+    try {
+      const params = { campaign: id, page: pg, limit: 20 };
+      if (statusFilter) params.status = statusFilter;
+      if (search) params.search = search;
+      const res = await leadsAPI.getAll(params);
+      const fetched = res.data.leads || [];
+      setLeads(fetched);
+      setTotalPages(res.data.pages || 1);
+      setTotalCount(res.data.total || fetched.length);
+      if (fetched.length > 0 && (!selectedLead || pg === 1)) setSelectedLead(fetched[0]);
+    } catch (err) { console.error(err); }
+    finally { setLeadsLoading(false); }
+  }, [id, statusFilter, search, selectedLead]);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([fetchCampaign(), fetchLeads(1)]);
+    setLoading(false);
+  }, [fetchCampaign, fetchLeads]);
+
+  useEffect(() => { fetchAll(); }, [id]);
+
+  // Re-fetch leads when filter/search/page changes
+  useEffect(() => { fetchLeads(page); }, [statusFilter, page]);
+
+  const handleSearchSubmit = (e) => { if (e.key === 'Enter') { setPage(1); fetchLeads(1); } };
+
+  const statusBreakdown = campaign?.statusBreakdown || [];
+  const totalLeads = campaign?.totalLeads || statusBreakdown.reduce((a, b) => a + b.count, 0) || 0;
+  const freshLeads = statusBreakdown.find(s => s._id === 'Fresh')?.count || 0;
+  const wonLeads = statusBreakdown.find(s => s._id === 'Won')?.count || 0;
+  const connectedLeads = statusBreakdown.find(s => s._id === 'Connected')?.count || 0;
+  const lostReasons = campaign?.lostReasons || [];
+
+  // All unique statuses for filter dropdown
+  const allStatuses = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
+
+  if (loading) return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner /></div>;
+  if (!campaign) return <div style={{ textAlign: 'center', padding: 48, color: MUTED }}>Campaign not found</div>;
+
+  return (
+    <div style={{ display: 'flex', height: 'calc(100vh - 48px)', fontFamily: 'inherit', overflow: 'hidden' }}>
+      {/* ─── LEFT PANEL: Student List ─────────────────────────────────────────── */}
+      <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Back + campaign info */}
+        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}` }}>
+          <button onClick={() => navigate('/campaigns')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: MUTED, marginBottom: 10, padding: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Campaigns
+          </button>
+
+          {/* Campaign summary card */}
+          <div style={{ background: P_LIGHT, borderRadius: 12, padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: P }}>@{campaign.name}</span>
+              <button onClick={fetchAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: P }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/></svg>
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              <StatCard label="Total" value={totalLeads} color={P} />
+              <StatCard label="Fresh" value={freshLeads} color="#6366f1" />
+              <StatCard label="Won" value={wonLeads} color="#22c55e" />
+              <StatCard label="Callers" value={campaign.assignedCallers?.length || 0} color={TEXT} />
+            </div>
+          </div>
         </div>
+
+        {/* Search + filter */}
+        <div style={{ padding: '10px 12px', borderBottom: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8f7ff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 10px' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchSubmit}
+              placeholder="Search students..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: TEXT, width: '100%' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+              style={{ flex: 1, fontSize: 11, padding: '5px 8px', border: `1px solid ${BORDER}`, borderRadius: 7, color: TEXT, background: '#fff', outline: 'none' }}>
+              <option value="">All Statuses</option>
+              {allStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={() => { setShowAddLeads(true); }}
+              style={{ background: P, color: '#fff', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: MUTED }}>{totalCount} student{totalCount !== 1 ? 's' : ''} in this campaign</div>
+        </div>
+
+        {/* Student list */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {leadsLoading ? <Spinner /> : leads.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 16px', color: MUTED }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ddd" strokeWidth="1.5" style={{ marginBottom: 8 }}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <div style={{ fontSize: 12 }}>No students found</div>
+              <button onClick={() => setShowAddLeads(true)}
+                style={{ marginTop: 10, background: P, color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                + Add Students
+              </button>
+            </div>
+          ) : leads.map(lead => (
+            <div key={lead._id} onClick={() => setSelectedLead(lead)}
+              style={{
+                padding: '11px 14px', borderBottom: `1px solid #f9f8ff`, cursor: 'pointer',
+                background: selectedLead?._id === lead._id ? P_LIGHT : 'transparent',
+                borderLeft: selectedLead?._id === lead._id ? `3px solid ${P}` : '3px solid transparent',
+                transition: 'background 0.1s',
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar name={lead.name} size={28} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+                  <div style={{ fontSize: 11, color: MUTED, fontFamily: 'monospace' }}>{lead.phone}</div>
+                </div>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+              <div style={{ marginTop: 5 }}><MiniStatus status={lead.status} /></div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ padding: '10px 14px', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: page === 1 ? 'not-allowed' : 'pointer', color: page === 1 ? '#ccc' : TEXT }}>‹ Prev</button>
+            <span style={{ fontSize: 11, color: MUTED }}>{page} / {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: page === totalPages ? 'not-allowed' : 'pointer', color: page === totalPages ? '#ccc' : TEXT }}>Next ›</button>
+          </div>
+        )}
+      </div>
+
+      {/* ─── MIDDLE PANEL: Analytics ──────────────────────────────────────────── */}
+      <div style={{ width: 240, flexShrink: 0, background: '#faf9ff', borderRight: `1px solid ${BORDER}`, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+        {/* Lead Status Distribution (Pie) */}
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', border: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Lead Status Distribution</div>
+          {statusBreakdown.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={110}>
+                <PieChart>
+                  <Pie data={statusBreakdown.map(s => ({ name: s._id, value: s.count }))}
+                    cx="50%" cy="50%" outerRadius={48} innerRadius={24} dataKey="value">
+                    {statusBreakdown.map((s, i) => (
+                      <Cell key={s._id} fill={STATUS_COLORS[s._id] || PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v, n) => [v, n]} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 6 }}>
+                {statusBreakdown.map((s, i) => (
+                  <div key={s._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[s._id] || PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+                      <span style={{ color: '#444', maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s._id}</span>
+                    </div>
+                    <span style={{ fontWeight: 600, color: TEXT }}>{s.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : <div style={{ textAlign: 'center', color: MUTED, fontSize: 12, padding: '20px 0' }}>No data yet</div>}
+        </div>
+
+        {/* Lost / Dropped Reasons */}
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', border: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Dropped / Lost Reasons</div>
+          {lostReasons.length > 0 ? (
+            lostReasons.map((r, i) => (
+              <div key={r._id} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                  <span style={{ color: '#555' }}>{r._id}</span>
+                  <span style={{ fontWeight: 600, color: TEXT }}>{r.count}</span>
+                </div>
+                <div style={{ height: 5, background: '#f0ecff', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: PIE_COLORS[i % PIE_COLORS.length], borderRadius: 4, width: `${totalLeads > 0 ? Math.round(r.count / totalLeads * 100) : 0}%`, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+            ))
+          ) : <div style={{ textAlign: 'center', color: MUTED, fontSize: 12, padding: '16px 0' }}>No dropped leads yet</div>}
+        </div>
+
+        {/* Call Outcomes */}
+        <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', border: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Call Outcomes</div>
+          {statusBreakdown.length > 0 ? (
+            statusBreakdown.map((s, i) => (
+              <div key={s._id} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                  <span style={{ color: '#555', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s._id}</span>
+                  <span style={{ fontWeight: 600, color: TEXT }}>{s.count}</span>
+                </div>
+                <div style={{ height: 5, background: '#f0ecff', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: STATUS_COLORS[s._id] || PIE_COLORS[i % PIE_COLORS.length], borderRadius: 4, width: `${totalLeads > 0 ? Math.round(s.count / totalLeads * 100) : 0}%`, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+            ))
+          ) : <div style={{ textAlign: 'center', color: MUTED, fontSize: 12, padding: '16px 0' }}>No call data yet</div>}
+        </div>
+
+        {/* Assigned Callers */}
+        {campaign.assignedCallers?.length > 0 && (
+          <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', border: `1px solid ${BORDER}` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Assigned Callers</div>
+            {campaign.assignedCallers.map(caller => (
+              <div key={caller._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Avatar name={caller.name} size={26} />
+                <span style={{ fontSize: 12, color: TEXT }}>{caller.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ─── RIGHT PANEL: Lead Detail ─────────────────────────────────────────── */}
+      <LeadDetailPanel lead={selectedLead} onAction={(action, lead) => {
+        // Extend: hook up to your call/sms actions here
+        console.log('Action:', action, lead);
+      }} />
+
+      {/* ─── Add Leads Modal ──────────────────────────────────────────────────── */}
+      {showAddLeads && (
+        <AddLeadsModal
+          campaignId={id}
+          onClose={() => setShowAddLeads(false)}
+          onSuccess={() => { fetchAll(); }}
+        />
       )}
     </div>
   );

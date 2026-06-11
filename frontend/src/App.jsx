@@ -19,6 +19,7 @@ import WhatsApp from './pages/WhatsApp';
 import Users from './pages/Users';
 
 import StaleLeads from './pages/StaleLeads';
+import BulkImport from './pages/BulkImport';
 import TeamOperations from './pages/TeamOperations';
 import LeadProfile from './pages/LeadProfile';
 
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="whatsapp" element={<WhatsApp />} />
             <Route path="users" element={<Users />} />
             <Route path="stale-leads" element={<StaleLeads />} />
+            <Route path="bulk-import" element={<BulkImport />} />
             <Route path="team-operations" element={<TeamOperations />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

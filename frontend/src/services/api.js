@@ -61,6 +61,8 @@ export const campaignsAPI = {
   create: (data) => api.post('/campaigns', data),
   update: (id, data) => api.put(`/campaigns/${id}`, data),
   delete: (id) => api.delete(`/campaigns/${id}`),
+  addLeads: (id, leadIds) => api.post(`/campaigns/${id}/add-leads`, { leadIds }),
+  removeLead: (id, leadId) => api.delete(`/campaigns/${id}/remove-lead/${leadId}`),
 };
 
 export const reportsAPI = {
@@ -103,6 +105,13 @@ export const messageTemplatesAPI = {
   create: (data) => api.post('/message-templates', data),
   update: (id, data) => api.put(`/message-templates/${id}`, data),
   delete: (id) => api.delete(`/message-templates/${id}`),
+};
+
+export const bulkImportAPI = {
+  preview: (formData) => api.post('/bulk-import/preview', formData),
+  import: (formData) => api.post('/bulk-import/import', formData),
+  assign: (data) => api.post('/bulk-import/assign', data),
+  downloadTemplate: () => api.get('/bulk-import/template', { responseType: 'blob' }),
 };
 
 export default api;
