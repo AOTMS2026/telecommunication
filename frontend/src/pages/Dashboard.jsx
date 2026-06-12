@@ -636,7 +636,7 @@ export default function Dashboard() {
                             💬 WA
                           </button>
                           <button 
-                            onClick={() => setActiveQueueIndex(idx)}
+                            onClick={() => navigate('/leads/' + item.lead._id)}
                             style={{ background: '#f3f0ff', color: PURPLE, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}
                             onMouseEnter={e => { e.currentTarget.style.background = PURPLE; e.currentTarget.style.color = '#fff'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = '#f3f0ff'; e.currentTarget.style.color = PURPLE; }}

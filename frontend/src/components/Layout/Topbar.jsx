@@ -13,8 +13,6 @@ export default function Topbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  // Due callback alerts (from DB) shown as red dashboard banners
-  const [dueCallbackAlerts, setDueCallbackAlerts] = useState([]);
   // Track which followup IDs we've already alerted so we don't repeat
   const alertedIds = useRef(new Set());
 
@@ -58,8 +56,6 @@ export default function Topbar() {
           followupId: f._id,
         }));
         setNotifications(prev => [...newNotifs, ...prev]);
-        // Add as dashboard red alert banners
-        setDueCallbackAlerts(prev => [...prev, ...due]);
       }
     } catch (e) {
       // silent
@@ -71,14 +67,6 @@ export default function Topbar() {
     const interval = setInterval(pollDueCallbacks, 60000);
     return () => clearInterval(interval);
   }, [pollDueCallbacks]);
-
-  // Expose dueCallbackAlerts globally so Dashboard can read them
-  useEffect(() => {
-    window.__dueCallbackAlerts = dueCallbackAlerts;
-    window.__dismissDueCallbackAlert = (followupId) => {
-      setDueCallbackAlerts(prev => prev.filter(f => f._id !== followupId));
-    };
-  }, [dueCallbackAlerts]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -163,50 +151,6 @@ export default function Topbar() {
 
   return (
     <>
-      {/* Due Callback Alert Banners — red, shown at top of screen below topbar */}
-      {dueCallbackAlerts.length > 0 && (
-        <div style={{ position: 'fixed', top: 48, left: 0, right: 0, zIndex: 99, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {dueCallbackAlerts.map(f => (
-            <div key={f._id} style={{
-              background: '#fff0f0', borderBottom: '2px solid #fca5a5',
-              padding: '10px 20px', display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', gap: 12
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>📞</span>
-                <div>
-                  <span style={{ fontWeight: 700, color: '#991b1b', fontSize: 13 }}>
-                    Callback Due Now:
-                  </span>
-                  <span style={{ color: '#b91c1c', fontSize: 13, marginLeft: 6 }}>
-                    Call <strong>{f.lead?.name || 'Lead'}</strong> ({f.lead?.phone || '—'})
-                    {f.note ? ` — ${f.note}` : ''}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => {
-                    if (f.lead?._id) navigate(`/leads/${f.lead._id}`);
-                    window.__dismissDueCallbackAlert?.(f._id);
-                  }}
-                  style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Call Now
-                </button>
-                <button
-                  onClick={() => window.__dismissDueCallbackAlert?.(f._id)}
-                  style={{ background: 'none', border: '1px solid #fca5a5', color: '#991b1b', padding: '5px 10px', borderRadius: 7, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}
-                  title="Dismiss"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 48,
         background: '#ffffff', borderBottom: '1px solid #e5e2f5',

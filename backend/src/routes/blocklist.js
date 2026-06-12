@@ -32,7 +32,7 @@ router.post('/', protect, async (req, res) => {
     if (cleanPhone.length < 10) return res.status(400).json({ message: 'Invalid phone number' });
 
     const existing = await Blocklist.findOne({ phone: cleanPhone });
-    if (existing) return res.status(400).json({ message: 'This number is already blocked' });
+    if (existing) return res.status(400).json({ message: 'This number is already blocked', entry: existing });
 
     const entry = await Blocklist.create({
       phone: cleanPhone,
@@ -47,7 +47,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// DELETE /api/blocklist/:id
+// DELETE /api/blocklist/:id  (by MongoDB _id)
 router.delete('/:id', protect, async (req, res) => {
   try {
     await Blocklist.findByIdAndDelete(req.params.id);
@@ -57,7 +57,19 @@ router.delete('/:id', protect, async (req, res) => {
   }
 });
 
-// GET /api/blocklist/check/:phone — check if a phone is blocked (used on lead creation)
+// DELETE /api/blocklist/phone/:phone  (by phone number — used from lead view)
+router.delete('/phone/:phone', protect, async (req, res) => {
+  try {
+    const cleanPhone = req.params.phone.replace(/[^0-9]/g, '');
+    const result = await Blocklist.findOneAndDelete({ phone: cleanPhone });
+    if (!result) return res.status(404).json({ message: 'Number not found in blocklist' });
+    res.json({ message: 'Unblocked successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/blocklist/check/:phone — check if a phone is blocked
 router.get('/check/:phone', protect, async (req, res) => {
   try {
     const phone = req.params.phone.replace(/[^0-9]/g, '');

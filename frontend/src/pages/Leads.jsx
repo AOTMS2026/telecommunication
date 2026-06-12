@@ -220,7 +220,7 @@ export default function Leads() {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button onClick={() => navigate('/leads/add')} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-sm">
+          <button onClick={() => navigate('/leads/new')} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-sm">
             <Plus className="w-4 h-4" />
             Add Lead
           </button>
@@ -424,7 +424,7 @@ export default function Leads() {
                           <Users className="w-10 h-10 mx-auto" />
                         </div>
                         <div className="text-sm text-gray-400">No leads found</div>
-                        <button onClick={() => navigate('/leads/add')} className="mt-3 text-xs text-purple-600 hover:underline">
+                        <button onClick={() => navigate('/leads/new')} className="mt-3 text-xs text-purple-600 hover:underline">
                           + Add your first lead
                         </button>
                       </td>

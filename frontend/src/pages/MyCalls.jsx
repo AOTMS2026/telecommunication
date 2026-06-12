@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Phone, PhoneOff, Clock, MessageSquare, MessageCircle, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
-import { leadsAPI, followupsAPI } from '../services/api';
+import { leadsAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { formatDistanceToNow } from 'date-fns';
@@ -93,6 +93,45 @@ function LogCallModal({ lead, onClose, onSubmit }) {
   );
 }
 
+function BlockConfirmModal({ lead, onClose, onConfirm, blocking }) {
+  const [reason, setReason] = useState('Spam Lead');
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">Block this number?</h3>
+            <p className="text-xs text-gray-500">{lead.name} · {lead.phone}</p>
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Reason</label>
+          <select className="input-field" value={reason} onChange={e => setReason(e.target.value)}>
+            <option>Spam Lead</option>
+            <option>Requested Do Not Call</option>
+            <option>Wrong Number</option>
+            <option>Abusive Caller</option>
+            <option>Duplicate</option>
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="btn-secondary flex-1" disabled={blocking}>Cancel</button>
+          <button
+            onClick={() => onConfirm(reason)}
+            disabled={blocking}
+            style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 0', fontSize: 13, fontWeight: 700, cursor: blocking ? 'not-allowed' : 'pointer', opacity: blocking ? 0.7 : 1 }}
+          >
+            {blocking ? 'Blocking…' : 'Block Number'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MyCalls() {
   const { user } = useAuth();
   const [leads, setLeads] = useState([]);
@@ -105,6 +144,11 @@ export default function MyCalls() {
   const [search, setSearch] = useState('');
   const [copied, setCopied] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showBlock, setShowBlock] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockEntryId, setBlockEntryId] = useState(null);
+  const [blockedPhones, setBlockedPhones] = useState(new Set());
 
   const fetchLeads = async () => {
     try {
@@ -134,6 +178,23 @@ export default function MyCalls() {
   };
 
   useEffect(() => { fetchLeads(); }, []);
+
+  // Load all blocked phones once so the left list can show blocked status
+  useEffect(() => {
+    blocklistAPI.getAll().then(res => {
+      const phones = new Set((res.data.blocklist || []).map(e => e.phone));
+      setBlockedPhones(phones);
+    }).catch(() => {});
+  }, []);
+
+  // Check DB block status whenever selected lead changes
+  useEffect(() => {
+    if (!selected?.phone) { setIsBlocked(false); setBlockEntryId(null); return; }
+    blocklistAPI.check(selected.phone).then(res => {
+      setIsBlocked(res.data.blocked);
+      setBlockEntryId(res.data.entry?._id || null);
+    }).catch(() => { setIsBlocked(false); setBlockEntryId(null); });
+  }, [selected?._id]);
 
   const refreshSelected = async () => {
     if (!selected) return;
@@ -186,6 +247,49 @@ export default function MyCalls() {
       await leadsAPI.update(selected._id, { rating: r });
       await refreshSelected();
     } catch (err) { console.error(err); }
+  };
+
+  const handleBlock = async (reason) => {
+    setBlocking(true);
+    try {
+      const res = await blocklistAPI.add({ phone: selected.phone, name: selected.name, reason });
+      setShowBlock(false);
+      setIsBlocked(true);
+      setBlockEntryId(res.data.entry?._id || null);
+      setBlockedPhones(prev => new Set([...prev, selected.phone.replace(/[^0-9]/g, '')]));
+      alert(`✅ ${selected.name} (${selected.phone}) has been blocked.`);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      // Already blocked — sync state from DB
+      if (err.response?.status === 400 && err.response?.data?.entry) {
+        setIsBlocked(true);
+        setBlockEntryId(err.response.data.entry._id);
+        setShowBlock(false);
+        alert(`ℹ️ This number is already blocked.`);
+      } else {
+        alert('Failed to block: ' + msg);
+      }
+    }
+    setBlocking(false);
+  };
+
+  const handleUnblock = async () => {
+    if (!window.confirm(`Unblock ${selected.name} (${selected.phone})?`)) return;
+    setBlocking(true);
+    try {
+      if (blockEntryId) {
+        await blocklistAPI.remove(blockEntryId);
+      } else {
+        await blocklistAPI.removeByPhone(selected.phone);
+      }
+      setIsBlocked(false);
+      setBlockEntryId(null);
+      setBlockedPhones(prev => { const s = new Set(prev); s.delete(selected.phone.replace(/[^0-9]/g, '')); return s; });
+      alert(`✅ ${selected.name} has been unblocked.`);
+    } catch (err) {
+      alert('Failed to unblock: ' + (err.response?.data?.message || err.message));
+    }
+    setBlocking(false);
   };
 
   const copyPhone = (phone) => {
@@ -280,6 +384,12 @@ export default function MyCalls() {
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <StatusBadge status={lead.status} />
+                    {blockedPhones.has(lead.phone?.replace(/[^0-9]/g, '')) && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', background: '#fff0f0', border: '1px solid #fca5a5', borderRadius: 20, padding: '1px 6px', display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                        Blocked
+                      </span>
+                    )}
                   </div>
                   {lead.activities?.[0] && (
                     <div className="flex items-center gap-1.5 mt-1.5">
@@ -309,7 +419,29 @@ export default function MyCalls() {
             <div className="card p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900">{selected.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900">{selected.name}</h2>
+                    {isBlocked ? (
+                      <button
+                        onClick={handleUnblock}
+                        disabled={blocking}
+                        title="Unblock this number"
+                        style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 7, padding: '3px 7px', cursor: blocking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 4, opacity: blocking ? 0.7 : 1 }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>{blocking ? '…' : 'Unblock'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setShowBlock(true)}
+                        title="Block this number"
+                        style={{ background: '#fff0f0', border: '1px solid #fca5a5', borderRadius: 7, padding: '3px 7px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626' }}>Block</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3 mt-2 flex-wrap">
                     <select value={selected.status} onChange={e => handleStatus(e.target.value)}
                       className="text-xs border-0 bg-transparent font-medium text-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg px-2 py-1 bg-indigo-50">
@@ -366,14 +498,21 @@ export default function MyCalls() {
             </div>
 
             {/* Actions */}
-            <div className="card p-4">
+            <div className="card p-4" style={{ position: 'relative', overflow: 'hidden' }}>
+              {isBlocked && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(254,242,242,0.92)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 12 }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>Number Blocked — Actions Disabled</span>
+                  <span style={{ fontSize: 11, color: '#991b1b' }}>Click "Unblock" above to re-enable calling</span>
+                </div>
+              )}
               <div className="grid grid-cols-5 gap-2">
                 {[
-                  { icon: Phone, label: 'CALL', action: handleCall, color: 'text-green-600', disabled: !!activeLead },
-                  { icon: Clock, label: 'CALL LATER', action: () => handleStatus('Call Back Later'), color: 'text-orange-600' },
-                  { icon: MessageCircle, label: 'WHATSAPP', action: () => leadsAPI.addNote(selected._id, { note: 'WhatsApp message sent', type: 'whatsapp' }).then(refreshSelected), color: 'text-green-500' },
-                  { icon: MessageSquare, label: 'SMS', action: () => leadsAPI.addNote(selected._id, { note: 'SMS sent', type: 'sms' }).then(refreshSelected), color: 'text-blue-600' },
-                  { icon: Plus, label: 'ADD NOTE', action: () => setShowNote(true), color: 'text-indigo-600' },
+                  { icon: Phone, label: 'CALL', action: handleCall, color: 'text-green-600', disabled: !!activeLead || isBlocked },
+                  { icon: Clock, label: 'CALL LATER', action: () => handleStatus('Call Back Later'), color: 'text-orange-600', disabled: isBlocked },
+                  { icon: MessageCircle, label: 'WHATSAPP', action: () => leadsAPI.addNote(selected._id, { note: 'WhatsApp message sent', type: 'whatsapp' }).then(refreshSelected), color: 'text-green-500', disabled: isBlocked },
+                  { icon: MessageSquare, label: 'SMS', action: () => leadsAPI.addNote(selected._id, { note: 'SMS sent', type: 'sms' }).then(refreshSelected), color: 'text-blue-600', disabled: isBlocked },
+                  { icon: Plus, label: 'ADD NOTE', action: () => setShowNote(true), color: 'text-indigo-600', disabled: isBlocked },
                 ].map(({ icon: Icon, label, action, color, disabled }) => (
                   <button key={label} onClick={action} disabled={disabled}
                     className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl hover:bg-gray-50 transition-colors group disabled:opacity-40 disabled:cursor-not-allowed">
@@ -387,6 +526,7 @@ export default function MyCalls() {
               {/* Initiate Call to Mobile — sends FCM push to caller's phone */}
               <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-center gap-3">
                 <button
+                  disabled={isBlocked}
                   onClick={async () => {
                     try {
                       await leadsAPI.initiateCall(selected._id, selected.assignedTo?._id || selected.assignedTo);
@@ -395,11 +535,11 @@ export default function MyCalls() {
                       alert('Failed to initiate call: ' + (err.response?.data?.message || err.message));
                     }
                   }}
-                  style={{ background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 18px', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  style={{ background: isBlocked ? '#9ca3af' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 18px', fontSize: 12, fontWeight: 600, cursor: isBlocked ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: isBlocked ? 0.5 : 1 }}
                 >
                   📲 Initiate Call to Mobile
                 </button>
-                <button onClick={() => setShowLogCall(true)} className="text-xs text-indigo-600 hover:underline">+ Log call manually</button>
+                <button disabled={isBlocked} onClick={() => setShowLogCall(true)} className="text-xs text-indigo-600 hover:underline disabled:opacity-40 disabled:cursor-not-allowed">+ Log call manually</button>
               </div>
             </div>
 
@@ -460,6 +600,7 @@ export default function MyCalls() {
 
       {showNote && <AddNoteModal onClose={() => setShowNote(false)} onSubmit={handleNote} />}
       {showLogCall && selected && <LogCallModal lead={selected} onClose={() => setShowLogCall(false)} onSubmit={handleLogCall} />}
+      {showBlock && selected && <BlockConfirmModal lead={selected} onClose={() => setShowBlock(false)} onConfirm={handleBlock} blocking={blocking} />}
     </div>
   );
 }

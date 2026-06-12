@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Smartphone } from 'lucide-react';
-import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI } from '../services/api';
+import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -365,6 +365,9 @@ export default function LeadProfile() {
   const [showInitiateCallModal, setShowInitiateCallModal] = useState(false); // NEW
   const [showCallbackModal, setShowCallbackModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockEntryId, setBlockEntryId] = useState(null);
+  const [blockingAction, setBlockingAction] = useState(false);
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -406,6 +409,40 @@ export default function LeadProfile() {
       setCallers((res.data.users || []).filter(u => u.role === 'caller' || u.role === 'admin' || u.role === 'super admin'));
     }).catch(console.error);
   }, [id]);
+
+  // Check blocklist status when lead loads
+  useEffect(() => {
+    if (!lead?.phone) return;
+    blocklistAPI.check(lead.phone).then(res => {
+      setIsBlocked(res.data.blocked);
+      setBlockEntryId(res.data.entry?._id || null);
+    }).catch(() => {});
+  }, [lead?.phone]);
+
+  const handleBlockToggle = async () => {
+    setBlockingAction(true);
+    try {
+      if (isBlocked) {
+        if (blockEntryId) await blocklistAPI.remove(blockEntryId);
+        else await blocklistAPI.removeByPhone(lead.phone);
+        setIsBlocked(false);
+        setBlockEntryId(null);
+      } else {
+        const res = await blocklistAPI.add({ phone: lead.phone, name: lead.name, reason: 'Blocked from lead profile' });
+        setIsBlocked(true);
+        setBlockEntryId(res.data.entry?._id || null);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      if (err.response?.status === 400 && err.response?.data?.entry) {
+        setIsBlocked(true);
+        setBlockEntryId(err.response.data.entry._id);
+      } else {
+        alert(isBlocked ? 'Failed to unblock: ' + msg : 'Failed to block: ' + msg);
+      }
+    }
+    setBlockingAction(false);
+  };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -758,24 +795,53 @@ export default function LeadProfile() {
           </div>
 
           {/* Action Center */}
-          <div className="card bg-white rounded-2xl border border-gray-200 shadow-xs p-5">
+          <div className="card bg-white rounded-2xl border border-gray-200 shadow-xs p-5" style={{ position: 'relative', overflow: 'hidden' }}>
+            {isBlocked && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(254,242,242,0.93)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 16 }}>
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#dc2626' }}>Number Blocked — Actions Disabled</span>
+                <span style={{ fontSize: 11, color: '#991b1b' }}>Unblock this number to re-enable all actions</span>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Quick Action Center</h3>
-              {/* Initiate Call button inside action center too */}
-              <button
-                onClick={() => setShowInitiateCallModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl text-xs font-bold transition-colors border border-green-200"
-              >
-                <Smartphone className="w-3.5 h-3.5" /> 📲 Send to Mobile
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Block / Unblock button */}
+                <button
+                  onClick={handleBlockToggle}
+                  disabled={blockingAction}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: blockingAction ? 'not-allowed' : 'pointer',
+                    border: isBlocked ? '1px solid #86efac' : '1px solid #fca5a5',
+                    background: isBlocked ? '#f0fdf4' : '#fff0f0',
+                    color: isBlocked ? '#16a34a' : '#dc2626',
+                    opacity: blockingAction ? 0.6 : 1,
+                  }}
+                >
+                  {isBlocked ? (
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>{blockingAction ? '…' : 'Unblock'}</>
+                  ) : (
+                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>{blockingAction ? '…' : 'Block'}</>
+                  )}
+                </button>
+                {/* Initiate Call button */}
+                <button
+                  onClick={() => setShowInitiateCallModal(true)}
+                  disabled={isBlocked}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl text-xs font-bold transition-colors border border-green-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Smartphone className="w-3.5 h-3.5" /> 📲 Send to Mobile
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
-                { icon: Phone, label: 'CALL NOW', action: handleStartCall, color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isCalling },
-                { icon: Clock, label: 'CALLBACK LATER', action: () => setShowCallbackModal(true), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200' },
-                { icon: MessageCircle, label: 'WHATSAPP LOG', action: () => handleInstantActivity('whatsapp', 'WhatsApp outreach message sent'), color: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-250' },
-                { icon: MessageSquare, label: 'SMS LOG', action: () => handleInstantActivity('sms', 'SMS template message dispatched'), color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200' },
-                { icon: Plus, label: 'ADD NOTE', action: () => setShowNoteModal(true), color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200' },
+                { icon: Phone, label: 'CALL NOW', action: handleStartCall, color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isCalling || isBlocked },
+                { icon: Clock, label: 'CALLBACK LATER', action: () => setShowCallbackModal(true), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200', disabled: isBlocked },
+                { icon: MessageCircle, label: 'WHATSAPP LOG', action: () => handleInstantActivity('whatsapp', 'WhatsApp outreach message sent'), color: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-250', disabled: isBlocked },
+                { icon: MessageSquare, label: 'SMS LOG', action: () => handleInstantActivity('sms', 'SMS template message dispatched'), color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200', disabled: isBlocked },
+                { icon: Plus, label: 'ADD NOTE', action: () => setShowNoteModal(true), color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200', disabled: isBlocked },
               ].map(({ icon: Icon, label, action, color, disabled }) => (
                 <button key={label} onClick={action} disabled={disabled}
                   className={`flex flex-col items-center justify-center gap-2 py-3 px-2.5 rounded-xl font-bold transition-all text-center ${color} disabled:opacity-40 disabled:cursor-not-allowed`}>
@@ -785,7 +851,7 @@ export default function LeadProfile() {
               ))}
             </div>
             <div className="mt-4 flex justify-center">
-              <button onClick={() => setShowLogCallModal(true)} className="text-xs font-bold text-indigo-650 hover:text-indigo-800 hover:underline transition-colors">
+              <button disabled={isBlocked} onClick={() => setShowLogCallModal(true)} className="text-xs font-bold text-indigo-650 hover:text-indigo-800 hover:underline transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                 + Log call records manually
               </button>
             </div>

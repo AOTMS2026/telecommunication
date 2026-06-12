@@ -99,6 +99,7 @@ export const blocklistAPI = {
   getAll: (params) => api.get('/blocklist', { params }),
   add: (data) => api.post('/blocklist', data),
   remove: (id) => api.delete(`/blocklist/${id}`),
+  removeByPhone: (phone) => api.delete(`/blocklist/phone/${phone}`),
   check: (phone) => api.get(`/blocklist/check/${phone}`),
 };
 

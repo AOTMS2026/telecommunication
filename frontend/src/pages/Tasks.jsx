@@ -97,18 +97,6 @@ function EditModal({ task, onClose, onSaved }) {
                 <option value="low">Low</option>
               </select>
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Status</label>
-              <select
-                value={form.status}
-                onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
-                style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
-              >
-                <option value="upcoming">Upcoming</option>
-                <option value="done">Done</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -160,7 +148,7 @@ export default function Tasks() {
   });
   const [forFilter, setForFilter] = useState('Me');
   const [dueFilter, setDueFilter] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(['pending', 'late']);
+  const [statusFilter, setStatusFilter] = useState(['pending', 'late', 'done', 'cancelled']);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdditional, setShowAdditional] = useState(false);
@@ -172,20 +160,45 @@ export default function Tasks() {
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      const statusMap = { pending: 'upcoming', late: 'upcoming', done: 'done', cancelled: 'cancelled' };
-      const mappedStatuses = [...new Set(statusFilter.map(s => statusMap[s] || s))];
+      const isAll = statusFilter.length === 4; // all 4 options selected = no filter
+      const wantsLate = statusFilter.includes('late');
+      const wantsPending = statusFilter.includes('pending');
+      const wantsDone = statusFilter.includes('done');
+      const wantsCancelled = statusFilter.includes('cancelled');
+
+      // Build DB-level statuses to fetch
+      const dbStatuses = [];
+      if (wantsPending || wantsLate) dbStatuses.push('upcoming');
+      if (wantsDone) dbStatuses.push('done');
+      if (wantsCancelled) dbStatuses.push('cancelled');
+
       const res = await followupsAPI.getAll({
         forMe: forFilter === 'Me',
         due: dueFilter ? dueFilter.toLowerCase().replace(' ', '_') : undefined,
-        status: mappedStatuses.join(','),
+        status: isAll ? undefined : dbStatuses.join(','),
         type: activeTab === 'Call Followups' ? 'call_followup' : 'todo',
       });
       let items = res.data.followups || res.data.tasks || [];
-      if (statusFilter.includes('late') && !statusFilter.includes('pending')) {
-        items = items.filter(t => t.status === 'upcoming' && new Date(t.scheduledAt) < new Date());
-      } else if (statusFilter.includes('pending') && !statusFilter.includes('late')) {
-        items = items.filter(t => !(t.status === 'upcoming' && new Date(t.scheduledAt) < new Date()) || t.status === 'upcoming');
+
+      // Refine upcoming into pending vs late on the frontend
+      if (!isAll) {
+        if (wantsLate && !wantsPending) {
+          // Only overdue: upcoming AND past scheduled time
+          items = items.filter(t =>
+            (t.status === 'done' && wantsDone) ||
+            (t.status === 'cancelled' && wantsCancelled) ||
+            (t.status === 'upcoming' && new Date(t.scheduledAt) < new Date())
+          );
+        } else if (wantsPending && !wantsLate) {
+          // Only upcoming: upcoming AND NOT past scheduled time
+          items = items.filter(t =>
+            (t.status === 'done' && wantsDone) ||
+            (t.status === 'cancelled' && wantsCancelled) ||
+            (t.status === 'upcoming' && new Date(t.scheduledAt) >= new Date())
+          );
+        }
       }
+
       if (priorityFilter) {
         items = items.filter(t => t.priority === priorityFilter);
       }
@@ -418,16 +431,30 @@ export default function Tasks() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Status:</span>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            border: '1px solid #e5e2f5', borderRadius: 6,
-            background: '#fff', padding: '5px 10px', cursor: 'pointer'
+            display: 'flex', alignItems: 'center', gap: 5,
+            border: `1px solid ${statusFilter.length < 4 ? PURPLE : '#e5e2f5'}`,
+            borderRadius: 6,
+            background: statusFilter.length < 4 ? '#f0ecff' : '#fff',
+            padding: '5px 10px', cursor: 'pointer',
           }}>
-            <div onClick={() => toggleStatus('pending')}
-              style={{ width: 16, height: 16, borderRadius: 3, background: '#f59e0b', opacity: statusFilter.includes('pending') ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.15s' }}
-              title="Pending" />
-            <div onClick={() => toggleStatus('late')}
-              style={{ width: 16, height: 16, borderRadius: 3, background: '#e53e3e', opacity: statusFilter.includes('late') ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.15s' }}
-              title="Late / Overdue" />
+            <select
+              value={statusFilter.length === 1 ? statusFilter[0] : statusFilter.length === 4 ? 'all' : 'custom'}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'all') setStatusFilter(['pending', 'late', 'done', 'cancelled']);
+                else if (val === 'pending') setStatusFilter(['pending']);
+                else if (val === 'late') setStatusFilter(['late']);
+                else if (val === 'done') setStatusFilter(['done']);
+                else if (val === 'cancelled') setStatusFilter(['cancelled']);
+              }}
+              style={{ border: 'none', outline: 'none', background: 'none', fontSize: 12, color: statusFilter.length < 4 ? PURPLE : TEXT_MAIN, cursor: 'pointer', fontWeight: statusFilter.length < 4 ? 600 : 400 }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">⏳ Upcoming</option>
+              <option value="late">🔴 Late / Overdue</option>
+              <option value="done">✅ Done</option>
+              <option value="cancelled">❌ Cancelled</option>
+            </select>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -625,13 +652,20 @@ export default function Tasks() {
                   </td>
                   {/* Status */}
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
-                      background: STATUS_COLORS[task.status]?.bg || '#f3f4f6',
-                      color: STATUS_COLORS[task.status]?.color || TEXT_MUTED
-                    }}>
-                      {task.status || 'upcoming'}
-                    </span>
+                    {(() => {
+                      const isLate = task.status === 'upcoming' && new Date(task.scheduledAt) < new Date();
+                      const displayStatus = isLate ? 'late' : task.status;
+                      const displayLabel = isLate ? 'Late' : (task.status || 'upcoming');
+                      return (
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
+                          background: STATUS_COLORS[displayStatus]?.bg || '#f3f4f6',
+                          color: STATUS_COLORS[displayStatus]?.color || TEXT_MUTED
+                        }}>
+                          {displayLabel}
+                        </span>
+                      );
+                    })()}
                   </td>
                   {/* Due date */}
                   <td style={{ padding: '12px 16px', background: '#faf9ff', fontSize: 12, color: TEXT_MAIN }}>
