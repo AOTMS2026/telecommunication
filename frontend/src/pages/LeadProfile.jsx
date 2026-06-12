@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Smartphone } from 'lucide-react';
-import { leadsAPI, campaignsAPI, usersAPI, coursesAPI } from '../services/api';
+import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -219,6 +219,133 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
   );
 }
 
+
+// ── Callback Time Picker Modal ────────────────────────────────────────────────
+function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
+  const PRESETS = [
+    { label: '5 min', minutes: 5 },
+    { label: '10 min', minutes: 10 },
+    { label: '15 min', minutes: 15 },
+    { label: '30 min', minutes: 30 },
+    { label: '1 hour', minutes: 60 },
+    { label: '1 day', minutes: 1440 },
+  ];
+  const [selected, setSelected] = useState(null);
+  const [manualDate, setManualDate] = useState('');
+  const [manualTime, setManualTime] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const getScheduledAt = () => {
+    if (selected !== null) {
+      return new Date(Date.now() + selected * 60000);
+    }
+    if (manualDate && manualTime) {
+      return new Date(`${manualDate}T${manualTime}`);
+    }
+    return null;
+  };
+
+  const handleSave = async () => {
+    const scheduledAt = getScheduledAt();
+    if (!scheduledAt || isNaN(scheduledAt.getTime())) {
+      setError('Please select a time or enter a valid date/time.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const res = await followupsAPI.create({
+        lead: lead._id,
+        assignedTo: lead.assignedTo?._id || currentUser?._id,
+        scheduledAt: scheduledAt.toISOString(),
+        type: 'call_followup',
+        status: 'upcoming',
+        note: note || ('Callback scheduled for ' + lead.name),
+      });
+      onScheduled(res.data.followup, scheduledAt);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to schedule callback');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const scheduledAt = getScheduledAt();
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-orange-600" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-base">Schedule Callback</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          For <strong>{lead.name}</strong> ({lead.phone}) — pick a time to be reminded to call back.
+        </p>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {PRESETS.map(p => (
+            <button
+              key={p.label}
+              onClick={() => { setSelected(p.minutes); setManualDate(''); setManualTime(''); }}
+              className={`py-2 rounded-xl text-xs font-bold border transition-all ${selected === p.minutes ? 'bg-orange-500 text-white border-orange-500' : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'}`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Or set manually</p>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={manualDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => { setManualDate(e.target.value); setSelected(null); }}
+              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            <input
+              type="time"
+              value={manualTime}
+              onChange={e => { setManualTime(e.target.value); setSelected(null); }}
+              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
+        </div>
+        <textarea
+          className="w-full border border-gray-200 rounded-xl p-3 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-orange-400 mb-4"
+          rows={2}
+          placeholder="Add a note (optional)..."
+          value={note}
+          onChange={e => setNote(e.target.value)}
+        />
+        {scheduledAt && !isNaN(scheduledAt.getTime()) && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs text-orange-700 font-semibold">
+            Callback at: {scheduledAt.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+          </div>
+        )}
+        {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
+        <div className="flex gap-2.5">
+          <button onClick={onClose} className="btn-secondary flex-1 rounded-xl py-2.5 font-semibold text-sm">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !scheduledAt || isNaN(scheduledAt?.getTime())}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? 'Saving...' : 'Schedule'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LeadProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -236,6 +363,7 @@ export default function LeadProfile() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLogCallModal, setShowLogCallModal] = useState(false);
   const [showInitiateCallModal, setShowInitiateCallModal] = useState(false); // NEW
+  const [showCallbackModal, setShowCallbackModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
@@ -336,6 +464,15 @@ export default function LeadProfile() {
       await fetchLeadDetails();
     } catch (err) { console.error(err); }
     finally { setSavingInfo(false); }
+  };
+
+  const handleCallbackScheduled = async (followup, scheduledAt) => {
+    setShowCallbackModal(false);
+    // Also update lead status to 'Call Back Later'
+    try {
+      await leadsAPI.updateStatus(lead._id, { status: 'Call Back Later' });
+      await fetchLeadDetails();
+    } catch (err) { console.error(err); }
   };
 
   const handleAddNote = async (note, type) => {
@@ -635,7 +772,7 @@ export default function LeadProfile() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
                 { icon: Phone, label: 'CALL NOW', action: handleStartCall, color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isCalling },
-                { icon: Clock, label: 'CALLBACK LATER', action: () => handleStatusChange('Call Back Later'), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200' },
+                { icon: Clock, label: 'CALLBACK LATER', action: () => setShowCallbackModal(true), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200' },
                 { icon: MessageCircle, label: 'WHATSAPP LOG', action: () => handleInstantActivity('whatsapp', 'WhatsApp outreach message sent'), color: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-250' },
                 { icon: MessageSquare, label: 'SMS LOG', action: () => handleInstantActivity('sms', 'SMS template message dispatched'), color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200' },
                 { icon: Plus, label: 'ADD NOTE', action: () => setShowNoteModal(true), color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200' },
@@ -701,6 +838,7 @@ export default function LeadProfile() {
       {/* Modals */}
       {showNoteModal && <AddNoteModal onClose={() => setShowNoteModal(false)} onSubmit={handleAddNote} />}
       {showLogCallModal && <LogCallModal lead={lead} onClose={() => setShowLogCallModal(false)} onSubmit={handleLogManualCall} />}
+      {showCallbackModal && lead && <CallbackTimeModal lead={lead} currentUser={user} onClose={() => setShowCallbackModal(false)} onScheduled={handleCallbackScheduled} />}
 
       {/* NEW: Initiate Call Modal */}
       {showInitiateCallModal && (

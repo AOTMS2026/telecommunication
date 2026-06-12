@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { followupsAPI } from '../services/api';
 
 const PURPLE = '#5b3fc7';
@@ -7,20 +8,156 @@ const TEXT_MAIN = '#2d2d6b';
 const TEXT_MUTED = '#888';
 
 const STATUS_COLORS = {
-  pending: { bg: '#fff8e6', color: '#b45309' },
-  done: { bg: '#e8f8f0', color: '#22a163' },
-  late: { bg: '#fff0f0', color: '#e53e3e' },
-  cancelled: { bg: '#f3f4f6', color: '#6b7280' },
+  upcoming: { bg: '#fff8e6', color: '#b45309' },
+  pending:  { bg: '#fff8e6', color: '#b45309' },
+  done:     { bg: '#e8f8f0', color: '#22a163' },
+  late:     { bg: '#fff0f0', color: '#e53e3e' },
+  cancelled:{ bg: '#f3f4f6', color: '#6b7280' },
 };
 
 const PRIORITY_COLORS = {
-  high: { bg: '#fff0f0', color: '#e53e3e' },
+  high:   { bg: '#fff0f0', color: '#e53e3e' },
   medium: { bg: '#fff8e6', color: '#b45309' },
-  low: { bg: '#e8f8f0', color: '#22a163' },
+  low:    { bg: '#e8f8f0', color: '#22a163' },
 };
 
+// ── Edit Modal ────────────────────────────────────────────────────────────────
+function EditModal({ task, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    note: task.note || task.description || '',
+    scheduledAt: task.scheduledAt ? task.scheduledAt.slice(0, 16) : '',
+    priority: task.priority || 'medium',
+    status: task.status || 'upcoming',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const update = {
+        note: form.note,
+        scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
+        priority: form.priority,
+        status: form.status,
+      };
+      const res = await followupsAPI.update(task._id, update);
+      onSaved(res.data.followup);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Edit Follow-up</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
+        </div>
+
+        {task.lead?.name && (
+          <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: PURPLE, fontWeight: 600 }}>
+            📞 {task.lead.name} — {task.lead.phone}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Description / Note</label>
+            <textarea
+              value={form.note}
+              onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+              rows={3}
+              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Due Date & Time</label>
+            <input
+              type="datetime-local"
+              value={form.scheduledAt}
+              onChange={e => setForm(f => ({ ...f, scheduledAt: e.target.value }))}
+              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Priority</label>
+              <select
+                value={form.priority}
+                onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+                style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+              >
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Status</label>
+              <select
+                value={form.status}
+                onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 10 }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Download helper ───────────────────────────────────────────────────────────
+function downloadCSV(tasks, tab) {
+  const headers = ['Lead Name', 'Phone', 'Description', 'Assignee', 'Status', 'Due Date', 'Priority'];
+  const rows = tasks.map(t => [
+    t.lead?.name || '',
+    t.lead?.phone || '',
+    t.note || t.description || '',
+    t.assignedTo?.name || '',
+    t.status || '',
+    t.scheduledAt ? new Date(t.scheduledAt).toLocaleDateString('en-IN') : '',
+    t.priority || '',
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${tab.replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function Tasks() {
-  const [activeTab, setActiveTab] = useState('Call Followups');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab');
+    return tab || 'Call Followups';
+  });
   const [forFilter, setForFilter] = useState('Me');
   const [dueFilter, setDueFilter] = useState(null);
   const [statusFilter, setStatusFilter] = useState(['pending', 'late']);
@@ -30,15 +167,13 @@ export default function Tasks() {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [sortField, setSortField] = useState('dueDate');
   const [sortDir, setSortDir] = useState('asc');
+  const [editingTask, setEditingTask] = useState(null);
 
   const fetchTasks = async () => {
     setLoading(true);
     try {
-      // Map frontend status names to backend values
-      // Backend uses 'upcoming' for pending, 'done', 'late', 'cancelled'
       const statusMap = { pending: 'upcoming', late: 'upcoming', done: 'done', cancelled: 'cancelled' };
       const mappedStatuses = [...new Set(statusFilter.map(s => statusMap[s] || s))];
-
       const res = await followupsAPI.getAll({
         forMe: forFilter === 'Me',
         due: dueFilter ? dueFilter.toLowerCase().replace(' ', '_') : undefined,
@@ -46,19 +181,14 @@ export default function Tasks() {
         type: activeTab === 'Call Followups' ? 'call_followup' : 'todo',
       });
       let items = res.data.followups || res.data.tasks || [];
-
-      // Client-side: filter overdue if 'late' selected but 'pending' not (late = upcoming + past date)
       if (statusFilter.includes('late') && !statusFilter.includes('pending')) {
         items = items.filter(t => t.status === 'upcoming' && new Date(t.scheduledAt) < new Date());
       } else if (statusFilter.includes('pending') && !statusFilter.includes('late')) {
         items = items.filter(t => !(t.status === 'upcoming' && new Date(t.scheduledAt) < new Date()) || t.status === 'upcoming');
       }
-
-      // Client-side priority filter
       if (priorityFilter) {
         items = items.filter(t => t.priority === priorityFilter);
       }
-
       setTasks(items);
     } catch (err) {
       console.error(err);
@@ -73,23 +203,34 @@ export default function Tasks() {
   const additionalRef = useRef(null);
   useEffect(() => {
     const handler = (e) => {
-      if (additionalRef.current && !additionalRef.current.contains(e.target)) {
-        setShowAdditional(false);
-      }
+      if (additionalRef.current && !additionalRef.current.contains(e.target)) setShowAdditional(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const toggleStatus = (s) => {
-    setStatusFilter(prev =>
-      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-    );
+    setStatusFilter(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
   const handleSort = (field) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const handleDelete = async (taskId) => {
+    if (!window.confirm('Delete this follow-up? This cannot be undone.')) return;
+    try {
+      await followupsAPI.delete(taskId);
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    } catch (err) {
+      alert('Failed to delete: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleEditSaved = (updated) => {
+    setTasks(prev => prev.map(t => t._id === updated._id ? { ...t, ...updated } : t));
+    setEditingTask(null);
   };
 
   const SortIcon = ({ field }) => (
@@ -103,6 +244,14 @@ export default function Tasks() {
 
   return (
     <div style={{ padding: 24 }}>
+      {editingTask && (
+        <EditModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={handleEditSaved}
+        />
+      )}
+
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -121,7 +270,6 @@ export default function Tasks() {
           </div>
         </div>
 
-        {/* Bulk upload button */}
         <label style={{
           background: PURPLE, color: '#fff', border: 'none',
           padding: '9px 18px', borderRadius: 8, fontSize: 13,
@@ -145,7 +293,7 @@ export default function Tasks() {
                 const formData = new FormData();
                 formData.append('file', file);
                 const res = await followupsAPI.import(formData);
-                alert(`✅ Bulk upload complete: ${res.data.count} of ${res.data.total} tasks created.`);
+                alert(`Bulk upload complete: ${res.data.count} of ${res.data.total} tasks created.`);
                 fetchTasks();
               } catch (err) {
                 alert('Failed to import tasks: ' + (err.response?.data?.message || err.message));
@@ -190,13 +338,11 @@ export default function Tasks() {
 
       {/* Filters bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        {/* For filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
           </svg>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>For:</span>
-
           <button
             onClick={() => setForFilter('Me')}
             style={{
@@ -207,14 +353,11 @@ export default function Tasks() {
               fontSize: 12, fontWeight: 600, cursor: 'pointer'
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-              stroke={forFilter === 'Me' ? '#fff' : PURPLE} strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={forFilter === 'Me' ? '#fff' : PURPLE} strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
             Me
           </button>
-
           <button
             onClick={() => setForFilter('Team')}
             style={{
@@ -227,10 +370,8 @@ export default function Tasks() {
             }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={forFilter === 'Team' ? '#fff' : PURPLE} strokeWidth="2">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
             Team
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={forFilter === 'Team' ? '#fff' : '#aaa'} strokeWidth="2.5">
@@ -239,23 +380,18 @@ export default function Tasks() {
           </button>
         </div>
 
-        {/* Divider */}
         <div style={{ width: 1, height: 20, background: '#e5e2f5' }} />
 
-        {/* Due filter */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Due:</span>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
             border: `1px solid ${dueFilter ? PURPLE : '#e5e2f5'}`, borderRadius: 6,
             background: dueFilter ? '#f0ecff' : '#fff', padding: '5px 10px', cursor: 'pointer',
-            transition: 'all 0.15s'
           }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
-              <rect x="3" y="4" width="18" height="18" rx="2"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
             <select
               value={dueFilter || ''}
@@ -268,11 +404,8 @@ export default function Tasks() {
               ))}
             </select>
             {dueFilter && (
-              <span
-                onClick={(e) => { e.stopPropagation(); setDueFilter(null); }}
-                style={{ cursor: 'pointer', color: PURPLE, fontWeight: 700, fontSize: 14, lineHeight: 1, marginLeft: 2 }}
-                title="Clear filter"
-              >×</span>
+              <span onClick={(e) => { e.stopPropagation(); setDueFilter(null); }}
+                style={{ cursor: 'pointer', color: PURPLE, fontWeight: 700, fontSize: 14, lineHeight: 1, marginLeft: 2 }}>×</span>
             )}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
@@ -280,10 +413,8 @@ export default function Tasks() {
           </div>
         </div>
 
-        {/* Divider */}
         <div style={{ width: 1, height: 20, background: '#e5e2f5' }} />
 
-        {/* Status filter - colored squares */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Status:</span>
           <div style={{
@@ -291,35 +422,18 @@ export default function Tasks() {
             border: '1px solid #e5e2f5', borderRadius: 6,
             background: '#fff', padding: '5px 10px', cursor: 'pointer'
           }}>
-            {/* Orange square = pending */}
-            <div
-              onClick={() => toggleStatus('pending')}
-              style={{
-                width: 16, height: 16, borderRadius: 3,
-                background: '#f59e0b',
-                opacity: statusFilter.includes('pending') ? 1 : 0.3,
-                cursor: 'pointer', transition: 'opacity 0.15s'
-              }}
-              title="Pending"
-            />
-            {/* Red square = late/overdue */}
-            <div
-              onClick={() => toggleStatus('late')}
-              style={{
-                width: 16, height: 16, borderRadius: 3,
-                background: '#e53e3e',
-                opacity: statusFilter.includes('late') ? 1 : 0.3,
-                cursor: 'pointer', transition: 'opacity 0.15s'
-              }}
-              title="Late / Overdue"
-            />
+            <div onClick={() => toggleStatus('pending')}
+              style={{ width: 16, height: 16, borderRadius: 3, background: '#f59e0b', opacity: statusFilter.includes('pending') ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.15s' }}
+              title="Pending" />
+            <div onClick={() => toggleStatus('late')}
+              style={{ width: 16, height: 16, borderRadius: 3, background: '#e53e3e', opacity: statusFilter.includes('late') ? 1 : 0.3, cursor: 'pointer', transition: 'opacity 0.15s' }}
+              title="Late / Overdue" />
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
         </div>
 
-        {/* Additional Filters */}
         <div ref={additionalRef} style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Additional Filters:</span>
           <button
@@ -339,11 +453,8 @@ export default function Tasks() {
             </svg>
           </button>
           {priorityFilter && (
-            <span
-              onClick={() => setPriorityFilter('')}
-              style={{ cursor: 'pointer', color: PURPLE, fontWeight: 700, fontSize: 14 }}
-              title="Clear"
-            >×</span>
+            <span onClick={() => setPriorityFilter('')}
+              style={{ cursor: 'pointer', color: PURPLE, fontWeight: 700, fontSize: 14 }}>×</span>
           )}
           {showAdditional && (
             <div style={{
@@ -384,13 +495,18 @@ export default function Tasks() {
           )}
         </div>
 
-        {/* Spacer + Download */}
         <div style={{ flex: 1 }} />
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: 12, color: PURPLE, fontWeight: 600
-        }}>
+
+        {/* DOWNLOAD — exports real filtered data as CSV */}
+        <button
+          onClick={() => downloadCSV(tasks, activeTab)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, color: PURPLE, fontWeight: 600
+          }}
+          title="Download current list as CSV"
+        >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
@@ -400,7 +516,6 @@ export default function Tasks() {
         </button>
       </div>
 
-      {/* Matching count */}
       <div style={{ fontSize: 12, color: TEXT_MUTED, marginBottom: 12 }}>
         <span style={{ fontWeight: 700, color: TEXT_MAIN }}>{tasks.length}</span> matching tasks found
       </div>
@@ -450,7 +565,8 @@ export default function Tasks() {
             {loading ? (
               <tr>
                 <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center' }}>
-                  <div className="animate-spin" style={{ width: 24, height: 24, border: `3px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto' }} />
+                  <div style={{ width: 24, height: 24, border: `3px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
+                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </td>
               </tr>
             ) : tasks.length === 0 ? (
@@ -466,15 +582,29 @@ export default function Tasks() {
                   onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  {/* Lead */}
+                  {/* Lead — clickable, navigates to lead profile */}
                   <td style={{ padding: '12px 16px', fontSize: 13, color: TEXT_MAIN, fontWeight: 500 }}>
-                    <div style={{ fontWeight: 600 }}>{task.lead?.name || '—'}</div>
-                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{task.lead?.phone}</div>
+                    {task.lead?._id ? (
+                      <div
+                        onClick={() => navigate(`/leads/${task.lead._id}`)}
+                        style={{ cursor: 'pointer' }}
+                        title="Open lead profile"
+                      >
+                        <div style={{ fontWeight: 600, color: PURPLE, textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                          {task.lead.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: TEXT_MUTED }}>{task.lead.phone}</div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div style={{ fontWeight: 600 }}>—</div>
+                      </div>
+                    )}
                   </td>
                   {/* Description */}
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#555', maxWidth: 200 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {task.description || task.note || '—'}
+                      {task.note || task.description || '—'}
                     </div>
                   </td>
                   {/* Assignee */}
@@ -486,9 +616,11 @@ export default function Tasks() {
                         fontSize: 11, fontWeight: 700,
                         display: 'flex', alignItems: 'center', justifyContent: 'center'
                       }}>
-                        {task.assignee?.name?.slice(0, 2).toUpperCase() || 'ME'}
+                        {(task.assignedTo?.name || task.assignee?.name || 'ME').slice(0, 2).toUpperCase()}
                       </div>
-                      <span style={{ fontSize: 12, color: TEXT_MAIN }}>{task.assignee?.name || 'Me'}</span>
+                      <span style={{ fontSize: 12, color: TEXT_MAIN }}>
+                        {task.assignedTo?.name || task.assignee?.name || 'Me'}
+                      </span>
                     </div>
                   </td>
                   {/* Status */}
@@ -498,7 +630,7 @@ export default function Tasks() {
                       background: STATUS_COLORS[task.status]?.bg || '#f3f4f6',
                       color: STATUS_COLORS[task.status]?.color || TEXT_MUTED
                     }}>
-                      {task.status || 'pending'}
+                      {task.status || 'upcoming'}
                     </span>
                   </td>
                   {/* Due date */}
@@ -514,19 +646,33 @@ export default function Tasks() {
                       background: PRIORITY_COLORS[task.priority || 'low']?.bg || '#f3f4f6',
                       color: PRIORITY_COLORS[task.priority || 'low']?.color || TEXT_MUTED
                     }}>
-                      {task.priority || 'Low'}
+                      {task.priority || 'low'}
                     </span>
                   </td>
                   {/* Actions */}
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button title="Edit" style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer' }}>
+                      {/* Edit */}
+                      <button
+                        title="Edit"
+                        onClick={() => setEditingTask(task)}
+                        style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = PURPLE}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e2f5'}
+                      >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
                       </button>
-                      <button title="Delete" style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer' }}>
+                      {/* Delete */}
+                      <button
+                        title="Delete"
+                        onClick={() => handleDelete(task._id)}
+                        style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = '#e53e3e'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e2f5'}
+                      >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2">
                           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
                           <path d="M10 11v6"/><path d="M14 11v6"/>
