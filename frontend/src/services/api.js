@@ -74,6 +74,8 @@ export const reportsAPI = {
   getAdminAnalysis: () => api.get('/reports/admin-analysis'),
   userAnalysis: (userId) => api.get(`/reports/user-analysis/${userId}`),
   getUserAnalysis: (userId) => api.get(`/reports/user-analysis/${userId}`),
+  leadView: (params) => api.get('/reports/lead-view', { params }),
+  leadViewFilters: () => api.get('/reports/lead-view-filters'),
 };
 
 export const usersAPI = {

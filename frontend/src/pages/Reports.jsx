@@ -149,37 +149,44 @@ function LeaderboardTab() {
   );
 }
 
-// Lead View chart section — mirrors the TeleCRM chart UI in image 2
+// Lead View chart section — mirrors the TeleCRM chart UI
 function LeadViewCharts({ summary }) {
   const [chartTab, setChartTab] = useState('Status');
-  const [groupBy, setGroupBy] = useState('None');
   const [chartType, setChartType] = useState('Bar');
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [total, setTotal] = useState(0);
+  const [assigneeId, setAssigneeId] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [assignees, setAssignees] = useState([]);
+  const [sources, setSources] = useState([]);
+
+  // Load filter options once
+  useEffect(() => {
+    reportsAPI.leadViewFilters().then(res => {
+      setAssignees(res.data.assignees || []);
+      setSources(res.data.sources || []);
+    }).catch(console.error);
+  }, []);
 
   const fetchChartData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await leadsAPI.getStats();
-      const statusCounts = res.data.statusCounts || [];
-
-      if (chartTab === 'Status') {
-        const data = statusCounts.map(s => ({ name: s._id, value: s.count }));
-        setChartData(data);
-        setTotal(data.reduce((a, b) => a + b.value, 0));
-      } else {
-        // For other tabs show status as fallback (extend backend for real data)
-        setChartData(statusCounts.map(s => ({ name: s._id, value: s.count })));
-        setTotal(statusCounts.reduce((a, b) => a + b.count, 0));
-      }
+      const params = { tab: chartTab };
+      if (assigneeId) params.assigneeId = assigneeId;
+      if (statusFilter) params.status = statusFilter;
+      if (dateRange.start) params.startDate = dateRange.start;
+      if (dateRange.end) params.endDate = dateRange.end;
+      const res = await reportsAPI.leadView(params);
+      setChartData(res.data.data || []);
+      setTotal(res.data.total || 0);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [chartTab]);
+  }, [chartTab, assigneeId, statusFilter, dateRange.start, dateRange.end]);
 
   useEffect(() => { fetchChartData(); }, [fetchChartData]);
 
@@ -229,14 +236,20 @@ function LeadViewCharts({ summary }) {
       <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Assignee</span>
-          <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
-            <option>All Assignees</option>
+          <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
+            <option value="">All Assignees</option>
+            {assignees.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Status</span>
-          <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
-            <option>All</option>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
+            <option value="">All</option>
+            {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost','Blocked'].map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
           </select>
         </div>
         <div className="flex items-center gap-2">
@@ -255,19 +268,11 @@ function LeadViewCharts({ summary }) {
             <option>Pie</option>
             <option>Area</option>
           </select>
-          <select value={groupBy} onChange={e => setGroupBy(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none">
-            <option>Group By</option>
-            <option>Status</option>
-            <option>Assignee</option>
-            <option>Source</option>
-          </select>
           <button onClick={fetchChartData} className="p-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
-
       {/* Chart */}
       <div className="p-5">
         {loading ? (

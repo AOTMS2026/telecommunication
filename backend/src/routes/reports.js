@@ -337,3 +337,104 @@ router.get('/user-analysis/:userId', protect, authorize('admin', 'super admin'),
 });
 
 module.exports = router;
+// GET /api/reports/lead-view
+router.get('/lead-view', protect, async (req, res) => {
+  try {
+    const { tab = 'Status', assigneeId, status, startDate, endDate } = req.query;
+    const matchQuery = {};
+    if (req.user.role === 'caller') matchQuery.assignedTo = req.user._id;
+    if (assigneeId && assigneeId !== 'all' && assigneeId !== '') matchQuery.assignedTo = new mongoose.Types.ObjectId(assigneeId);
+    if (status && status !== 'all' && status !== '') matchQuery.status = status;
+    if (startDate || endDate) {
+      matchQuery.createdAt = {};
+      if (startDate) matchQuery.createdAt.$gte = new Date(startDate);
+      if (endDate) { const end = new Date(endDate); end.setHours(23,59,59,999); matchQuery.createdAt.$lte = end; }
+    }
+
+    let pipeline = [];
+
+    if (tab === 'Assignee') {
+      pipeline = [
+        { $match: matchQuery },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+        { $project: { name: { $ifNull: ['$user.name', 'Unassigned'] }, count: 1 } },
+        { $sort: { count: -1 } }
+      ];
+      const data = await Lead.aggregate(pipeline);
+      return res.json({ data: data.map(d => ({ name: d.name, value: d.count })), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    if (tab === 'Lead source') {
+      const data = await Lead.aggregate([{ $match: matchQuery }, { $group: { _id: '$leadSource', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+      return res.json({ data: data.map(d=>({name: d._id||'Unknown', value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    if (tab === 'Rating') {
+      const data = await Lead.aggregate([{ $match: matchQuery }, { $group: { _id: { $toString: '$rating' }, count: { $sum: 1 } } }, { $sort: { _id: 1 } }]);
+      return res.json({ data: data.map(d=>({name: `Rating ${d._id}`, value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    if (tab === 'Call status') {
+      const data = await Lead.aggregate([
+        { $match: matchQuery },
+        { $unwind: { path: '$activities', preserveNullAndEmptyArrays: true } },
+        { $match: { 'activities.type': 'call' } },
+        { $sort: { 'activities.createdAt': -1 } },
+        { $group: { _id: '$_id', callStatus: { $first: '$activities.callStatus' } } },
+        { $group: { _id: '$callStatus', count: { $sum: 1 } } },
+        { $sort: { count: -1 } }
+      ]);
+      return res.json({ data: data.map(d=>({name: d._id||'No Call', value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    if (tab === 'Number of calls placed') {
+      const data = await Lead.aggregate([
+        { $match: matchQuery },
+        { $project: { callBucket: { $switch: { branches: [
+          { case: { $eq: ['$totalCalls', 0] }, then: '0 calls' },
+          { case: { $lte: ['$totalCalls', 2] }, then: '1-2 calls' },
+          { case: { $lte: ['$totalCalls', 5] }, then: '3-5 calls' },
+          { case: { $lte: ['$totalCalls', 10] }, then: '6-10 calls' }
+        ], default: '10+ calls' } } } },
+        { $group: { _id: '$callBucket', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }
+      ]);
+      return res.json({ data: data.map(d=>({name: d._id, value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    if (tab === 'Created on') {
+      const data = await Lead.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } }, { $limit: 30 }
+      ]);
+      return res.json({ data: data.map(d=>({name: d._id, value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+    }
+    // Default: Status
+    const data = await Lead.aggregate([{ $match: matchQuery }, { $group: { _id: '$status', count: { $sum: 1 } } }, { $sort: { count: -1 } }]);
+    res.json({ data: data.map(d=>({name: d._id||'Unknown', value: d.count})), total: data.reduce((a,b)=>a+b.count,0) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/reports/lead-view-filters
+router.get('/lead-view-filters', protect, async (req, res) => {
+  try {
+    const [assignees, sources] = await Promise.all([
+      Lead.aggregate([
+        { $match: { assignedTo: { $ne: null } } },
+        { $group: { _id: '$assignedTo' } },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+        { $unwind: '$user' },
+        { $project: { _id: 1, name: '$user.name' } },
+        { $sort: { name: 1 } }
+      ]),
+      Lead.aggregate([
+        { $match: { leadSource: { $exists: true, $ne: null, $ne: '' } } },
+        { $group: { _id: '$leadSource' } },
+        { $sort: { _id: 1 } }
+      ])
+    ]);
+    res.json({ assignees: assignees.map(a=>({_id: a._id, name: a.name})), sources: sources.map(s=>s._id).filter(Boolean) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
