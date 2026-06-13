@@ -17,11 +17,12 @@ import Blocklist from './pages/Blocklist';
 import MyPreferences from './pages/MyPreferences';
 import WhatsApp from './pages/WhatsApp';
 import Users from './pages/Users';
-
 import StaleLeads from './pages/StaleLeads';
 import BulkImport from './pages/BulkImport';
 import TeamOperations from './pages/TeamOperations';
 import LeadProfile from './pages/LeadProfile';
+import Integrations from './pages/Integrations';
+import IntegrationDetail from './pages/IntegrationDetail';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -70,6 +71,8 @@ export default function App() {
             <Route path="stale-leads" element={<StaleLeads />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="team-operations" element={<TeamOperations />} />
+            <Route path="integrations" element={<Integrations />} />
+            <Route path="integrations/:id" element={<IntegrationDetail />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

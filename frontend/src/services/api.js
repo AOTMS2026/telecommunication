@@ -118,3 +118,12 @@ export const bulkImportAPI = {
 };
 
 export default api;
+export const integrationsAPI = {
+  getAll: () => api.get('/integrations'),
+  getOne: (id) => api.get(`/integrations/${id}`),
+  create: (data) => api.post('/integrations', data),
+  update: (id, data) => api.put(`/integrations/${id}`, data),
+  remove: (id) => api.delete(`/integrations/${id}`),
+  getLeads: (id, params) => api.get(`/integrations/${id}/leads`, { params }),
+  testWebhook: (id) => api.post(`/integrations/${id}/test-webhook`),
+};

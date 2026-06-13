@@ -103,6 +103,7 @@ export default function Leads() {
   const [statusStats, setStatusStats] = useState([]);
   const [statsLoading, setStatsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   // Load callers list for admin
   useEffect(() => {
@@ -220,10 +221,36 @@ export default function Leads() {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button onClick={() => navigate('/leads/new')} className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-sm">
-            <Plus className="w-4 h-4" />
-            Add Lead
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowAddMenu(v => !v)}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Lead
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {showAddMenu && (
+              <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #e5e2f5', borderRadius: 10, boxShadow: '0 8px 24px rgba(99,102,241,0.13)', minWidth: 200, zIndex: 300, overflow: 'hidden' }}
+                onMouseLeave={() => setShowAddMenu(false)}>
+                <div style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid #f0eef8' }}>Add Leads</div>
+                {[
+                  { label: 'Add Single Lead', to: '/leads/new', icon: '👤' },
+                  { label: 'Add From Excel', to: '/bulk-import', icon: '📊' },
+                  { label: 'Add From Integration', to: '/integrations', icon: '🔗' },
+                ].map(item => (
+                  <div key={item.to}
+                    onClick={() => { setShowAddMenu(false); navigate(item.to); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 14, color: '#374151' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                  >
+                    <span>{item.icon}</span>{item.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -7,6 +7,9 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const { initFCM } = require('./services/fcm');
+const http = require('node:http');
+const { WebSocketServer } = require('ws');
+const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -52,6 +55,8 @@ app.use('/api/courses', apiLimiter, require('./routes/courses'));
 app.use('/api/blocklist', apiLimiter, require('./routes/blocklist'));
 app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates'));
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
+app.use('/api/ai-caller', require('./routes/aiCaller'));
+app.use('/api/integrations', require('./routes/integrations'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
@@ -62,7 +67,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
+
+// ── WebSocket server for Twilio ConversationRelay ─────────────────────────────
+const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
+wss.on('connection', (ws) => handleConversationRelay(ws));
+
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  app.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
+  server.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
 }
+
 module.exports = app;
