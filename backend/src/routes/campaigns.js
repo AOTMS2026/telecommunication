@@ -91,6 +91,21 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
   }
 });
 
+// DELETE /api/campaigns/:id
+router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+
+    await Lead.updateMany({ campaign: campaign._id }, { $unset: { campaign: '' } });
+    await Campaign.findByIdAndDelete(campaign._id);
+
+    res.json({ message: 'Campaign deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST /api/campaigns/:id/add-leads  — bulk assign existing leads to this campaign
 router.post('/:id/add-leads', protect, authorize('admin', 'super admin'), async (req, res) => {
   try {

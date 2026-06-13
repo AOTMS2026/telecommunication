@@ -295,6 +295,17 @@ export default function Campaigns() {
 
   const refresh = () => loadCampaigns();
 
+  const handleDeleteCampaign = async (campaign, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete campaign "${campaign.name}"? This will remove it from any linked leads.`)) return;
+    try {
+      await campaignsAPI.delete(campaign._id);
+      await loadCampaigns();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete campaign');
+    }
+  };
+
   return (
     <div style={{ padding: 24 }}>
       {/* Header */}
@@ -534,6 +545,15 @@ export default function Campaigns() {
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                             <polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/>
+                          </svg>
+                        </button>
+                        <button
+                          title="Delete campaign"
+                          style={{ background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          onClick={(e) => handleDeleteCampaign(c, e)}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/>
                           </svg>
                         </button>
                         <button

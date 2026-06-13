@@ -9,6 +9,20 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: '' },
   isActive: { type: Boolean, default: true },
   phone: { type: String, default: '' },
+  preferences: {
+    type: Object,
+    default: {
+      email: 'Send to Mobile',
+      whatsapp: 'Send to Mobile',
+      notifications: {
+        paymentPending: true,
+        paymentCompleted: true,
+        paymentFailed: true,
+        newLeadInCampaign: true,
+        callReminder: true,
+      },
+    },
+  },
   // FCM token for push notifications to mobile app
   fcmToken: { type: String, default: '' },
   fcmTokenUpdatedAt: { type: Date },

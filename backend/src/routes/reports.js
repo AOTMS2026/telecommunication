@@ -26,7 +26,12 @@ router.get('/leaderboard', protect, async (req, res) => {
       start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
     } else if (period === 'year') {
       start = new Date(); start.setMonth(0, 1); start.setHours(0, 0, 0, 0);
+    } else {
+      // 'all' and any unknown value should return the full available history.
+      start = new Date(0);
+      end = new Date();
     }
+    
 
     const dateMatch = period === 'custom'
       ? { 'activities.createdAt': { $gte: start, $lte: end } }

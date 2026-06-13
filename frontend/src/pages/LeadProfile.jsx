@@ -352,6 +352,7 @@ export default function LeadProfile() {
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super admin';
   const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+  const isCaller = user?.role === 'caller';
 
   const [lead, setLead] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -368,6 +369,8 @@ export default function LeadProfile() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockEntryId, setBlockEntryId] = useState(null);
   const [blockingAction, setBlockingAction] = useState(false);
+
+  const [activityFilter, setActivityFilter] = useState('all');
 
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -425,6 +428,10 @@ export default function LeadProfile() {
       if (isBlocked) {
         if (blockEntryId) await blocklistAPI.remove(blockEntryId);
         else await blocklistAPI.removeByPhone(lead.phone);
+        if (lead.status === 'Blocked') {
+          await leadsAPI.updateStatus(lead._id, { status: 'Fresh' });
+          setLead(prev => prev ? { ...prev, status: 'Fresh' } : prev);
+        }
         setIsBlocked(false);
         setBlockEntryId(null);
       } else {
@@ -613,7 +620,7 @@ export default function LeadProfile() {
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          {isSuperAdmin && (
+          {(isAdmin || (isCaller && (lead?.assignedTo?._id === user?._id || lead?.assignedTo === user?._id))) && (
             <button onClick={handleDeleteLead} className="w-9 h-9 rounded-xl border border-red-200 hover:bg-red-50 text-red-500 flex items-center justify-center transition-all hover:text-red-700 active:scale-95" title="Delete Lead">
               <Trash2 className="w-4 h-4" />
             </button>
@@ -859,15 +866,62 @@ export default function LeadProfile() {
 
           {/* Activity Timeline */}
           <div className="card bg-white rounded-2xl border border-gray-200 shadow-xs p-6">
-            <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide mb-6 pb-2.5 border-b border-gray-100">Activity & calling history</h3>
+            <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide mb-4 pb-2.5 border-b border-gray-100">Activity & Calling History</h3>
+
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap gap-1.5 mb-5">
+              {[
+                { key: 'all', label: 'All' },
+                { key: 'call', label: 'Calls' },
+                { key: 'whatsapp', label: 'WhatsApp' },
+                { key: 'sms', label: 'SMS' },
+                { key: 'followup', label: 'Callback Later' },
+                { key: 'note', label: 'Notes' },
+              ].map(tab => {
+                const count = tab.key === 'all'
+                  ? (lead.activities?.length || 0)
+                  : (lead.activities?.filter(a => a.type === tab.key).length || 0);
+                const isActive = activityFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActivityFilter(tab.key)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: isActive ? '#5b3fc7' : '#f3f4f6',
+                      color: isActive ? '#fff' : '#6b7280',
+                      border: isActive ? '1px solid #5b3fc7' : '1px solid #e5e7eb',
+                    }}
+                  >
+                    {tab.label}
+                    <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+                      style={{ background: isActive ? 'rgba(255,255,255,0.25)' : '#e5e7eb', color: isActive ? '#fff' : '#9ca3af' }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Timeline */}
             <div className="relative border-l border-gray-100 ml-4 space-y-6">
-              {lead.activities?.length === 0 ? (
-                <div className="text-center py-10">
-                  <Clock className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">No activity history logged yet.</p>
-                </div>
-              ) : (
-                lead.activities?.map((a, i) => (
+              {(() => {
+                const filtered = activityFilter === 'all'
+                  ? (lead.activities || [])
+                  : (lead.activities || []).filter(a => a.type === activityFilter);
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-10">
+                      <Clock className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">
+                        {activityFilter === 'all' ? 'No activity history logged yet.' : `No ${activityFilter} activity found.`}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return filtered.map((a, i) => (
                   <div key={i} className="relative pl-6">
                     <div className="absolute -left-3.5 top-0 w-7 h-7 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center text-gray-500">
                       {activityIcon(a.type)}
@@ -894,8 +948,8 @@ export default function LeadProfile() {
                       </div>
                     </div>
                   </div>
-                ))
-              )}
+                ));
+              })()}
             </div>
           </div>
         </div>

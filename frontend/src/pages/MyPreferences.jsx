@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usersAPI } from '../services/api';
 
 const Toggle = ({ checked, onChange }) => (
   <div
@@ -39,8 +40,56 @@ export default function MyPreferences() {
     newLeadInCampaign: true,
     callReminder: true,
   });
+  const [saving, setSaving] = useState(false);
 
-  const toggleNotif = (key) => setNotifs(prev => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const res = await usersAPI.getPreferences();
+        const prefs = res.data.preferences || {};
+        setEmailPref(prefs.email || 'Send to Mobile');
+        setWhatsappPref(prefs.whatsapp || 'Send to Mobile');
+        setNotifs({
+          paymentPending: prefs.notifications?.paymentPending ?? true,
+          paymentCompleted: prefs.notifications?.paymentCompleted ?? true,
+          paymentFailed: prefs.notifications?.paymentFailed ?? true,
+          newLeadInCampaign: prefs.notifications?.newLeadInCampaign ?? true,
+          callReminder: prefs.notifications?.callReminder ?? true,
+        });
+      } catch (err) {
+        console.error('Failed to load preferences', err);
+      }
+    };
+
+    loadPreferences();
+  }, []);
+
+  const savePreferences = async (next) => {
+    setSaving(true);
+    try {
+      await usersAPI.updatePreferences({ preferences: next });
+    } catch (err) {
+      console.error('Failed to save preferences', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateEmail = (value) => {
+    setEmailPref(value);
+    savePreferences({ email: value, whatsapp: whatsappPref, notifications: notifs });
+  };
+
+  const updateWhatsapp = (value) => {
+    setWhatsappPref(value);
+    savePreferences({ email: emailPref, whatsapp: value, notifications: notifs });
+  };
+
+  const toggleNotif = (key) => {
+    const nextNotifs = { ...notifs, [key]: !notifs[key] };
+    setNotifs(nextNotifs);
+    savePreferences({ email: emailPref, whatsapp: whatsappPref, notifications: nextNotifs });
+  };
 
   const notifItems = [
     { key: 'paymentPending', label: 'Payment Pending' },

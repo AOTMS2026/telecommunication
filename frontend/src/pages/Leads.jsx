@@ -163,8 +163,12 @@ export default function Leads() {
   const handleDelete = async (id, e) => {
     e.stopPropagation();
     if (!confirm('Delete this lead?')) return;
-    await leadsAPI.delete(id);
-    fetchLeads();
+    try {
+      await leadsAPI.delete(id);
+      fetchLeads();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete lead');
+    }
   };
 
   const handleBlock = async (lead, e) => {
@@ -433,7 +437,7 @@ export default function Leads() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Rating</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignee</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Created On</th>
-                    {isAdmin && <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>}
+                    {(isAdmin || isCaller) && <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -515,16 +519,18 @@ export default function Leads() {
                         <td className="px-4 py-3 text-sm text-gray-400">
                           {lead.createdAt ? format(new Date(lead.createdAt), 'd MMM yyyy') : '—'}
                         </td>
-                        {isAdmin && (
+                        {(isAdmin || isCaller) && (
                           <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={e => handleBlock(lead, e)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                                title="Block"
-                              >
-                                <Ban className="w-3.5 h-3.5" />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={e => handleBlock(lead, e)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                  title="Block"
+                                >
+                                  <Ban className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                               <button
                                 onClick={e => handleDelete(lead._id, e)}
                                 className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"

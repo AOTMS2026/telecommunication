@@ -30,6 +30,122 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
+// GET /api/users/preferences
+router.get('/preferences', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('preferences');
+    res.json({
+      preferences: user?.preferences || {
+        email: 'Send to Mobile',
+        whatsapp: 'Send to Mobile',
+        notifications: {
+          paymentPending: true,
+          paymentCompleted: true,
+          paymentFailed: true,
+          newLeadInCampaign: true,
+          callReminder: true,
+        },
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /api/users/preferences
+router.put('/preferences', protect, async (req, res) => {
+  try {
+    const defaults = {
+      email: 'Send to Mobile',
+      whatsapp: 'Send to Mobile',
+      notifications: {
+        paymentPending: true,
+        paymentCompleted: true,
+        paymentFailed: true,
+        newLeadInCampaign: true,
+        callReminder: true,
+      },
+    };
+
+    const nextPreferences = {
+      ...defaults,
+      ...(req.body?.preferences || req.body || {}),
+      notifications: {
+        ...defaults.notifications,
+        ...((req.body?.preferences || req.body || {}).notifications || {}),
+      },
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferences: nextPreferences },
+      { new: true }
+    ).select('preferences');
+
+    res.json({ preferences: user?.preferences || nextPreferences });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/users/preferences
+router.get('/preferences', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('preferences');
+    res.json({
+      preferences: user?.preferences || {
+        email: 'Send to Mobile',
+        whatsapp: 'Send to Mobile',
+        notifications: {
+          paymentPending: true,
+          paymentCompleted: true,
+          paymentFailed: true,
+          newLeadInCampaign: true,
+          callReminder: true,
+        },
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /api/users/preferences
+router.put('/preferences', protect, async (req, res) => {
+  try {
+    const defaults = {
+      email: 'Send to Mobile',
+      whatsapp: 'Send to Mobile',
+      notifications: {
+        paymentPending: true,
+        paymentCompleted: true,
+        paymentFailed: true,
+        newLeadInCampaign: true,
+        callReminder: true,
+      },
+    };
+
+    const nextPreferences = {
+      ...defaults,
+      ...(req.body?.preferences || req.body || {}),
+      notifications: {
+        ...defaults.notifications,
+        ...((req.body?.preferences || req.body || {}).notifications || {}),
+      },
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { preferences: nextPreferences },
+      { new: true }
+    ).select('preferences');
+
+    res.json({ preferences: user?.preferences || nextPreferences });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // PUT /api/users/:id
 router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
   try {

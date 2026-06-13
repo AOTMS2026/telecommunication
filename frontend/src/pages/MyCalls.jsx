@@ -282,6 +282,10 @@ export default function MyCalls() {
       } else {
         await blocklistAPI.removeByPhone(selected.phone);
       }
+      if (selected.status === 'Blocked') {
+        await leadsAPI.updateStatus(selected._id, { status: 'Fresh' });
+        setSelected(prev => prev ? { ...prev, status: 'Fresh' } : prev);
+      }
       setIsBlocked(false);
       setBlockEntryId(null);
       setBlockedPhones(prev => { const s = new Set(prev); s.delete(selected.phone.replace(/[^0-9]/g, '')); return s; });

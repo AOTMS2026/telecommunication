@@ -1,7 +1,31 @@
 const express = require('express');
 const Blocklist = require('../models/Blocklist');
+const Lead = require('../models/Lead');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
+
+const restoreLeadStatus = async (phone) => {
+  try {
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    if (!cleanPhone) return;
+
+    const leads = await Lead.find({ phone: cleanPhone });
+    for (const lead of leads) {
+      if (lead.status === 'Blocked') {
+        const previousStatus = lead.status;
+        lead.status = 'Fresh';
+        lead.activities.unshift({
+          type: 'status_change',
+          description: `Status changed from ${previousStatus} to Fresh after unblocking`,
+          performedBy: null,
+        });
+        await lead.save();
+      }
+    }
+  } catch (err) {
+    console.error('Failed to restore lead status after unblocking:', err);
+  }
+};
 
 // GET /api/blocklist
 router.get('/', protect, async (req, res) => {
@@ -50,7 +74,12 @@ router.post('/', protect, async (req, res) => {
 // DELETE /api/blocklist/:id  (by MongoDB _id)
 router.delete('/:id', protect, async (req, res) => {
   try {
+    const entry = await Blocklist.findById(req.params.id);
+    if (!entry) return res.status(404).json({ message: 'Blocklist entry not found' });
+
     await Blocklist.findByIdAndDelete(req.params.id);
+    await restoreLeadStatus(entry.phone);
+
     res.json({ message: 'Unblocked successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -63,6 +92,9 @@ router.delete('/phone/:phone', protect, async (req, res) => {
     const cleanPhone = req.params.phone.replace(/[^0-9]/g, '');
     const result = await Blocklist.findOneAndDelete({ phone: cleanPhone });
     if (!result) return res.status(404).json({ message: 'Number not found in blocklist' });
+
+    await restoreLeadStatus(cleanPhone);
+
     res.json({ message: 'Unblocked successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -449,8 +449,15 @@ router.put('/:id/status', protect, async (req, res) => {
 });
 
 // DELETE /api/leads/:id
-router.delete('/:id', protect, authorize('super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('caller', 'admin', 'super admin'), async (req, res) => {
   try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+
+    if (req.user.role === 'caller' && lead.assignedTo?.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You can only delete leads assigned to you' });
+    }
+
     await Lead.findByIdAndDelete(req.params.id);
     res.json({ message: 'Lead deleted' });
   } catch (err) {

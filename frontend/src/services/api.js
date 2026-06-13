@@ -80,6 +80,8 @@ export const reportsAPI = {
 
 export const usersAPI = {
   getAll: () => api.get('/users'),
+  getPreferences: () => api.get('/users/preferences'),
+  updatePreferences: (data) => api.put('/users/preferences', data),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),

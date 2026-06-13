@@ -1,4 +1,4 @@
-// Nodemon restart trigger
+// Nodemon restart trigger v3
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -45,7 +45,9 @@ app.use(mongoSanitize());
 if (process.env.NODE_ENV === 'development') app.use(morgan('dev'));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/leads', apiLimiter, require('./routes/leads'));
 app.use('/api/followups', apiLimiter, require('./routes/followups'));
 app.use('/api/campaigns', apiLimiter, require('./routes/campaigns'));
