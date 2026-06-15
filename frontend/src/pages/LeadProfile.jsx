@@ -832,19 +832,12 @@ export default function LeadProfile() {
                     <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>{blockingAction ? '…' : 'Block'}</>
                   )}
                 </button>
-                {/* Initiate Call button */}
-                <button
-                  onClick={() => setShowInitiateCallModal(true)}
-                  disabled={isBlocked}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl text-xs font-bold transition-colors border border-green-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <Smartphone className="w-3.5 h-3.5" /> 📲 Send to Mobile
-                </button>
+
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {[
-                { icon: Phone, label: 'CALL NOW', action: handleStartCall, color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isCalling || isBlocked },
+                { icon: Phone, label: 'CALL NOW', action: () => setShowInitiateCallModal(true), color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isBlocked },
                 { icon: Clock, label: 'CALLBACK LATER', action: () => setShowCallbackModal(true), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200', disabled: isBlocked },
                 { icon: MessageCircle, label: 'WHATSAPP LOG', action: () => handleInstantActivity('whatsapp', 'WhatsApp outreach message sent'), color: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-250', disabled: isBlocked },
                 { icon: MessageSquare, label: 'SMS LOG', action: () => handleInstantActivity('sms', 'SMS template message dispatched'), color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200', disabled: isBlocked },

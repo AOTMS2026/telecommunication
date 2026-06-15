@@ -47,7 +47,6 @@ function normaliseStatus(raw) {
 function parseDate(val) {
   if (!val) return undefined;
   if (val instanceof Date) return val;
-  // DD/MM/YYYY
   const dm = String(val).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (dm) return new Date(`${dm[3]}-${dm[2]}-${dm[1]}`);
   const d = new Date(val);
@@ -55,7 +54,6 @@ function parseDate(val) {
 }
 
 function rowToLead(row, campaignId, callerId) {
-  // Accept both friendly header names and raw column keys
   const g = (keys) => {
     for (const k of keys) {
       const found = Object.keys(row).find(r => r.trim().toLowerCase() === k.toLowerCase());
@@ -92,7 +90,6 @@ function rowToLead(row, campaignId, callerId) {
 }
 
 // ── POST /api/bulk-import/preview ─────────────────────────────────────────────
-// Parse file, return first 5 rows + column headers — no DB writes
 router.post(
   '/preview',
   protect,
@@ -119,7 +116,7 @@ router.post(
 );
 
 // ── POST /api/bulk-import/import ──────────────────────────────────────────────
-// Full import with campaign + caller assignment
+// Supports multi-caller assignment with percentage distribution
 router.post(
   '/import',
   protect,
@@ -129,30 +126,55 @@ router.post(
     try {
       if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-      const { campaignId, callerId, skipDuplicates = 'true' } = req.body;
+      const { campaignId, skipDuplicates = 'true' } = req.body;
       const shouldSkipDups = skipDuplicates !== 'false';
 
-      // Validate campaign + caller if provided
-      if (campaignId) {
-        const camp = await Campaign.findById(campaignId);
-        if (!camp) return res.status(404).json({ message: 'Campaign not found' });
-      }
-      if (callerId) {
-        const caller = await User.findById(callerId);
-        if (!caller) return res.status(404).json({ message: 'Caller not found' });
+      // Parse caller assignments: [{ callerId, pct }]
+      let callerAssignments = [];
+      try {
+        callerAssignments = JSON.parse(req.body.callerAssignments || '[]');
+      } catch {
+        return res.status(400).json({ message: 'Invalid callerAssignments format' });
       }
 
+      // Validate required fields
+      if (!campaignId) {
+        return res.status(400).json({ message: 'Campaign is required' });
+      }
+      if (!callerAssignments.length) {
+        return res.status(400).json({ message: 'At least one caller must be assigned' });
+      }
+
+      // Validate percentages sum to 100
+      const totalPct = callerAssignments.reduce((s, c) => s + (c.pct || 0), 0);
+      if (totalPct !== 100) {
+        return res.status(400).json({ message: `Caller percentages must total 100% (got ${totalPct}%)` });
+      }
+
+      // Validate campaign
+      const campaign = await Campaign.findById(campaignId);
+      if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+
+      // Validate callers
+      const callerIds = callerAssignments.map(c => c.callerId);
+      const validCallers = await User.find({ _id: { $in: callerIds } }).select('_id name').lean();
+      if (validCallers.length !== callerIds.length) {
+        return res.status(404).json({ message: 'One or more callers not found' });
+      }
+      const callerMap = Object.fromEntries(validCallers.map(u => [String(u._id), u.name]));
+
+      // Parse file
       const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
       if (!rows.length) return res.status(400).json({ message: 'File is empty' });
 
-      // Build leads array
+      // Build leads (no caller assigned yet)
       const leads = [];
       const errors = [];
       for (let i = 0; i < rows.length; i++) {
-        const lead = rowToLead(rows[i], campaignId || null, callerId || null);
+        const lead = rowToLead(rows[i], campaignId, null);
         if (!lead) {
           errors.push({ row: i + 2, reason: 'Missing name or phone' });
         } else {
@@ -164,33 +186,55 @@ router.post(
         return res.status(400).json({ message: 'No valid leads found', errors });
       }
 
-      // Duplicate check by phone
+      // Duplicate check
       const phones = leads.map(l => l.phone);
       const existingPhones = shouldSkipDups
         ? new Set((await Lead.find({ phone: { $in: phones } }).select('phone').lean()).map(l => l.phone))
         : new Set();
 
       const toInsert = leads.filter(l => !existingPhones.has(l.phone));
-      const skipped = leads.length - toInsert.length;
+      const skippedCount = leads.length - toInsert.length;
 
-      let inserted = [];
-      if (toInsert.length) {
-        inserted = await Lead.insertMany(toInsert, { ordered: false });
+      if (!toInsert.length) {
+        return res.json({ message: 'Import complete', total: rows.length, imported: 0, skipped: skippedCount, errors, callerBreakdown: [], campaignName: campaign.name });
       }
 
-      // Update campaign totalLeads count
-      if (campaignId && inserted.length) {
-        await Campaign.findByIdAndUpdate(campaignId, {
-          $inc: { totalLeads: inserted.length },
-        });
+      // Distribute leads across callers by percentage
+      // Build assignment list: for each lead index, which callerId gets it
+      const total = toInsert.length;
+      const callerBreakdown = [];
+      let startIdx = 0;
+
+      for (let i = 0; i < callerAssignments.length; i++) {
+        const { callerId, pct } = callerAssignments[i];
+        // Last caller gets the remainder to avoid rounding gaps
+        const count = i === callerAssignments.length - 1
+          ? total - startIdx
+          : Math.round((pct / 100) * total);
+
+        const slice = toInsert.slice(startIdx, startIdx + count);
+        slice.forEach(lead => { lead.assignedTo = callerId; });
+        startIdx += count;
+
+        callerBreakdown.push({ callerId, callerName: callerMap[String(callerId)] || 'Unknown', count, pct });
+      }
+
+      // Insert all leads
+      const inserted = await Lead.insertMany(toInsert, { ordered: false });
+
+      // Update campaign totalLeads
+      if (inserted.length) {
+        await Campaign.findByIdAndUpdate(campaignId, { $inc: { totalLeads: inserted.length } });
       }
 
       res.json({
-        message: `Import complete`,
+        message: 'Import complete',
         total: rows.length,
         imported: inserted.length,
-        skipped,
+        skipped: skippedCount,
         errors,
+        campaignName: campaign.name,
+        callerBreakdown,
       });
     } catch (err) {
       console.error('Bulk import error:', err);
@@ -200,7 +244,6 @@ router.post(
 );
 
 // ── GET /api/bulk-import/template ─────────────────────────────────────────────
-// Download a sample Excel template
 router.get('/template', protect, (req, res) => {
   const headers = [
     'Name', 'Phone', 'Alternate Phone', 'Email', 'Status', 'Lead Source',
@@ -221,7 +264,6 @@ router.get('/template', protect, (req, res) => {
 });
 
 // ── POST /api/bulk-import/assign ──────────────────────────────────────────────
-// Assign existing leads to a campaign + caller (bulk re-assign)
 router.post(
   '/assign',
   protect,
@@ -241,7 +283,6 @@ router.post(
 
       const result = await Lead.updateMany({ _id: { $in: leadIds } }, { $set: update });
 
-      // Refresh campaign totalLeads
       if (campaignId) {
         const count = await Lead.countDocuments({ campaign: campaignId });
         await Campaign.findByIdAndUpdate(campaignId, { totalLeads: count });

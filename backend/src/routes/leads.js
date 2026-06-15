@@ -167,6 +167,28 @@ router.get('/stats', protect, async (req, res) => {
     ]);
     const globalCounts = globalStatusStats[0] || { fresh: 0, active: 0, won: 0, lost: 0 };
 
+    // Leads Assigned to Caller — leads where assignedTo is set (not null/unassigned)
+    const assignedStatusStats = await Lead.aggregate([
+      { $match: { assignedTo: { $ne: null, $exists: true } } },
+      {
+        $group: {
+          _id: null,
+          fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
+          won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
+          lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
+          active: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] },
+                1, 0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+    const assignedCounts = assignedStatusStats[0] || { fresh: 0, active: 0, won: 0, lost: 0 };
+
     const myStatusStats = await Lead.aggregate([
       { $match: { assignedTo: req.user._id } },
       {
@@ -301,6 +323,10 @@ router.get('/stats', protect, async (req, res) => {
       myActive: myCounts.active,
       myWon: myCounts.won,
       myLost: myCounts.lost,
+      assignedFresh: assignedCounts.fresh,
+      assignedActive: assignedCounts.active,
+      assignedWon: assignedCounts.won,
+      assignedLost: assignedCounts.lost,
       ...extraStats
     });
   } catch (err) {
