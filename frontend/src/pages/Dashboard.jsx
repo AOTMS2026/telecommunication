@@ -13,6 +13,18 @@ const GREEN = '#22a163';
 const RED = '#e53e3e';
 const AMBER = '#d97706';
 const COLORS = [PURPLE, '#8b5cf6', '#ec4899', '#f59e0b', GREEN, RED, '#3b82f6', '#a78bfa'];
+const STATUS_COLORS = {
+  'Fresh':               '#3B82F6',
+  'Connected':           '#10B981',
+  'Call Not Responding': '#EA580C',
+  'Call Back Later':     '#F59E0B',
+  'Not interested':      '#EF4444',
+  'Demo Scheduled':      '#8B5CF6',
+  'Demo Done':           '#14B8A6',
+  'Won':                 '#16A34A',
+  'Lost':                '#DC2626',
+  'Blocked':             '#111827',
+};
 const BORDER = '#e5e2f5';
 
 function fmtDuration(sec) {
@@ -741,7 +753,7 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height={120}>
                     <PieChart>
                       <Pie data={stats.statusCounts.map(s => ({ name: s._id, value: s.count }))} cx="50%" cy="50%" innerRadius={30} outerRadius={50} paddingAngle={2} dataKey="value">
-                        {stats.statusCounts.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        {stats.statusCounts.map((s, i) => <Cell key={i} fill={STATUS_COLORS[s._id] || COLORS[i % COLORS.length]} />)}
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -749,7 +761,7 @@ export default function Dashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
                     {stats.statusCounts.slice(0, 6).map((s, i) => (
                       <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0, fontSize: 11 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: 2, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: STATUS_COLORS[s._id] || COLORS[i % COLORS.length], flexShrink: 0 }} />
                         <span style={{ color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{s._id}</span>
                         <span style={{ fontWeight: 600, color: TEXT_MAIN }}>{s.count}</span>
                       </div>
@@ -1345,7 +1357,7 @@ export default function Dashboard() {
                           <div style={{ 
                             width: `${Math.max(3, stagePct)}%`, 
                             height: '100%', 
-                            background: COLORS[idx % COLORS.length],
+                            background: STATUS_COLORS[stage.stage] || COLORS[idx % COLORS.length],
                             opacity: 0.85
                           }} />
                           <span style={{ position: 'absolute', left: 10, top: 4, fontSize: 11.5, fontWeight: 700, color: stagePct > 40 ? '#fff' : TEXT_MAIN }}>
@@ -1679,7 +1691,7 @@ export default function Dashboard() {
                           {loc._id || 'Unknown'}
                         </span>
                         <div style={{ flex: 1, height: 16, background: '#f8f7ff', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: COLORS[idx % COLORS.length], borderRadius: 4 }} />
+                          <div style={{ width: `${pct}%`, height: '100%', background: STATUS_COLORS[stage.stage] || COLORS[idx % COLORS.length], borderRadius: 4 }} />
                         </div>
                         <span style={{ width: 30, textAlign: 'right', fontSize: 12, fontWeight: 700, color: TEXT_MAIN }}>{loc.count}</span>
                       </div>

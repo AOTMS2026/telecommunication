@@ -21,31 +21,7 @@ const COLORS = ['#5b3fc7','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6','#EC
 const STATUSES = ['All', 'Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
 const SOURCES = ['All', 'Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel'];
 
-const STATUS_COLORS = {
-  Fresh: 'bg-blue-100 text-blue-700',
-  Connected: 'bg-green-100 text-green-700',
-  'Call Not Responding': 'bg-gray-100 text-gray-600',
-  'Call Back Later': 'bg-yellow-100 text-yellow-700',
-  'Not interested': 'bg-red-100 text-red-600',
-  'Demo Scheduled': 'bg-purple-100 text-purple-700',
-  'Demo Done': 'bg-indigo-100 text-indigo-700',
-  Won: 'bg-emerald-100 text-emerald-700',
-  Lost: 'bg-rose-100 text-rose-700',
-  Blocked: 'bg-slate-100 text-slate-600',
-};
 
-const STATUS_DOT = {
-  Fresh: '#3B82F6',
-  Connected: '#10B981',
-  'Call Not Responding': '#9CA3AF',
-  'Call Back Later': '#F59E0B',
-  'Not interested': '#EF4444',
-  'Demo Scheduled': '#8B5CF6',
-  'Demo Done': '#6366F1',
-  Won: '#10B981',
-  Lost: '#F43F5E',
-  Blocked: '#64748B',
-};
 
 function StatCard({ icon: Icon, label, value, color }) {
   const colors = {
@@ -492,10 +468,7 @@ export default function Leads() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[lead.status] || 'bg-gray-100 text-gray-600'}`}>
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: STATUS_DOT[lead.status] || '#9CA3AF' }} />
-                            {lead.status}
-                          </span>
+                          <StatusBadge status={lead.status} />
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-0.5">

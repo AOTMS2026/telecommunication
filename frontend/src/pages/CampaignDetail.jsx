@@ -14,12 +14,12 @@ const BORDER = '#ede9f8';
 const STATUS_COLORS = {
   Fresh: '#6366f1',
   Connected: '#10b981',
-  'Call Not Responding': '#f59e0b',
-  'Call Back Later': '#ef4444',
+  'Call Not Responding': '#ea580c',
+  'Call Back Later': '#f59e0b',
   'Not interested': '#6b7280',
   'Demo Scheduled': '#8b5cf6',
   'Demo Done': '#3b82f6',
-  Won: '#22c55e',
+  Won: '#16a34a',
   Lost: '#dc2626',
   Blocked: '#111827',
 };
