@@ -56,11 +56,13 @@ export default function Leads() {
     ? [
         { key: 'all', label: 'All Leads' },
         { key: 'mine', label: 'My Leads' },
-        { key: 'assigned', label: 'Leads Assigned To Me' },
+        { key: 'last_week', label: 'Last Week' },
+        { key: 'last_month', label: 'Last Month' },
       ]
     : [
         { key: 'mine', label: 'My Leads' },
-        { key: 'assigned', label: 'Leads Assigned To Me' },
+        { key: 'last_week', label: 'Last Week' },
+        { key: 'last_month', label: 'Last Month' },
       ];
 
   const [leads, setLeads] = useState([]);
@@ -111,11 +113,17 @@ export default function Leads() {
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 20, filter };
+      const params = { page, limit: 20 };
+      // Date-based filters go as dateFilter; role/assignee filters go as filter
+      if (filter === 'last_week' || filter === 'last_month') {
+        params.filter = 'mine'; // callers always scoped to themselves
+        params.dateFilter = filter;
+      } else {
+        params.filter = filter;
+      }
       if (search) params.search = search;
       if (status !== 'All') params.status = status;
       if (source !== 'All') params.source = source;
-      // For caller "all" filter — backend restricts to their assigned leads
       const res = await leadsAPI.getAll(params);
       setLeads(res.data.leads || []);
       setTotal(res.data.total || 0);

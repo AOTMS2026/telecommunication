@@ -38,11 +38,12 @@ export default function AddLead() {
   });
 
   useEffect(() => {
-    Promise.all([campaignsAPI.getAll(), usersAPI.getAll(), coursesAPI.getAll()]).then(([c, u, cr]) => {
-      setCampaigns(c.data.campaigns || []);
-      setUsers(u.data.users || []);
-      setCourses(cr.data.courses || []);
-    });
+    // Fetch independently so a permission error on one doesn't block others
+    coursesAPI.getAll().then(cr => setCourses(cr.data.courses || [])).catch(console.error);
+    campaignsAPI.getAll().then(c => setCampaigns(c.data.campaigns || [])).catch(() => {});
+    if (user?.role === 'admin' || user?.role === 'super admin') {
+      usersAPI.getAll().then(u => setUsers(u.data.users || [])).catch(() => {});
+    }
     if (isEdit) {
       setLoading(true);
       leadsAPI.getOne(id).then(res => {
@@ -179,7 +180,17 @@ export default function AddLead() {
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <Field label="Interested Course">
-              <select className="input-field" value={form.courseInterest} onChange={e => set('courseInterest', e.target.value)}>
+              <select
+                className="input-field"
+                value={form.courseInterest}
+                onChange={e => {
+                  const selectedCourse = courses.find(c => c._id === e.target.value);
+                  set('courseInterest', e.target.value);
+                  if (selectedCourse && !form.budget) {
+                    set('budget', String(selectedCourse.cost));
+                  }
+                }}
+              >
                 <option value="">Select Interested Course</option>
                 {courses.map(c => (
                   <option key={c._id} value={c._id}>{c.name} (₹{c.cost.toLocaleString()})</option>

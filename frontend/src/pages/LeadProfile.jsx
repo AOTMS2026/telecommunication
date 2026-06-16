@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Smartphone } from 'lucide-react';
+import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen } from 'lucide-react';
 import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
@@ -133,7 +133,11 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-green-600" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                <path d="M16 5.3a5 5 0 0 1 0 6.4" stroke="#16a34a" strokeOpacity="0.6"/>
+                <path d="M19 3a9 9 0 0 1 0 11" stroke="#16a34a" strokeOpacity="0.35"/>
+              </svg>
             </div>
             <div>
               <h3 className="font-bold text-gray-900 text-base">📲 Initiate Call</h3>
@@ -209,7 +213,7 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
               {loading ? (
                 <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Sending...</>
               ) : (
-                <><Smartphone className="w-4 h-4" />Send to Mobile</>
+                <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/><path d="M16 5.3a5 5 0 0 1 0 6.4" strokeOpacity="0.6"/><path d="M19 3a9 9 0 0 1 0 11" strokeOpacity="0.4"/></svg>Send Notification</>
               )}
             </button>
           )}
@@ -359,6 +363,7 @@ export default function LeadProfile() {
   const [campaigns, setCampaigns] = useState([]);
   const [callers, setCallers] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [leadFollowups, setLeadFollowups] = useState([]);
 
   const [isCalling, setIsCalling] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -378,8 +383,12 @@ export default function LeadProfile() {
 
   const fetchLeadDetails = async () => {
     try {
-      const res = await leadsAPI.getOne(id);
+      const [res, followupsRes] = await Promise.all([
+        leadsAPI.getOne(id),
+        followupsAPI.getAll({ leadId: id }),
+      ]);
       setLead(res.data.lead);
+      setLeadFollowups(followupsRes.data.followups || []);
       const l = res.data.lead;
       setEditForm({
         name: l.name || '',
@@ -391,7 +400,7 @@ export default function LeadProfile() {
         leadSource: l.leadSource || 'Manual',
         courseInterest: l.courseInterest?._id || l.courseInterest || '',
         mode: l.mode || '',
-        budget: l.budget || 0,
+        budget: l.budget > 0 ? l.budget : '',
         location: l.location || '',
         lastQualification: l.lastQualification || '',
         assignedTo: l.assignedTo?._id || '',
@@ -542,7 +551,7 @@ export default function LeadProfile() {
     e.preventDefault();
     setSavingInfo(true);
     try {
-      const data = { ...editForm, budget: editForm.budget ? +editForm.budget : 0, assignedTo: editForm.assignedTo || null, campaign: editForm.campaign || null, courseInterest: editForm.courseInterest || null };
+      const data = { ...editForm, budget: editForm.budget !== '' ? +editForm.budget : 0, assignedTo: editForm.assignedTo || null, campaign: editForm.campaign || null, courseInterest: editForm.courseInterest || null };
       const res = await leadsAPI.update(lead._id, data);
       setLead(res.data.lead);
       setIsEditingInfo(false);
@@ -605,11 +614,16 @@ export default function LeadProfile() {
           {/* ── Initiate Call Button (all users) ── */}
           <button
             onClick={() => setShowInitiateCallModal(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
             title="Send call notification to mobile app"
           >
-            <Smartphone className="w-4 h-4" />
-            <span className="hidden sm:inline">📲 Initiate Call</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              <path d="M17.5 1a8.5 8.5 0 0 1 0 17" opacity="0"/>
+              <path d="M16 5.3a5 5 0 0 1 0 6.4" stroke="currentColor" strokeOpacity="0.7"/>
+              <path d="M19 3a9 9 0 0 1 0 11" stroke="currentColor" strokeOpacity="0.5"/>
+            </svg>
+            <span className="hidden sm:inline">Initiate Call</span>
           </button>
 
           <select
@@ -665,7 +679,7 @@ export default function LeadProfile() {
                     ))}
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Budget (INR)</label>
-                      <input type="number" className="input-field w-full border border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={editForm.budget} onChange={e => setEditForm({ ...editForm, budget: +e.target.value })} />
+                      <input type="number" className="input-field w-full border border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={editForm.budget} onChange={e => setEditForm({ ...editForm, budget: e.target.value })} placeholder="Enter budget amount" min={0} />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Lead Source</label>
@@ -756,7 +770,19 @@ export default function LeadProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Course Target</label>
-                    <select className="input-field w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={editForm.courseInterest} onChange={e => setEditForm({ ...editForm, courseInterest: e.target.value })}>
+                    <select
+                      className="input-field w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      value={editForm.courseInterest}
+                      onChange={e => {
+                        const selectedCourse = courses.find(c => c._id === e.target.value);
+                        setEditForm(prev => ({
+                          ...prev,
+                          courseInterest: e.target.value,
+                          // Auto-fill budget with course fee if budget is empty or was previously auto-filled
+                          budget: selectedCourse ? selectedCourse.cost : prev.budget,
+                        }));
+                      }}
+                    >
                       <option value="">No Course Linked</option>
                       {courses.map(c => <option key={c._id} value={c._id}>{c.name} (₹{c.cost.toLocaleString()})</option>)}
                     </select>
@@ -767,6 +793,28 @@ export default function LeadProfile() {
                       <option value="">Select Mode</option>
                       {MODES.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
+                  </div>
+                  {/* Editable course fee override */}
+                  <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                      Budget / Negotiated Fee (₹)
+                      {editForm.courseInterest && courses.find(c => c._id === editForm.courseInterest) && (
+                        <span className="ml-2 font-normal text-indigo-500 normal-case">
+                          Course default: ₹{courses.find(c => c._id === editForm.courseInterest)?.cost?.toLocaleString()}
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                      <input
+                        type="number"
+                        className="input-field w-full border border-gray-200 rounded-xl p-2.5 pl-7 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={editForm.budget}
+                        onChange={e => setEditForm({ ...editForm, budget: e.target.value })}
+                        placeholder="Enter budget amount"
+                        min={0}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -787,7 +835,19 @@ export default function LeadProfile() {
                   <div className="bg-emerald-50/25 border border-emerald-100 rounded-2xl p-5 flex flex-col justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Course Fee</p>
-                      <h4 className="text-3xl font-extrabold text-emerald-800 mt-1">{lead.courseInterest?.cost ? `₹${lead.courseInterest.cost.toLocaleString()}` : '₹0'}</h4>
+                      <h4 className="text-3xl font-extrabold text-emerald-800 mt-1">
+                        {lead.courseInterest?.cost ? `₹${lead.courseInterest.cost.toLocaleString()}` : '—'}
+                      </h4>
+                      {lead.budget > 0 && lead.budget !== lead.courseInterest?.cost && (
+                        <p className="text-xs text-emerald-600 mt-1 font-semibold">
+                          Budget: ₹{lead.budget.toLocaleString()}
+                        </p>
+                      )}
+                      {lead.budget > 0 && !lead.courseInterest && (
+                        <p className="text-xs text-emerald-600 mt-1 font-semibold">
+                          Budget: ₹{lead.budget.toLocaleString()}
+                        </p>
+                      )}
                     </div>
                     <div className="pt-4 border-t border-emerald-100/50 mt-4 flex items-center justify-between">
                       <span className="text-[10px] font-bold text-gray-400 uppercase">Learning Mode</span>
@@ -871,9 +931,14 @@ export default function LeadProfile() {
                 { key: 'followup', label: 'Callback Later' },
                 { key: 'note', label: 'Notes' },
               ].map(tab => {
-                const count = tab.key === 'all'
-                  ? (lead.activities?.length || 0)
-                  : (lead.activities?.filter(a => a.type === tab.key).length || 0);
+                let count;
+                if (tab.key === 'all') {
+                  count = (lead.activities?.length || 0) + leadFollowups.length;
+                } else if (tab.key === 'followup') {
+                  count = leadFollowups.length;
+                } else {
+                  count = lead.activities?.filter(a => a.type === tab.key).length || 0;
+                }
                 const isActive = activityFilter === tab.key;
                 return (
                   <button
@@ -899,9 +964,68 @@ export default function LeadProfile() {
             {/* Timeline */}
             <div className="relative border-l border-gray-100 ml-4 space-y-6">
               {(() => {
-                const filtered = activityFilter === 'all'
+                // For 'followup' tab, show leadFollowups from DB
+                if (activityFilter === 'followup') {
+                  if (leadFollowups.length === 0) {
+                    return (
+                      <div className="text-center py-10">
+                        <Clock className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                        <p className="text-gray-400 text-sm">No callback scheduled yet.</p>
+                      </div>
+                    );
+                  }
+                  return leadFollowups.map((f, i) => (
+                    <div key={f._id || i} className="relative pl-6">
+                      <div className="absolute -left-3.5 top-0 w-7 h-7 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center text-gray-500">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div className="bg-orange-50/50 rounded-xl p-3.5 border border-orange-100 hover:border-orange-200 transition-colors shadow-2xs">
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="font-bold text-sm text-gray-800">
+                            📅 Callback Scheduled
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${f.status === 'upcoming' ? 'bg-orange-100 text-orange-700' : f.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {f.status === 'upcoming' ? '⏳ Upcoming' : f.status === 'completed' ? '✅ Done' : f.status}
+                          </span>
+                        </div>
+                        {f.note && (
+                          <p className="text-xs text-gray-500 italic mt-1.5 bg-white border border-orange-100/50 rounded-lg p-2">"{f.note}"</p>
+                        )}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100/30 text-[10px] text-gray-400 font-semibold">
+                          <span>ASSIGNED TO: {f.assignedTo?.name || 'Unassigned'}</span>
+                          {f.scheduledAt && (
+                            <span>📅 {format(new Date(f.scheduledAt), 'dd MMM yyyy, hh:mm a')}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ));
+                }
+
+                // For 'all' tab, combine activities + followups
+                const activityItems = activityFilter === 'all'
                   ? (lead.activities || [])
                   : (lead.activities || []).filter(a => a.type === activityFilter);
+
+                // Merge followups into 'all' view as virtual activity items
+                const followupItems = activityFilter === 'all'
+                  ? leadFollowups.map(f => ({
+                      _followup: true,
+                      _id: f._id,
+                      type: 'followup',
+                      description: f.note || 'Callback scheduled',
+                      createdAt: f.createdAt,
+                      scheduledAt: f.scheduledAt,
+                      status: f.status,
+                      performedBy: f.assignedTo,
+                    }))
+                  : [];
+
+                const allItems = [...activityItems, ...followupItems].sort(
+                  (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+                );
+
+                const filtered = allItems;
 
                 if (filtered.length === 0) {
                   return (
@@ -915,14 +1039,21 @@ export default function LeadProfile() {
                 }
 
                 return filtered.map((a, i) => (
-                  <div key={i} className="relative pl-6">
-                    <div className="absolute -left-3.5 top-0 w-7 h-7 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center text-gray-500">
-                      {activityIcon(a.type)}
+                  <div key={a._id || i} className="relative pl-6">
+                    <div className={`absolute -left-3.5 top-0 w-7 h-7 rounded-full bg-white border shadow-xs flex items-center justify-center ${a._followup ? 'border-orange-200' : 'border-gray-200'}`}>
+                      {a._followup ? <Clock className="w-4 h-4 text-orange-500" /> : activityIcon(a.type)}
                     </div>
-                    <div className="bg-gray-50/50 rounded-xl p-3.5 border border-gray-100 hover:border-gray-200 transition-colors shadow-2xs">
+                    <div className={`rounded-xl p-3.5 border hover:border-gray-200 transition-colors shadow-2xs ${a._followup ? 'bg-orange-50/40 border-orange-100' : 'bg-gray-50/50 border-gray-100'}`}>
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div className="font-bold text-sm text-gray-800">
-                          {a.type === 'call' ? (
+                          {a._followup ? (
+                            <span className="flex items-center gap-2">
+                              📅 Callback Scheduled
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.status === 'upcoming' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                                {a.status === 'upcoming' ? '⏳ Upcoming' : '✅ Done'}
+                              </span>
+                            </span>
+                          ) : a.type === 'call' ? (
                             <span>Logged Call — {fmtDuration(a.callDuration)} ({a.callStatus?.toUpperCase() || 'CONNECTED'})</span>
                           ) : a.type === 'status_change' ? (
                             <span className="text-orange-700">{a.description}</span>
@@ -932,7 +1063,15 @@ export default function LeadProfile() {
                         </div>
                         <span className="text-xs text-gray-400 font-medium">{a.createdAt ? formatDistanceToNow(new Date(a.createdAt), { addSuffix: true }) : ''}</span>
                       </div>
-                      {a.type === 'call' && a.description && (
+                      {a._followup && a.scheduledAt && (
+                        <p className="text-xs text-orange-600 font-semibold mt-1.5 bg-white border border-orange-100 rounded-lg p-2">
+                          ⏰ Due: {format(new Date(a.scheduledAt), 'dd MMM yyyy, hh:mm a')}
+                        </p>
+                      )}
+                      {a._followup && a.description && (
+                        <p className="text-xs text-gray-500 italic mt-1 bg-white border border-orange-100/50 rounded-lg p-2">"{a.description}"</p>
+                      )}
+                      {!a._followup && a.type === 'call' && a.description && (
                         <p className="text-xs text-gray-500 italic mt-1.5 bg-white border border-gray-100/50 rounded-lg p-2">"{a.description}"</p>
                       )}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100/30 text-[10px] text-gray-400 font-semibold">

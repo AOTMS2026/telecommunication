@@ -4,6 +4,13 @@ const User = require('../models/User');
 const { sendCallNotification } = require('../services/fcm');
 const FollowUp = require('../models/FollowUp');
 const { protect, authorize } = require('../middleware/auth');
+const {
+  notifyLeadAssigned,
+  notifyLeadStatusChanged,
+  notifyLeadUpdated,
+  notifyNewLeadCreated,
+  notifyCallInitiated,
+} = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -72,21 +79,30 @@ router.get('/export', protect, async (req, res) => {
 //         callers NEVER see "all" leads — always scoped to their own
 router.get('/', protect, async (req, res) => {
   try {
-    const { status, source, search, campaign, page = 1, limit = 20, filter } = req.query;
+    const { status, source, search, campaign, page = 1, limit = 20, filter, dateFilter } = req.query;
     const query = {};
 
     if (req.user.role === 'caller') {
-      // Callers can ONLY see their assigned leads regardless of filter
       query.assignedTo = req.user._id;
     } else {
-      // Admin / super admin
       if (filter === 'mine' || filter === 'assigned') {
         query.assignedTo = req.user._id;
       } else if (filter && filter !== 'all') {
-        // filter is a specific user ID (caller selected from sidebar)
         query.assignedTo = filter;
       }
-      // filter === 'all' or no filter => no assignedTo restriction
+    }
+
+    // Date range filter
+    if (dateFilter === 'last_week') {
+      const from = new Date();
+      from.setDate(from.getDate() - 7);
+      from.setHours(0, 0, 0, 0);
+      query.createdAt = { $gte: from };
+    } else if (dateFilter === 'last_month') {
+      const from = new Date();
+      from.setMonth(from.getMonth() - 1);
+      from.setHours(0, 0, 0, 0);
+      query.createdAt = { $gte: from };
     }
 
     if (status) query.status = status;
@@ -342,15 +358,18 @@ router.post('/', protect, async (req, res) => {
     if (!body.campaign || body.campaign === '') body.campaign = undefined;
     if (!body.assignedTo || body.assignedTo === '') body.assignedTo = undefined;
     if (Array.isArray(body.courseInterest)) body.courseInterest = body.courseInterest[0] || undefined;
+    const assignedToId = body.assignedTo || req.user._id;
     const lead = await Lead.create({
       ...body,
-      assignedTo: body.assignedTo || req.user._id,
+      assignedTo: assignedToId,
     });
     await lead.populate([
       { path: 'assignedTo', select: 'name email avatar' },
       { path: 'campaign', select: 'name' },
       { path: 'courseInterest' }
     ]);
+    // Notify assigned caller (if not the creator themselves)
+    notifyNewLeadCreated({ lead, assignedToId, performedByUser: req.user }).catch(() => {});
     res.status(201).json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -392,11 +411,33 @@ router.put('/:id', protect, async (req, res) => {
       .populate('campaign', 'name')
       .populate('courseInterest');
 
-    if (req.body.assignedTo) {
+    // Handle reassignment
+    const prevAssignedTo = lead.assignedTo?.toString();
+    const newAssignedTo = req.body.assignedTo;
+
+    if (newAssignedTo) {
       await FollowUp.updateMany(
         { lead: lead._id, status: 'upcoming' },
-        { assignedTo: req.body.assignedTo }
+        { assignedTo: newAssignedTo }
       );
+      // Notify new assignee if different from actor
+      if (newAssignedTo !== req.user._id.toString() && newAssignedTo !== prevAssignedTo) {
+        notifyLeadAssigned({ lead: updated, assignedToId: newAssignedTo, performedByUser: req.user }).catch(() => {});
+      }
+    }
+
+    // Notify existing assignee of general update (if admin edited their lead)
+    const currentAssignee = updated.assignedTo?._id?.toString();
+    if (currentAssignee && currentAssignee !== req.user._id.toString()) {
+      const changedFields = Object.keys(req.body).filter(k => !['assignedTo', 'campaign'].includes(k));
+      if (changedFields.length > 0) {
+        notifyLeadUpdated({
+          lead: updated,
+          assignedToId: currentAssignee,
+          performedByUser: req.user,
+          changedFields: changedFields.slice(0, 4),
+        }).catch(() => {});
+      }
     }
 
     res.json({ lead: updated });
@@ -458,7 +499,7 @@ router.post('/:id/note', protect, async (req, res) => {
 router.put('/:id/status', protect, async (req, res) => {
   try {
     const { status } = req.body;
-    const lead = await Lead.findById(req.params.id);
+    const lead = await Lead.findById(req.params.id).populate('assignedTo', 'name _id');
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     const prevStatus = lead.status;
     lead.status = status;
@@ -468,6 +509,16 @@ router.put('/:id/status', protect, async (req, res) => {
       performedBy: req.user._id,
     });
     await lead.save();
+    // Notify the assigned caller
+    if (lead.assignedTo) {
+      notifyLeadStatusChanged({
+        lead,
+        prevStatus,
+        newStatus: status,
+        assignedToId: lead.assignedTo._id,
+        performedByUser: req.user,
+      }).catch(() => {});
+    }
     res.json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -522,6 +573,9 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
       performedBy: req.user._id,
     });
     await lead.save();
+
+    // Also create in-app notification
+    notifyCallInitiated({ lead, callerId: caller._id, performedByUser: req.user }).catch(() => {});
 
     res.json({
       success: sent,

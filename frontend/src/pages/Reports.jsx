@@ -18,6 +18,7 @@ const STATUS_COLORS = {
   'Demo Done':           '#14B8A6',
   'Won':                 '#16A34A',
   'Lost':                '#DC2626',
+  'Wrong Number':        '#DC2626',
   'Blocked':             '#111827',
 };
 
@@ -259,7 +260,7 @@ function LeadViewCharts({ summary }) {
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
             <option value="">All</option>
-            {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost','Blocked'].map(s => (
+            {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Wrong Number','Lost','Blocked'].map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

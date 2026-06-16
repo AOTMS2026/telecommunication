@@ -178,7 +178,8 @@ export default function Blocklist() {
                     </td>
                     <td style={{ padding: '8px 0', textAlign: 'center', color: TEXT_MAIN, fontWeight: 500 }}>{item.blockedBy?.name || '—'}</td>
                     <td style={{ padding: '8px 0', textAlign: 'center', color: TEXT_MUTED }}>
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      <div>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 2 }}>{new Date(item.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                     </td>
                     <td style={{ padding: '8px 0', textAlign: 'right' }}>
                       <button

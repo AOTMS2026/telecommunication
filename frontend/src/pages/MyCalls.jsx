@@ -95,6 +95,7 @@ function LogCallModal({ lead, onClose, onSubmit }) {
 
 function BlockConfirmModal({ lead, onClose, onConfirm, blocking }) {
   const [reason, setReason] = useState('Spam Lead');
+  const [note, setNote] = useState('');
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -107,7 +108,7 @@ function BlockConfirmModal({ lead, onClose, onConfirm, blocking }) {
             <p className="text-xs text-gray-500">{lead.name} · {lead.phone}</p>
           </div>
         </div>
-        <div className="mb-4">
+        <div className="mb-3">
           <label className="text-xs font-medium text-gray-600 mb-1 block">Reason</label>
           <select className="input-field" value={reason} onChange={e => setReason(e.target.value)}>
             <option>Spam Lead</option>
@@ -115,12 +116,23 @@ function BlockConfirmModal({ lead, onClose, onConfirm, blocking }) {
             <option>Wrong Number</option>
             <option>Abusive Caller</option>
             <option>Duplicate</option>
+            <option>Other</option>
           </select>
+        </div>
+        <div className="mb-4">
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Note <span className="text-gray-400 font-normal">(optional)</span></label>
+          <textarea
+            className="input-field resize-none w-full text-sm"
+            rows={3}
+            placeholder="Add any additional notes about this block..."
+            value={note}
+            onChange={e => setNote(e.target.value)}
+          />
         </div>
         <div className="flex gap-2">
           <button onClick={onClose} className="btn-secondary flex-1" disabled={blocking}>Cancel</button>
           <button
-            onClick={() => onConfirm(reason)}
+            onClick={() => onConfirm(reason, note)}
             disabled={blocking}
             style={{ flex: 1, background: '#dc2626', color: '#fff', border: 'none', borderRadius: 10, padding: '9px 0', fontSize: 13, fontWeight: 700, cursor: blocking ? 'not-allowed' : 'pointer', opacity: blocking ? 0.7 : 1 }}
           >
@@ -249,10 +261,10 @@ export default function MyCalls() {
     } catch (err) { console.error(err); }
   };
 
-  const handleBlock = async (reason) => {
+  const handleBlock = async (reason, note) => {
     setBlocking(true);
     try {
-      const res = await blocklistAPI.add({ phone: selected.phone, name: selected.name, reason });
+      const res = await blocklistAPI.add({ phone: selected.phone, name: selected.name, reason, note: note || '' });
       setShowBlock(false);
       setIsBlocked(true);
       setBlockEntryId(res.data.entry?._id || null);

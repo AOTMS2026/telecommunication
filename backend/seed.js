@@ -45,14 +45,27 @@ const seed = async () => {
   ]);
 
   // ── USERS ─────────────────────────────────────────────────────────────────
-  const superAdmin = await User.create({
-    name: 'Swathi Raguthu', email: 'swathiraguthu@gmail.com',
-    password: 'Swathi@2005', role: 'super admin', phone: '919876543210', isActive: true,
+  const superAdmin1 = await User.create({
+    name: 'Ameen', email: 'ameenaotms@gmail.com',
+    password: 'Ameen@aotms', role: 'super admin', phone: '919000000010', isActive: true,
+  });
+  const superAdmin2 = await User.create({
+    name: 'Rabbani', email: 'ctoaotms@gmail.com',
+    password: 'Rabbani@aotms', role: 'super admin', phone: '919000000011', isActive: true,
   });
   const adminDemo = await User.create({
-    name: 'Admin Demo', email: 'admin@aotms.com',
-    password: 'admin123', role: 'admin', phone: '919876543211', isActive: true,
+    name: 'Deenaz', email: 'hraotms@gmail.com',
+    password: 'Deenaz@aotms', role: 'admin', phone: '919000000012', isActive: true,
   });
+  const admin2 = await User.create({
+    name: 'Bhavani', email: 'hiringaotms@gmail.com',
+    password: 'Bhavani@aotms', role: 'admin', phone: '919000000013', isActive: true,
+  });
+  console.log('✅  4 Users created');
+
+  // Use superAdmin1 as the primary superAdmin reference
+  const superAdmin = superAdmin1;
+  // Original callers kept as-is
   const c1 = await User.create({
     name: 'Mahesh Choudare', email: 'maheshchoudare21@gmail.com',
     password: 'Mahesh@2005', role: 'caller', phone: '919000000001', isActive: true,
@@ -69,7 +82,7 @@ const seed = async () => {
     name: 'Poojitha Reddy', email: 'poojitha@aotms.com',
     password: 'caller123', role: 'caller', phone: '919000000004', isActive: true,
   });
-  console.log('✅  6 Users created');
+  console.log('✅  4 Callers created');
 
   // ── CAMPAIGNS ─────────────────────────────────────────────────────────────
   const camp1 = await Campaign.create({
@@ -241,18 +254,20 @@ const seed = async () => {
   console.log('  ✅   AOTMS SEED COMPLETE — ALL COLLECTIONS POPULATED');
   console.log('══════════════════════════════════════════════════════');
   console.log('\n  🔐  LOGIN CREDENTIALS\n');
-  console.log('  Super Admin : swathiraguthu@gmail.com    / Swathi@2005');
-  console.log('  Admin Demo  : admin@aotms.com            / admin123');
-  console.log('  Caller 1    : maheshchoudare21@gmail.com / Mahesh@2005');
-  console.log('  Caller 2    : haseena@aotms.com          / caller123');
-  console.log('  Caller 3    : ravi@aotms.com             / caller123');
-  console.log('  Caller 4    : poojitha@aotms.com         / caller123');
+  console.log('  Super Admin : ameenaotms@gmail.com      / Ameen@aotms');
+  console.log('  Super Admin : ctoaotms@gmail.com        / Rabbani@aotms');
+  console.log('  Admin       : hraotms@gmail.com         / Deenaz@aotms');
+  console.log('  Admin       : hiringaotms@gmail.com     / Bhavani@aotms');
+  console.log('  Caller      : maheshchoudare21@gmail.com / Mahesh@2005');
+  console.log('  Caller      : haseena@aotms.com          / caller123');
+  console.log('  Caller      : ravi@aotms.com             / caller123');
+  console.log('  Caller      : poojitha@aotms.com         / caller123');
   console.log('\n  📦  DATA SEEDED');
-  console.log(`  Users:             6  (1 super admin · 1 admin · 4 callers)`);
+  console.log(`  Users:             8  (2 super admins · 2 admins · 4 callers)`);
   console.log(`  Campaigns:         3`);
   console.log(`  Courses:           5`);
   console.log(`  Leads:             ${createdLeads.length}  (with activities & notes)`);
-  console.log(`  Follow-ups/Tasks:  13  (8 call follow-ups + 4 to-do tasks + 1 done)`);
+  console.log(`  Follow-ups/Tasks:  13`);
   console.log(`  Message Templates: 10  (WhatsApp · SMS · Email)`);
   console.log(`  Blocklist:          4`);
   console.log('══════════════════════════════════════════════════════\n');

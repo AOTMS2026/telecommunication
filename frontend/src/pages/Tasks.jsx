@@ -282,39 +282,6 @@ export default function Tasks() {
             </span>
           </div>
         </div>
-
-        <label style={{
-          background: PURPLE, color: '#fff', border: 'none',
-          padding: '9px 18px', borderRadius: 8, fontSize: 13,
-          fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 7
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Bulk upload task
-          <input
-            type="file"
-            accept=".csv, .xlsx, .xls"
-            style={{ display: 'none' }}
-            onChange={async (e) => {
-              const file = e.target.files[0];
-              if (!file) return;
-              try {
-                const formData = new FormData();
-                formData.append('file', file);
-                const res = await followupsAPI.import(formData);
-                alert(`Bulk upload complete: ${res.data.count} of ${res.data.total} tasks created.`);
-                fetchTasks();
-              } catch (err) {
-                alert('Failed to import tasks: ' + (err.response?.data?.message || err.message));
-              }
-              e.target.value = '';
-            }}
-          />
-        </label>
       </div>
 
       {/* Tabs */}

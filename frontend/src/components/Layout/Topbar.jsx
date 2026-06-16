@@ -1,7 +1,18 @@
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { followupsAPI } from '../../services/api';
+import { followupsAPI, notificationsAPI } from '../../services/api';
+
+// Module-level helper — no hoisting issues
+function formatNotifTime(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
 
 export default function Topbar() {
   const { user, logout } = useAuth();
@@ -13,6 +24,7 @@ export default function Topbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   // Track which followup IDs we've already alerted so we don't repeat
   const alertedIds = useRef(new Set());
 
@@ -26,7 +38,28 @@ export default function Topbar() {
     return () => clearInterval(t);
   }, []);
 
-  // Poll DB every 60s for due callback followups
+  // Poll real notifications from backend every 30s
+  const pollNotifications = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await notificationsAPI.getAll({ limit: 30 });
+      const dbNotifs = (res.data.notifications || []).map(n => ({
+        id: n._id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        time: formatNotifTime(n.createdAt),
+        read: n.read,
+        leadId: n.lead?._id || n.lead,
+      }));
+      setNotifications(dbNotifs);
+      setUnreadCount(res.data.unreadCount || 0);
+    } catch (e) {
+      // silent
+    }
+  }, [user]);
+
+  // Also poll DB every 60s for due callback followups (for instant alert)
   const pollDueCallbacks = useCallback(async () => {
     if (!user) return;
     try {
@@ -37,16 +70,15 @@ export default function Topbar() {
       });
       const all = res.data.followups || [];
       const now = new Date();
-      // Due = scheduledAt <= now and not yet alerted
       const due = all.filter(f => {
         const t = new Date(f.scheduledAt);
         return t <= now && !alertedIds.current.has(f._id);
       });
       if (due.length > 0) {
         due.forEach(f => alertedIds.current.add(f._id));
-        // Add to notifications dropdown
+        // These are in-memory only (callback due alerts)
         const newNotifs = due.map(f => ({
-          id: f._id,
+          id: 'cb_' + f._id,
           type: 'callback_due',
           title: '📞 Callback Due Now!',
           message: `Call ${f.lead?.name || 'lead'} (${f.lead?.phone || ''}) — scheduled callback`,
@@ -54,8 +86,10 @@ export default function Topbar() {
           read: false,
           leadId: f.lead?._id,
           followupId: f._id,
+          ephemeral: true,
         }));
-        setNotifications(prev => [...newNotifs, ...prev]);
+        setNotifications(prev => [...newNotifs, ...prev.filter(n => !n.ephemeral || alertedIds.current.has(n.followupId))]);
+        setUnreadCount(prev => prev + newNotifs.length);
       }
     } catch (e) {
       // silent
@@ -63,10 +97,12 @@ export default function Topbar() {
   }, [user]);
 
   useEffect(() => {
+    pollNotifications();
     pollDueCallbacks();
-    const interval = setInterval(pollDueCallbacks, 60000);
-    return () => clearInterval(interval);
-  }, [pollDueCallbacks]);
+    const ni = setInterval(pollNotifications, 30000);
+    const ci = setInterval(pollDueCallbacks, 60000);
+    return () => { clearInterval(ni); clearInterval(ci); };
+  }, [pollNotifications, pollDueCallbacks]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -83,9 +119,29 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const markRead = (id) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  const markAllRead = async () => {
+    try {
+      await notificationsAPI.markAllRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (e) {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    }
+  };
+
+  const markRead = async (id) => {
+    if (String(id).startsWith('cb_')) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      return;
+    }
+    try {
+      await notificationsAPI.markRead(id);
+    } catch (e) {}
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
 
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -94,14 +150,20 @@ export default function Topbar() {
     if (type === 'callback_due') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     );
-    if (type === 'followup') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    );
-    if (type === 'lead') return (
+    if (type === 'lead_assigned' || type === 'new_lead') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22a163" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
     );
-    if (type === 'campaign') return (
+    if (type === 'lead_status_changed') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+    );
+    if (type === 'lead_updated') return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    );
+    if (type === 'call_initiated') return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+    );
+    if (type === 'followup') return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     );
     return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -110,10 +172,21 @@ export default function Topbar() {
 
   const notifBg = (type) => {
     if (type === 'callback_due') return '#fff0f0';
+    if (type === 'lead_assigned' || type === 'new_lead') return '#e8f8f0';
+    if (type === 'lead_status_changed') return '#fff8e6';
+    if (type === 'lead_updated') return '#f0ecff';
+    if (type === 'call_initiated') return '#e0f7fa';
     if (type === 'followup') return '#f0ecff';
-    if (type === 'lead') return '#e8f8f0';
     if (type === 'campaign') return '#fff8e6';
     return '#f3f4f6';
+  };
+
+  const notifTitleColor = (type) => {
+    if (type === 'callback_due') return '#991b1b';
+    if (type === 'lead_assigned' || type === 'new_lead') return '#166534';
+    if (type === 'lead_status_changed') return '#92400e';
+    if (type === 'call_initiated') return '#155e75';
+    return '#2d2d6b';
   };
 
   const roleLabel = user?.role
@@ -302,13 +375,13 @@ export default function Topbar() {
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                            <span style={{ fontSize: 12, fontWeight: n.read ? 500 : 700, color: n.type === 'callback_due' ? '#991b1b' : '#2d2d6b' }}>{n.title}</span>
+                            <span style={{ fontSize: 12, fontWeight: n.read ? 500 : 700, color: notifTitleColor(n.type) }}>{n.title}</span>
                             <span style={{ fontSize: 10, color: '#aaa', flexShrink: 0, marginLeft: 8 }}>{n.time}</span>
                           </div>
                           <div style={{ fontSize: 11, color: '#666', lineHeight: 1.4 }}>{n.message}</div>
                         </div>
                         {!n.read && (
-                          <div style={{ width: 7, height: 7, background: n.type === 'callback_due' ? '#e53e3e' : '#5b3fc7', borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
+                          <div style={{ width: 7, height: 7, background: n.type === 'callback_due' ? '#e53e3e' : (n.type === 'call_initiated' ? '#0891b2' : '#5b3fc7'), borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
                         )}
                       </div>
                     ))

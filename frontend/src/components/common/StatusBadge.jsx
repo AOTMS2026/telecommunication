@@ -8,6 +8,7 @@ const statusConfig = {
   'Demo Done': { bg: 'bg-teal-50', text: 'text-teal-700', dot: 'bg-teal-500' },
   'Won': { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-600' },
   'Lost': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
+  'Wrong Number': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
   'Blocked': { bg: 'bg-rose-100', text: 'text-rose-700', dot: 'bg-rose-500' },
 };
 

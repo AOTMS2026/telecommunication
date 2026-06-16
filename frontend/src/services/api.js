@@ -129,3 +129,9 @@ export const integrationsAPI = {
   getLeads: (id, params) => api.get(`/integrations/${id}/leads`, { params }),
   testWebhook: (id) => api.post(`/integrations/${id}/test-webhook`),
 };
+
+export const notificationsAPI = {
+  getAll: (params) => api.get('/notifications', { params }),
+  markRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
+};

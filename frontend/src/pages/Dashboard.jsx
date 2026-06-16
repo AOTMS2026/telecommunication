@@ -23,6 +23,7 @@ const STATUS_COLORS = {
   'Demo Done':           '#14B8A6',
   'Won':                 '#16A34A',
   'Lost':                '#DC2626',
+  'Wrong Number':        '#DC2626',
   'Blocked':             '#111827',
 };
 const BORDER = '#e5e2f5';
@@ -857,6 +858,9 @@ export default function Dashboard() {
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Callers Activity & Live Status
+                <span style={{ marginLeft: 'auto', background: PURPLE_LIGHT, color: PURPLE, fontSize: 12, fontWeight: 700, borderRadius: 20, padding: '2px 12px' }}>
+                  {liveCallers.length} Caller{liveCallers.length !== 1 ? 's' : ''} Logged In
+                </span>
               </div>
               {liveCallers.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '24px 0', color: TEXT_MUTED, fontSize: 13 }}>No caller accounts set up yet.</div>
@@ -868,7 +872,7 @@ export default function Dashboard() {
                         <th style={{ textAlign: 'left', fontWeight: 600, paddingBottom: 8 }}>Caller Name</th>
                         <th style={{ textAlign: 'center', fontWeight: 600, paddingBottom: 8 }}>Status</th>
                         <th style={{ textAlign: 'center', fontWeight: 600, paddingBottom: 8 }}>Calls Logged Today</th>
-                        <th style={{ textAlign: 'right', fontWeight: 600, paddingBottom: 8 }}>Last Call Time</th>
+                        <th style={{ textAlign: 'right', fontWeight: 600, paddingBottom: 8 }}>Last Call Date & Time</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -899,7 +903,12 @@ export default function Dashboard() {
                             {caller.callsToday}
                           </td>
                           <td style={{ textAlign: 'right', color: TEXT_MUTED }}>
-                            {caller.lastCallTime ? new Date(caller.lastCallTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                            {caller.lastCallTime ? (
+                              <span>
+                                <span style={{ display: 'block', fontWeight: 600, color: TEXT_MAIN, fontSize: 12 }}>{new Date(caller.lastCallTime).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                                <span style={{ fontSize: 11 }}>{new Date(caller.lastCallTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </span>
+                            ) : 'Never'}
                           </td>
                         </tr>
                       ))}
@@ -965,7 +974,7 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {adminStats.detailedOverdueFollowups.slice(0, 15).map(fu => (
+                      {(adminStats?.detailedOverdueFollowups || []).slice(0, 15).map(fu => (
                         <tr key={fu._id} style={{ borderBottom: '1px solid #faf9ff', height: 42 }}>
                           <td>
                             <strong style={{ color: TEXT_MAIN }}>{fu.lead?.name || 'Lead'}</strong>
@@ -1048,7 +1057,7 @@ export default function Dashboard() {
                 <div style={{ textAlign: 'center', padding: '24px 0', color: TEXT_MUTED, fontSize: 12 }}>No recent operations alerts.</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto', paddingRight: 4 }}>
-                  {adminStats.notifications.slice(0, 10).map(note => {
+                  {(adminStats?.notifications || []).slice(0, 10).map(note => {
                     let badgeBg = '#f0ecff', badgeColor = PURPLE;
                     if (note.type === 'overdue') { badgeBg = '#fff0f0'; badgeColor = RED; }
                     else if (note.type === 'demo') { badgeBg = '#e8f8f0'; badgeColor = GREEN; }
@@ -1691,7 +1700,7 @@ export default function Dashboard() {
                           {loc._id || 'Unknown'}
                         </span>
                         <div style={{ flex: 1, height: 16, background: '#f8f7ff', borderRadius: 4, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: STATUS_COLORS[stage.stage] || COLORS[idx % COLORS.length], borderRadius: 4 }} />
+                          <div style={{ width: `${pct}%`, height: '100%', background: COLORS[idx % COLORS.length], borderRadius: 4 }} />
                         </div>
                         <span style={{ width: 30, textAlign: 'right', fontSize: 12, fontWeight: 700, color: TEXT_MAIN }}>{loc.count}</span>
                       </div>
@@ -1974,7 +1983,7 @@ export default function Dashboard() {
                           <option value="Demo Scheduled">Demo Scheduled</option>
                           <option value="Demo Done">Demo Done</option>
                           <option value="Won">Won</option>
-                          <option value="Lost">Lost</option>
+                          <option value="Wrong Number">Wrong Number</option>
                         </select>
                       </div>
 

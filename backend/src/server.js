@@ -59,6 +59,7 @@ app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));
+app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 

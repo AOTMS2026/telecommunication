@@ -11,8 +11,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 // GET /api/followups
 router.get('/', protect, async (req, res) => {
   try {
-    const { status, date, due: dueQuery, callerId, type, forMe: forMeQuery } = req.query;
+    const { status, date, due: dueQuery, callerId, type, forMe: forMeQuery, leadId } = req.query;
     const query = {};
+
+    // 0. Lead filter (for lead profile page)
+    if (leadId) {
+      query.lead = leadId;
+    }
 
     // 1. assignedTo filtering (Me vs Team)
     const forMe = forMeQuery === 'true' || forMeQuery === true;
