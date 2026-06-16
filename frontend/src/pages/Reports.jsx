@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Download, Phone, Clock, TrendingUp, BarChart2, RefreshCw, Users, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { reportsAPI, followupsAPI, leadsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,7 +8,6 @@ import {
 } from 'recharts';
 
 const COLORS = ['#5b3fc7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', '#6366F1'];
-<<<<<<< HEAD
 const STATUS_COLORS = {
   'Fresh':               '#3B82F6',
   'Connected':           '#10B981',
@@ -20,11 +18,8 @@ const STATUS_COLORS = {
   'Demo Done':           '#14B8A6',
   'Won':                 '#16A34A',
   'Lost':                '#DC2626',
-  'Wrong Number':        '#DC2626',
   'Blocked':             '#111827',
 };
-=======
->>>>>>> 1febdd1f01daeeb84ed488ec4179b1dd06c12367
 
 // Tab structure matching TeleCRM source image
 const CHART_TABS = ['Status', 'Lead source', 'Assignee', 'Rating', 'Call status', 'Number of calls placed', 'Created on'];
@@ -168,7 +163,6 @@ function LeaderboardTab() {
 
 // Lead View chart section — mirrors the TeleCRM chart UI
 function LeadViewCharts({ summary }) {
-  const navigate = useNavigate();
   const [chartTab, setChartTab] = useState('Status');
   const [chartType, setChartType] = useState('Bar');
   const [chartData, setChartData] = useState([]);
@@ -265,7 +259,7 @@ function LeadViewCharts({ summary }) {
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
             className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
             <option value="">All</option>
-            {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Wrong Number','Lost','Blocked'].map(s => (
+            {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost','Blocked'].map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -312,7 +306,7 @@ function LeadViewCharts({ summary }) {
                     formatter={(val) => [val, 'Leads Count']}
                   />
                   <Bar dataKey="value" name="Leads Count" radius={[5, 5, 0, 0]}>
-                    {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    {chartData.map((entry, i) => <Cell key={i} fill={STATUS_COLORS[entry.name] || COLORS[i % COLORS.length]} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -323,7 +317,7 @@ function LeadViewCharts({ summary }) {
                   <PieChart>
                     <Pie data={chartData} cx="50%" cy="50%" outerRadius={90} innerRadius={45} paddingAngle={2} dataKey="value"
                       label={({ name, percent }) => `${(percent * 100).toFixed(1)}%`} labelLine={false}>
-                      {chartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      {chartData.map((entry, i) => <Cell key={i} fill={STATUS_COLORS[entry.name] || COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: 12 }} />
                   </PieChart>
@@ -352,7 +346,7 @@ function LeadViewCharts({ summary }) {
             <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-100">
               {chartData.map((d, i) => (
                 <div key={d.name} className="flex items-center gap-2 text-xs">
-                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+                  <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: STATUS_COLORS[d.name] || COLORS[i % COLORS.length] }} />
                   <span className="text-gray-500">{d.name}</span>
                   <span className="font-bold text-gray-800">{d.value.toLocaleString()}</span>
                   <span className="text-gray-400">{total > 0 ? `${((d.value / total) * 100).toFixed(2)}%` : '0%'}</span>
@@ -362,7 +356,7 @@ function LeadViewCharts({ summary }) {
 
             {/* View X leads button */}
             <div className="flex justify-end mt-4">
-              <button onClick={() => navigate('/leads')} className="px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-xl hover:bg-purple-700 transition-colors">
+              <button className="px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-xl hover:bg-purple-700 transition-colors">
                 View {total.toLocaleString()} leads
               </button>
             </div>
@@ -512,7 +506,7 @@ export default function Reports() {
                     <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
                     <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: 12 }} formatter={v => [v, 'Leads']} />
                     <Bar dataKey="value" name="Leads" radius={[5, 5, 0, 0]}>
-                      {statusChartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                      {statusChartData.map((entry, i) => <Cell key={i} fill={STATUS_COLORS[entry.name] || COLORS[i % COLORS.length]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -529,7 +523,7 @@ export default function Reports() {
                     <PieChart>
                       <Pie data={statusChartData} cx="50%" cy="50%" outerRadius={75} innerRadius={38} paddingAngle={2} dataKey="value"
                         label={({ name, percent }) => percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''} labelLine={false}>
-                        {statusChartData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        {statusChartData.map((entry, i) => <Cell key={i} fill={STATUS_COLORS[entry.name] || COLORS[i % COLORS.length]} />)}
                       </Pie>
                       <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: 12 }} />
                     </PieChart>
@@ -537,7 +531,7 @@ export default function Reports() {
                   <div className="grid grid-cols-2 gap-1.5 mt-2">
                     {statusChartData.map((s, i) => (
                       <div key={s.name} className="flex items-center gap-1.5 text-xs">
-                        <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+                        <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: STATUS_COLORS[s.name] || COLORS[i % COLORS.length] }} />
                         <span className="text-gray-500 truncate">{s.name}</span>
                         <span className="font-semibold text-gray-700 ml-auto">{s.value}</span>
                       </div>
