@@ -1,110 +1,215 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const PURPLE = '#5b3fc7';
 const PURPLE_DARK = '#4a2eb8';
+const PURPLE_LIGHT = '#7c5cdd';
 
-const LOGO_URL = 'https://res.cloudinary.com/dcmt06mac/image/upload/v1780998283/aotms_logo-2_v8fs1e.jpg';
+const LOGO_URL = 'https://res.cloudinary.com/dcmt06mac/image/upload/v1781638554/aotms_logo-2-removebg-preview_iivip1.png';
 const CALLER_IMG = 'https://res.cloudinary.com/dcmt06mac/image/upload/v1781513140/loginui_oyryix.png';
 
 const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes fadeInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
-  @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
-  @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
-  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-  @keyframes countUp { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes fadeInRight { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes float { 0%,100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-14px) rotate(1deg); } }
+  @keyframes shimmer { 0% { background-position: -300% 0; } 100% { background-position: 300% 0; } }
+  @keyframes slideIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes bgMove { 0% { transform: translate(0,0) scale(1); } 33% { transform: translate(30px,-20px) scale(1.05); } 66% { transform: translate(-20px,15px) scale(0.98); } 100% { transform: translate(0,0) scale(1); } }
+  @keyframes dotPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
 
-  .login-wrapper { min-height: 100vh; display: flex; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0c29; }
+  .lw-root {
+    min-height: 100vh; display: flex;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #ffffff;
+  }
 
-  .left-panel {
-    width: 55%;
-    background: linear-gradient(135deg, #1a0533 0%, #2d1b69 40%, #4a2eb8 80%, #6d28d9 100%);
+  /* ── LEFT PANEL ── */
+  .lw-left {
+    width: 52%; position: relative; overflow: hidden;
     display: flex; flex-direction: column; justify-content: space-between;
-    padding: 48px; position: relative; overflow: hidden;
-    animation: fadeInLeft 0.7s ease both;
+    padding: 44px 48px; gap: 24px;
+    background: linear-gradient(145deg, #1e0860 0%, #3318a0 30%, #5b3fc7 65%, #7c5cdd 100%);
+    animation: fadeInLeft 0.65s cubic-bezier(0.22,1,0.36,1) both;
   }
-  @media (max-width: 900px) { .left-panel { display: none !important; } .right-panel { width: 100% !important; } }
+  @media (max-width: 860px) { .lw-left { display: none !important; } .lw-right { width: 100% !important; } }
 
-  .orb1 { position: absolute; top: -80px; left: -80px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,0.4), transparent 70%); animation: float 6s ease-in-out infinite; }
-  .orb2 { position: absolute; bottom: -100px; right: -60px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(91,63,199,0.3), transparent 70%); animation: float 8s ease-in-out infinite reverse; }
-  .orb3 { position: absolute; top: 40%; left: 30%; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(167,139,250,0.15), transparent 70%); animation: float 5s ease-in-out infinite 1s; }
-
-  .caller-img-wrap {
-    position: relative; z-index: 2; flex: 1; display: flex; align-items: center; justify-content: center; margin: 20px 0;
-    animation: float 5s ease-in-out infinite 0.5s;
+  .lw-bg-circle {
+    position: absolute; border-radius: 50%; pointer-events: none;
+    animation: bgMove 12s ease-in-out infinite;
   }
-  .caller-img {
-    width: 85%; max-width: 380px; border-radius: 20px;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+  .lw-bg-c1 { width: 420px; height: 420px; top: -140px; left: -120px; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%); animation-delay: 0s; }
+  .lw-bg-c2 { width: 500px; height: 500px; bottom: -180px; right: -150px; background: radial-gradient(circle, rgba(167,139,250,0.15) 0%, transparent 65%); animation-delay: -4s; }
+  .lw-bg-c3 { width: 240px; height: 240px; top: 42%; left: 38%; background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%); animation-delay: -8s; }
+
+  .lw-dots {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0.055;
+    background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* ── LOGO: large transparent PNG, no text ── */
+  .lw-logo-area {
+    position: relative; z-index: 3;
+    animation: fadeInUp 0.6s ease 0.1s both;
+  }
+  .lw-logo-img {
+    width: 400px; height: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1) drop-shadow(0 2px 14px rgba(0,0,0,0.2));
+  }
+
+  /* Headline */
+  .lw-headline { position: relative; z-index: 3; animation: fadeInUp 0.6s ease 0.2s both; }
+  .lw-headline h2 {
+    font-size: 32px; font-weight: 900; color: #fff; line-height: 1.18;
+    letter-spacing: -0.5px; margin-bottom: 12px;
+  }
+  .lw-gradient-text {
+    background: linear-gradient(90deg, #c4b5fd, #e9d5ff, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .lw-headline p { font-size: 13.5px; color: rgba(255,255,255,0.65); line-height: 1.75; }
+
+  /* Feature chips */
+  .lw-chips { position: relative; z-index: 3; display: flex; gap: 8px; flex-wrap: wrap; animation: fadeInUp 0.6s ease 0.3s both; }
+  .lw-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.11); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 20px;
+    padding: 6px 13px; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.92);
+  }
+  .lw-chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #86efac; animation: dotPulse 2s ease infinite; flex-shrink: 0; }
+
+  /* Caller image */
+  .lw-img-wrap {
+    position: relative; z-index: 3; flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    animation: float 6s ease-in-out infinite 0.5s; min-height: 0;
+  }
+  .lw-img-glow {
+    position: absolute; width: 75%; padding-top: 75%; border-radius: 50%;
+    background: radial-gradient(circle, rgba(167,139,250,0.22), transparent 65%);
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+  }
+  .lw-caller-img {
+    width: 82%; max-width: 340px; border-radius: 18px; position: relative; z-index: 2;
+    box-shadow: 0 28px 68px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.1);
     object-fit: cover;
   }
 
-  .stat-card {
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 14px; padding: 16px 12px; text-align: center;
-    transition: transform 0.2s, background 0.2s;
+  /* Stats */
+  .lw-stats { position: relative; z-index: 3; display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; animation: fadeInUp 0.6s ease 0.5s both; }
+  .lw-stat {
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 12px;
+    padding: 14px 10px; text-align: center;
+    transition: transform 0.2s ease, background 0.2s ease;
     animation: countUp 0.5s ease both;
   }
-  .stat-card:hover { transform: translateY(-4px); background: rgba(255,255,255,0.18); }
+  .lw-stat:hover { transform: translateY(-3px); background: rgba(255,255,255,0.17); }
+  .lw-stat-val { font-size: 20px; font-weight: 800; color: #fff; line-height: 1; }
+  .lw-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 5px; font-weight: 500; }
 
-  .right-panel {
-    flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px;
-    background: #faf9ff;
-    animation: fadeInRight 0.7s ease both;
+  /* ── RIGHT PANEL ── */
+  .lw-right {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 40px 32px; background: #ffffff;
+    animation: fadeInRight 0.65s cubic-bezier(0.22,1,0.36,1) both;
   }
+  .lw-form-card { width: 100%; max-width: 400px; }
 
-  .form-card { width: 100%; max-width: 400px; }
-
-  .logo-wrap {
-    display: flex; align-items: center; gap: 12; margin-bottom: 36px;
-    animation: fadeInUp 0.5s ease 0.2s both;
+  /* Portal badge */
+  .lw-portal-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #f3f0ff; border: 1px solid #e0d9ff;
+    border-radius: 20px; padding: 5px 13px;
+    margin-bottom: 26px; animation: fadeInUp 0.5s ease 0.1s both;
   }
-  .logo-img { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; box-shadow: 0 4px 16px rgba(91,63,199,0.3); }
+  .lw-portal-dot { width: 7px; height: 7px; border-radius: 50%; background: ${PURPLE}; animation: dotPulse 2.5s ease infinite; }
+  .lw-portal-text { font-size: 11px; font-weight: 700; color: ${PURPLE}; text-transform: uppercase; letter-spacing: 1.2px; }
 
-  .input-field {
-    width: 100%; padding: 11px 12px 11px 36px;
-    border: 1.5px solid #e0daf5; border-radius: 8px; font-size: 14px;
-    background: #fff; color: #2d2d6b; outline: none; box-sizing: border-box;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .input-field:focus { border-color: ${PURPLE}; box-shadow: 0 0 0 3px rgba(91,63,199,0.12); }
-  .input-field::placeholder { color: #bbb; }
+  /* Welcome */
+  .lw-welcome { animation: fadeInUp 0.5s ease 0.2s both; margin-bottom: 26px; }
+  .lw-welcome h1 { font-size: 26px; font-weight: 800; color: #1a1442; margin-bottom: 5px; letter-spacing: -0.4px; }
+  .lw-welcome p { font-size: 13.5px; color: #8a8a9a; }
 
-  .sign-btn {
-    width: 100%; background: linear-gradient(135deg, ${PURPLE_DARK}, #6d28d9);
-    color: #fff; border: none; padding: 13px; border-radius: 10px;
-    font-size: 15px; font-weight: 700; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 6px 20px rgba(91,63,199,0.4);
-    position: relative; overflow: hidden;
+  /* Error */
+  .lw-error {
+    display: flex; align-items: center; gap: 9px;
+    margin-bottom: 16px; padding: 11px 14px;
+    background: #fff5f5; border: 1px solid #fed7d7; border-radius: 9px;
+    color: #c53030; font-size: 13px; font-weight: 500;
+    animation: slideIn 0.3s ease both;
   }
-  .sign-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(91,63,199,0.5); }
-  .sign-btn:active:not(:disabled) { transform: translateY(0); }
-  .sign-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-  .sign-btn::after {
+  .lw-err-icon { width: 16px; height: 16px; background: #fc8181; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Form */
+  .lw-form { display: flex; flex-direction: column; gap: 18px; }
+  .lw-field { animation: fadeInUp 0.5s ease both; }
+  .lw-field:nth-child(1) { animation-delay: 0.3s; }
+  .lw-field:nth-child(2) { animation-delay: 0.4s; }
+  .lw-field:nth-child(3) { animation-delay: 0.5s; }
+
+  .lw-label { display: block; font-size: 11.5px; font-weight: 700; color: #4a4a6a; text-transform: uppercase; letter-spacing: 0.9px; margin-bottom: 7px; }
+  .lw-input-wrap { position: relative; }
+  .lw-input-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #b0aecf; z-index: 1; display: flex; }
+  .lw-input {
+    width: 100%; padding: 12px 13px 12px 40px;
+    border: 1.5px solid #e8e4f5; border-radius: 10px;
+    font-size: 14px; background: #fafafa; color: #1a1442; outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    font-family: inherit;
+  }
+  .lw-input:focus { border-color: ${PURPLE}; background: #fff; box-shadow: 0 0 0 4px rgba(91,63,199,0.09); }
+  .lw-input::placeholder { color: #c5c2da; }
+  .lw-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #b0aecf; display: flex; align-items: center; padding: 2px; transition: color 0.2s; border-radius: 4px; }
+  .lw-eye:hover { color: ${PURPLE}; }
+
+  .lw-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .lw-forgot { font-size: 12px; color: ${PURPLE}; text-decoration: none; font-weight: 600; transition: opacity 0.2s; }
+  .lw-forgot:hover { opacity: 0.75; }
+
+  /* Button */
+  .lw-btn {
+    width: 100%; background: linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 50%, ${PURPLE_LIGHT} 100%);
+    color: #fff; border: none; padding: 14px; border-radius: 11px;
+    font-size: 14.5px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 8px 24px rgba(91,63,199,0.38);
+    position: relative; overflow: hidden; font-family: inherit; letter-spacing: 0.2px;
+  }
+  .lw-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 32px rgba(91,63,199,0.48); }
+  .lw-btn:active:not(:disabled) { transform: translateY(0); box-shadow: 0 4px 12px rgba(91,63,199,0.3); }
+  .lw-btn:disabled { opacity: 0.72; cursor: not-allowed; }
+  .lw-btn::after {
     content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+    background-size: 300% 100%; animation: shimmer 2.2s infinite;
   }
+  .lw-spinner { width: 17px; height: 17px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
 
-  .demo-box {
-    margin-top: 24px; padding: 14px 16px;
-    background: #fff; border-radius: 10px; border: 1px solid #e5e2f5;
-    animation: fadeInUp 0.5s ease 0.6s both;
-  }
+  /* Divider */
+  .lw-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; animation: fadeInUp 0.5s ease 0.55s both; }
+  .lw-divider-line { flex: 1; height: 1px; background: #ede9f8; }
+  .lw-divider-text { font-size: 11px; color: #b5b2cc; font-weight: 500; white-space: nowrap; }
 
-  .field-wrap { animation: fadeInUp 0.5s ease both; }
-  .field-wrap:nth-child(1) { animation-delay: 0.35s; }
-  .field-wrap:nth-child(2) { animation-delay: 0.45s; }
-  .field-wrap:nth-child(3) { animation-delay: 0.55s; }
+  /* Demo box */
+  .lw-demo { background: #f8f6ff; border: 1px solid #ede9f8; border-radius: 11px; padding: 14px 16px; animation: fadeInUp 0.5s ease 0.6s both; }
+  .lw-demo-title { font-size: 10.5px; font-weight: 700; color: #a09cc0; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 9px; }
+  .lw-demo-row { font-size: 12.5px; color: #4a4a6a; display: flex; align-items: center; gap: 6px; padding: 3px 0; flex-wrap: wrap; }
+  .lw-demo-role { font-weight: 700; color: ${PURPLE}; min-width: 44px; }
+  .lw-demo-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px; color: #6b68a0; background: #ede9f8; padding: 2px 7px; border-radius: 5px; }
+
+  .lw-footer { margin-top: 20px; text-align: center; font-size: 11px; color: #c0bdda; animation: fadeInUp 0.5s ease 0.7s both; }
 `;
 
 export default function Login() {
@@ -129,84 +234,108 @@ export default function Login() {
   return (
     <>
       <style>{styles}</style>
-      <div className="login-wrapper">
+      <div className="lw-root">
 
-        {/* LEFT PANEL */}
-        <div className="left-panel">
-          <div className="orb1" /><div className="orb2" /><div className="orb3" />
+        {/* ── LEFT PANEL ── */}
+        <div className="lw-left">
+          <div className="lw-dots" />
+          <div className="lw-bg-circle lw-bg-c1" />
+          <div className="lw-bg-circle lw-bg-c2" />
+          <div className="lw-bg-circle lw-bg-c3" />
 
-          {/* Top logo - full width */}
-          <div style={{ position: 'relative', zIndex: 2, animation: 'fadeInUp 0.6s ease both' }}>
-            <img src={LOGO_URL} alt="AOTMS Logo" style={{ width: '100%', maxWidth: 260, height: 'auto', borderRadius: 14, objectFit: 'contain', border: '2px solid rgba(255,255,255,0.15)', display: 'block' }} />
+          {/* Logo — large transparent PNG only, no text */}
+          <div className="lw-logo-area">
+            <img src={LOGO_URL} alt="AOTMS Logo" className="lw-logo-img" />
           </div>
 
           {/* Headline */}
-          <div style={{ position: 'relative', zIndex: 2, animation: 'fadeInUp 0.6s ease 0.15s both' }}>
-            <h2 style={{ fontSize: 34, fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 12 }}>
+          <div className="lw-headline">
+            <h2>
               Supercharge Your<br />
-              <span style={{ background: 'linear-gradient(90deg, #a78bfa, #c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sales Calls</span>
+              <span className="lw-gradient-text">Sales Calls</span>
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, lineHeight: 1.7 }}>
-              Manage leads, track calls, and close more deals with the most powerful caller dashboard built for teams.
-            </p>
+            <p>Manage leads, track performance, and close more deals with the most powerful telecaller dashboard built for modern teams.</p>
           </div>
 
-          {/* Telecaller image */}
-          <div className="caller-img-wrap">
-            <img src={CALLER_IMG} alt="Telecaller" className="caller-img" />
+          {/* Feature chips */}
+          <div className="lw-chips">
+            {['AI-Powered Dialing', 'Real-time Analytics', 'Smart Follow-ups'].map((f, i) => (
+              <div key={i} className="lw-chip">
+                <div className="lw-chip-dot" style={{ animationDelay: `${i * 0.4}s` }} />
+                {f}
+              </div>
+            ))}
+          </div>
+
+          {/* Caller image */}
+          <div className="lw-img-wrap">
+            <div className="lw-img-glow" />
+            <img src={CALLER_IMG} alt="Telecaller" className="lw-caller-img" />
           </div>
 
           {/* Stats */}
-          <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            {[['10K+', 'Leads Managed', 0.1], ['97%', 'Call Success', 0.2], ['3x', 'Faster Closings', 0.3]].map(([num, label, delay]) => (
-              <div key={label} className="stat-card" style={{ animationDelay: `${delay + 0.4}s` }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>{num}</div>
-                <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>{label}</div>
+          <div className="lw-stats">
+            {[['10K+', 'Leads Managed', 0.5], ['97%', 'Call Success', 0.6], ['3×', 'Faster Closings', 0.7]].map(([num, lbl, d]) => (
+              <div key={lbl} className="lw-stat" style={{ animationDelay: `${d}s` }}>
+                <div className="lw-stat-val">{num}</div>
+                <div className="lw-stat-lbl">{lbl}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="right-panel">
-          <div className="form-card">
+        {/* ── RIGHT PANEL ── */}
+        <div className="lw-right">
+          <div className="lw-form-card">
 
-            {/* Portal label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 36, animation: 'fadeInUp 0.5s ease 0.1s both' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: PURPLE }} />
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: '1px' }}>Caller Portal</div>
+            <div className="lw-portal-badge">
+              <div className="lw-portal-dot" />
+              <span className="lw-portal-text">Caller Portal</span>
             </div>
 
-            <div style={{ animation: 'fadeInUp 0.5s ease 0.2s both' }}>
-              <h1 style={{ fontSize: 26, fontWeight: 800, color: '#1a1a4e', marginBottom: 4 }}>Welcome back 👋</h1>
-              <p style={{ color: '#999', marginBottom: 28, fontSize: 14 }}>Sign in to your caller dashboard</p>
+            <div className="lw-welcome">
+              <h1>Welcome back 👋</h1>
+              <p>Sign in to your caller dashboard</p>
             </div>
 
             {error && (
-              <div style={{ marginBottom: 16, padding: '10px 14px', background: '#fff0f0', border: '1px solid #fca5a5', borderRadius: 8, color: '#c53030', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, animation: 'fadeInUp 0.3s ease both' }}>
-                <div style={{ width: 6, height: 6, background: '#e53e3e', borderRadius: '50%', flexShrink: 0 }} />
+              <div className="lw-error">
+                <div className="lw-err-icon">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className="field-wrap">
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>Email</label>
-                <div style={{ position: 'relative' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                  <input type="email" placeholder="you@company.com" className="input-field" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} autoComplete="off" required />
+            <form onSubmit={handleSubmit} autoComplete="off" className="lw-form">
+              {/* Email */}
+              <div className="lw-field">
+                <label className="lw-label">Email Address</label>
+                <div className="lw-input-wrap">
+                  <span className="lw-input-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  </span>
+                  <input type="email" placeholder="you@company.com" className="lw-input"
+                    value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                    autoComplete="off" required />
                 </div>
               </div>
 
-              <div className="field-wrap">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Password</label>
-                  <a href="#" style={{ fontSize: 12, color: PURPLE, textDecoration: 'none', fontWeight: 600 }}>Forgot password?</a>
+              {/* Password */}
+              <div className="lw-field">
+                <div className="lw-label-row">
+                  <label className="lw-label" style={{ margin: 0 }}>Password</label>
+                  <a href="#" className="lw-forgot">Forgot password?</a>
                 </div>
-                <div style={{ position: 'relative' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', zIndex: 1 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <input type={showPass ? 'text' : 'password'} placeholder="••••••••" className="input-field" style={{ paddingRight: 40 }} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} autoComplete="new-password" required />
-                  <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#aaa', display: 'flex', padding: 0 }}>
+                <div className="lw-input-wrap">
+                  <span className="lw-input-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </span>
+                  <input type={showPass ? 'text' : 'password'} placeholder="••••••••" className="lw-input"
+                    style={{ paddingRight: 42 }} value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    autoComplete="new-password" required />
+                  <button type="button" className="lw-eye" onClick={() => setShowPass(!showPass)}>
                     {showPass
                       ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                       : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -215,25 +344,42 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="field-wrap">
-                <button type="submit" disabled={loading} className="sign-btn">
-                  {loading ? (
-                    <><div style={{ width: 17, height: 17, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Signing in...</>
-                  ) : 'Sign in →'}
+              {/* Submit */}
+              <div className="lw-field">
+                <button type="submit" disabled={loading} className="lw-btn">
+                  {loading
+                    ? <><div className="lw-spinner" /> Signing in...</>
+                    : <>Sign In <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>
+                  }
                 </button>
               </div>
             </form>
 
-            <div className="demo-box">
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Demo Credentials</div>
-              <div style={{ fontSize: 12, color: '#555', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div><strong style={{ color: '#2d2d6b' }}>Admin:</strong> admin@aotms.com / admin123</div>
-                <div><strong style={{ color: '#2d2d6b' }}>Caller:</strong> poojitha@aotms.com / caller123</div>
+            <div className="lw-divider">
+              <div className="lw-divider-line" />
+              <span className="lw-divider-text">Demo Access</span>
+              <div className="lw-divider-line" />
+            </div>
+
+            <div className="lw-demo">
+              <div className="lw-demo-title">Try with demo credentials</div>
+              <div className="lw-demo-row">
+                <span className="lw-demo-role">Admin</span>
+                <span className="lw-demo-code">admin@aotms.com</span>
+                <span className="lw-demo-code">admin123</span>
+              </div>
+              <div className="lw-demo-row" style={{ marginTop: 5 }}>
+                <span className="lw-demo-role">Caller</span>
+                <span className="lw-demo-code">poojitha@aotms.com</span>
+                <span className="lw-demo-code">caller123</span>
               </div>
             </div>
 
+            <div className="lw-footer">© 2025 AOTMS · Secure & Encrypted</div>
+
           </div>
         </div>
+
       </div>
     </>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { campaignsAPI } from '../services/api';
+import { campaignsAPI, usersAPI, leadsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const PURPLE = '#6c47ff';
 const PURPLE_DARK = '#4f35c0';
@@ -50,6 +51,213 @@ const globalStyles = `
 
   .table-header th { letter-spacing: 0.05em; }
 `;
+
+function TransferLeadsModal({ onClose }) {
+  const [callers, setCallers] = useState([]);
+  const [fromCaller, setFromCaller] = useState('');
+  const [toCaller, setToCaller] = useState('');
+  const [fromLeads, setFromLeads] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [loadingCallers, setLoadingCallers] = useState(true);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+  const [transferMode, setTransferMode] = useState('all'); // 'all' | 'select'
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    usersAPI.getAll().then(res => {
+      setCallers((res.data.users || []).filter(u => u.role === 'caller' && u.isActive));
+    }).catch(() => {}).finally(() => setLoadingCallers(false));
+  }, []);
+
+  useEffect(() => {
+    if (!fromCaller) { setFromLeads([]); setSelectedLeads([]); return; }
+    setLoadingLeads(true);
+    setSelectedLeads([]);
+    leadsAPI.getByCallerAll(fromCaller)
+      .then(res => setFromLeads(res.data.leads || []))
+      .catch(() => setFromLeads([]))
+      .finally(() => setLoadingLeads(false));
+  }, [fromCaller]);
+
+  const toggleLead = (id) => {
+    setSelectedLeads(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleAll = () => {
+    if (selectedLeads.length === fromLeads.length) setSelectedLeads([]);
+    else setSelectedLeads(fromLeads.map(l => l._id));
+  };
+
+  const handleTransfer = async () => {
+    if (!fromCaller || !toCaller) return alert('Select both callers');
+    if (fromCaller === toCaller) return alert('Source and destination cannot be the same');
+    const leadsToTransfer = transferMode === 'select' ? selectedLeads : [];
+    if (transferMode === 'select' && leadsToTransfer.length === 0) return alert('Select at least one lead');
+    setSaving(true);
+    try {
+      const payload = { fromCallerId: fromCaller, toCallerId: toCaller };
+      if (transferMode === 'select') payload.leadIds = leadsToTransfer;
+      const res = await leadsAPI.transferLeads(payload);
+      setResult(res.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Transfer failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fromCallerObj = callers.find(c => c._id === fromCaller);
+  const toCallerObj = callers.find(c => c._id === toCaller);
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,10,40,0.55)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(6px)' }}>
+      <div className="fade-in" style={{ background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(108,71,255,0.2), 0 0 0 1px rgba(108,71,255,0.08)', width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+        {/* Accent bar */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: GRADIENT, borderRadius: '20px 20px 0 0' }} />
+
+        {/* Header */}
+        <div style={{ padding: '28px 28px 16px', borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 18, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                Transfer Leads
+              </div>
+              <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 3 }}>Reassign leads from one caller to another</div>
+            </div>
+            <button onClick={onClose} style={{ background: '#f1f0f9', border: 'none', cursor: 'pointer', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT_SUB, fontSize: 16 }}>✕</button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 28, overflowY: 'auto', flex: 1 }}>
+          {result ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4caf50" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 17, color: TEXT_MAIN, marginBottom: 8 }}>Transfer Complete!</div>
+              <div style={{ fontSize: 13, color: TEXT_SUB, lineHeight: 1.6 }}>
+                <span style={{ fontWeight: 700, color: PURPLE }}>{result.modifiedCount}</span> lead(s) transferred<br />
+                from <span style={{ fontWeight: 700 }}>{result.fromCaller}</span> → <span style={{ fontWeight: 700 }}>{result.toCaller}</span>
+              </div>
+              <button onClick={onClose} style={{ marginTop: 20, background: GRADIENT, color: '#fff', border: 'none', padding: '10px 28px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Done</button>
+            </div>
+          ) : (
+            <>
+              {/* Caller selectors */}
+              {loadingCallers ? (
+                <div style={{ textAlign: 'center', padding: 24, color: TEXT_MUTED }}>Loading callers...</div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, alignItems: 'end', marginBottom: 20 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_SUB, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>From Caller</label>
+                      <select
+                        value={fromCaller}
+                        onChange={e => { setFromCaller(e.target.value); setTransferMode('all'); }}
+                        style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${fromCaller ? PURPLE : BORDER}`, borderRadius: 10, fontSize: 13, outline: 'none', color: TEXT_MAIN, background: '#fafafa', cursor: 'pointer' }}
+                      >
+                        <option value="">Select caller...</option>
+                        {callers.filter(c => c._id !== toCaller).map(c => (
+                          <option key={c._id} value={c._id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ paddingBottom: 2, color: PURPLE_MID, fontWeight: 700 }}>→</div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: TEXT_SUB, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>To Caller</label>
+                      <select
+                        value={toCaller}
+                        onChange={e => setToCaller(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${toCaller ? PURPLE : BORDER}`, borderRadius: 10, fontSize: 13, outline: 'none', color: TEXT_MAIN, background: '#fafafa', cursor: 'pointer' }}
+                      >
+                        <option value="">Select caller...</option>
+                        {callers.filter(c => c._id !== fromCaller).map(c => (
+                          <option key={c._id} value={c._id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Lead count badge */}
+                  {fromCaller && (
+                    <div style={{ background: PURPLE_LIGHT, borderRadius: 10, padding: '8px 14px', marginBottom: 16, fontSize: 12.5, color: PURPLE, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0113 0"/></svg>
+                      {loadingLeads ? 'Loading leads...' : `${fromLeads.length} lead(s) assigned to ${fromCallerObj?.name || ''}`}
+                    </div>
+                  )}
+
+                  {/* Transfer mode toggle */}
+                  {fromCaller && fromLeads.length > 0 && !loadingLeads && (
+                    <>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        {['all', 'select'].map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => { setTransferMode(mode); setSelectedLeads([]); }}
+                            style={{ padding: '6px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${transferMode === mode ? PURPLE : BORDER}`, background: transferMode === mode ? PURPLE_LIGHT : '#fff', color: transferMode === mode ? PURPLE : TEXT_SUB, transition: 'all 0.15s' }}
+                          >
+                            {mode === 'all' ? 'Transfer All' : 'Select Leads'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Lead selection list */}
+                      {transferMode === 'select' && (
+                        <div style={{ border: `1.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+                          <div style={{ padding: '8px 12px', background: '#f8f7ff', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" checked={selectedLeads.length === fromLeads.length && fromLeads.length > 0} onChange={toggleAll} style={{ cursor: 'pointer' }} />
+                            <span style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_SUB }}>
+                              {selectedLeads.length > 0 ? `${selectedLeads.length} selected` : 'Select all'}
+                            </span>
+                          </div>
+                          {fromLeads.map(lead => (
+                            <div
+                              key={lead._id}
+                              onClick={() => toggleLead(lead._id)}
+                              style={{ padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: `1px solid #f0eeff`, background: selectedLeads.includes(lead._id) ? '#f5f3ff' : '#fff', transition: 'background 0.12s' }}
+                            >
+                              <input type="checkbox" checked={selectedLeads.includes(lead._id)} onChange={() => {}} style={{ cursor: 'pointer', pointerEvents: 'none' }} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: TEXT_MAIN }}>{lead.name}</div>
+                                <div style={{ fontSize: 11, color: TEXT_MUTED }}>{lead.phone} {lead.campaign?.name ? `· ${lead.campaign.name}` : ''}</div>
+                              </div>
+                              <span style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 20, background: PURPLE_LIGHT, color: PURPLE, fontWeight: 600 }}>{lead.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {fromCaller && !loadingLeads && fromLeads.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 13, color: TEXT_MUTED }}>No leads assigned to this caller.</div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!result && (
+          <div style={{ padding: '16px 28px', borderTop: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 10, border: `1.5px solid ${BORDER}`, background: '#fff', color: TEXT_SUB, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <button
+              onClick={handleTransfer}
+              disabled={saving || !fromCaller || !toCaller || (transferMode === 'select' && selectedLeads.length === 0)}
+              style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: (!fromCaller || !toCaller || saving) ? '#c4b8ff' : GRADIENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (!fromCaller || !toCaller || saving) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              {saving ? 'Transferring...' : `Transfer ${transferMode === 'select' && selectedLeads.length > 0 ? selectedLeads.length + ' Lead(s)' : transferMode === 'all' && fromLeads.length > 0 ? fromLeads.length + ' Lead(s)' : 'Leads'}`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function CreateCampaignModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ name: '', description: '' });
@@ -260,6 +468,7 @@ function FilterDropdown({ label, options, value, onChange, icon }) {
 
 export default function Campaigns() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -271,6 +480,9 @@ export default function Campaigns() {
   const [dateFilter, setDateFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [createdByFilter, setCreatedByFilter] = useState('');
+
+  // Transfer Leads modal state
+  const [showTransfer, setShowTransfer] = useState(false);
 
   const loadCampaigns = async () => {
     setLoading(true);
@@ -399,14 +611,26 @@ export default function Campaigns() {
             <span style={{ color: PURPLE, cursor: 'pointer', fontWeight: 600, borderBottom: `1px dashed ${PURPLE_MID}` }}>Learn More</span>
           </p>
         </div>
-        <button
-          className="create-btn"
-          onClick={() => setShowCreate(true)}
-          style={{ background: GRADIENT, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 4px 20px rgba(108,71,255,0.35)' }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Create New
-        </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          {(user?.role === 'admin' || user?.role === 'super admin') && (
+            <button
+              className="action-btn"
+              onClick={() => setShowTransfer(true)}
+              style={{ background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, padding: '10px 18px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+              Transfer Leads
+            </button>
+          )}
+          <button
+            className="create-btn"
+            onClick={() => setShowCreate(true)}
+            style={{ background: GRADIENT, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 4px 20px rgba(108,71,255,0.35)' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create New
+          </button>
+        </div>
       </div>
 
       {/* ── Summary Cards ── */}
@@ -689,6 +913,7 @@ export default function Campaigns() {
       )}
 
       {showCreate && <CreateCampaignModal onClose={() => setShowCreate(false)} onSuccess={loadCampaigns} />}
+      {showTransfer && <TransferLeadsModal onClose={() => setShowTransfer(false)} />}
     </div>
   );
 }

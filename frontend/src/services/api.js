@@ -45,6 +45,10 @@ export const leadsAPI = {
   exportCSV: (params) => api.get('/leads/export', { params, responseType: 'blob' }),
   // Send push notification to caller's mobile app
   initiateCall: (leadId, callerId) => api.post(`/leads/${leadId}/initiate-call`, { callerId }),
+  // Transfer leads from one caller to another
+  transferLeads: (data) => api.post('/leads/transfer', data),
+  // Get leads by caller
+  getByCallerAll: (callerId) => api.get(`/leads/by-caller/${callerId}`),
 };
 
 export const followupsAPI = {

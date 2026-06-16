@@ -8,6 +8,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const { initFCM } = require('./services/fcm');
 const http = require('node:http');
+require('./models/ImportHistory'); // add this line
 const { WebSocketServer } = require('ws');
 const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
 const dns = require('node:dns');

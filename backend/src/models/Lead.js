@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const activitySchema = new mongoose.Schema({
   type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup'], required: true },
   description: { type: String, default: '' },
-  callDuration: { type: Number, default: 0 }, // seconds
+  callDuration: { type: Number, default: 0 },
   callStatus: { type: String, enum: ['connected', 'no_answer', 'busy', 'failed', ''], default: '' },
   performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
@@ -37,11 +37,16 @@ const leadSchema = new mongoose.Schema({
   totalCalls: { type: Number, default: 0 },
   totalCallDuration: { type: Number, default: 0 },
   lastCalledAt: { type: Date },
+  // --- NEW: store extra/custom columns from Excel import ---
+  customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
+  importId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportHistory' },
+  collegeName: { type: String, default: '' },
 }, { timestamps: true });
 
 leadSchema.index({ phone: 1 });
 leadSchema.index({ assignedTo: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ campaign: 1 });
+leadSchema.index({ importId: 1 });
 
 module.exports = mongoose.model('Lead', leadSchema);

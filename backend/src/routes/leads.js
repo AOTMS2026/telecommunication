@@ -591,4 +591,56 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
   }
 });
 
+// POST /api/leads/transfer — transfer leads from one caller to another
+// Body: { fromCallerId, toCallerId, leadIds? (optional array; if omitted, transfers ALL leads of fromCaller) }
+router.post('/transfer', protect, authorize('admin', 'super admin'), async (req, res) => {
+  try {
+    const { fromCallerId, toCallerId, leadIds } = req.body;
+
+    if (!fromCallerId || !toCallerId) {
+      return res.status(400).json({ message: 'fromCallerId and toCallerId are required' });
+    }
+    if (fromCallerId === toCallerId) {
+      return res.status(400).json({ message: 'Source and destination callers must be different' });
+    }
+
+    const [fromCaller, toCaller] = await Promise.all([
+      User.findById(fromCallerId).select('name role'),
+      User.findById(toCallerId).select('name role'),
+    ]);
+
+    if (!fromCaller) return res.status(404).json({ message: 'Source caller not found' });
+    if (!toCaller) return res.status(404).json({ message: 'Destination caller not found' });
+
+    const query = { assignedTo: fromCallerId };
+    if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) {
+      query._id = { $in: leadIds };
+    }
+
+    const result = await Lead.updateMany(query, { $set: { assignedTo: toCallerId } });
+
+    res.json({
+      message: `${result.modifiedCount} lead(s) transferred from ${fromCaller.name} to ${toCaller.name}`,
+      modifiedCount: result.modifiedCount,
+      fromCaller: fromCaller.name,
+      toCaller: toCaller.name,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/leads/by-caller/:callerId — get leads assigned to a specific caller (admin/super admin only)
+router.get('/by-caller/:callerId', protect, authorize('admin', 'super admin'), async (req, res) => {
+  try {
+    const leads = await Lead.find({ assignedTo: req.params.callerId })
+      .select('name phone status campaign')
+      .populate('campaign', 'name')
+      .sort({ createdAt: -1 });
+    res.json({ leads, total: leads.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;
