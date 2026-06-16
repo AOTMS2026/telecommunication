@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Clock, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
+import { Phone, PhoneOff, Clock, MessageSquare, MessageCircle, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
 import { leadsAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
