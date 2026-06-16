@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Clock, MessageSquare, MessageCircle, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
+import { Phone, PhoneOff, Clock, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
 import { leadsAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
@@ -522,12 +522,10 @@ export default function MyCalls() {
                   <span style={{ fontSize: 11, color: '#991b1b' }}>Click "Unblock" above to re-enable calling</span>
                 </div>
               )}
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   { icon: Phone, label: 'CALL', action: handleCall, color: 'text-green-600', disabled: !!activeLead || isBlocked },
                   { icon: Clock, label: 'CALL LATER', action: () => handleStatus('Call Back Later'), color: 'text-orange-600', disabled: isBlocked },
-                  { icon: MessageCircle, label: 'WHATSAPP', action: () => leadsAPI.addNote(selected._id, { note: 'WhatsApp message sent', type: 'whatsapp' }).then(refreshSelected), color: 'text-green-500', disabled: isBlocked },
-                  { icon: MessageSquare, label: 'SMS', action: () => leadsAPI.addNote(selected._id, { note: 'SMS sent', type: 'sms' }).then(refreshSelected), color: 'text-blue-600', disabled: isBlocked },
                   { icon: Plus, label: 'ADD NOTE', action: () => setShowNote(true), color: 'text-indigo-600', disabled: isBlocked },
                 ].map(({ icon: Icon, label, action, color, disabled }) => (
                   <button key={label} onClick={action} disabled={disabled}

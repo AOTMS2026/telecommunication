@@ -895,12 +895,10 @@ export default function LeadProfile() {
 
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { icon: Phone, label: 'CALL NOW', action: () => setShowInitiateCallModal(true), color: 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow', disabled: isBlocked },
                 { icon: Clock, label: 'CALLBACK LATER', action: () => setShowCallbackModal(true), color: 'bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200', disabled: isBlocked },
-                { icon: MessageCircle, label: 'WHATSAPP LOG', action: () => handleInstantActivity('whatsapp', 'WhatsApp outreach message sent'), color: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-250', disabled: isBlocked },
-                { icon: MessageSquare, label: 'SMS LOG', action: () => handleInstantActivity('sms', 'SMS template message dispatched'), color: 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200', disabled: isBlocked },
                 { icon: Plus, label: 'ADD NOTE', action: () => setShowNoteModal(true), color: 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200', disabled: isBlocked },
               ].map(({ icon: Icon, label, action, color, disabled }) => (
                 <button key={label} onClick={action} disabled={disabled}
@@ -926,8 +924,6 @@ export default function LeadProfile() {
               {[
                 { key: 'all', label: 'All' },
                 { key: 'call', label: 'Calls' },
-                { key: 'whatsapp', label: 'WhatsApp' },
-                { key: 'sms', label: 'SMS' },
                 { key: 'followup', label: 'Callback Later' },
                 { key: 'note', label: 'Notes' },
               ].map(tab => {
