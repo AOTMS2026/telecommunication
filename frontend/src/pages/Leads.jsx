@@ -512,13 +512,15 @@ export default function Leads() {
                                   <Ban className="w-3.5 h-3.5" />
                                 </button>
                               )}
-                              <button
-                                onClick={e => handleDelete(lead._id, e)}
-                                className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {isAdmin && (
+                                <button
+                                  onClick={e => handleDelete(lead._id, e)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         )}

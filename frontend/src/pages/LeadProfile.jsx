@@ -634,7 +634,7 @@ export default function LeadProfile() {
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          {(isAdmin || (isCaller && (lead?.assignedTo?._id === user?._id || lead?.assignedTo === user?._id))) && (
+          {isAdmin && (
             <button onClick={handleDeleteLead} className="w-9 h-9 rounded-xl border border-red-200 hover:bg-red-50 text-red-500 flex items-center justify-center transition-all hover:text-red-700 active:scale-95" title="Delete Lead">
               <Trash2 className="w-4 h-4" />
             </button>
