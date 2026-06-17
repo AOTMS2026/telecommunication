@@ -355,13 +355,13 @@ export default function Login() {
               </div>
             </form>
 
-            <div className="lw-divider">
+            {/* <div className="lw-divider">
               <div className="lw-divider-line" />
               <span className="lw-divider-text">Demo Access</span>
               <div className="lw-divider-line" />
-            </div>
+            </div> */}
 
-            <div className="lw-demo">
+            {/* <div className="lw-demo">
               <div className="lw-demo-title">Try with demo credentials</div>
               <div className="lw-demo-row">
                 <span className="lw-demo-role">Admin</span>
@@ -373,7 +373,7 @@ export default function Login() {
                 <span className="lw-demo-code">poojitha@aotms.com</span>
                 <span className="lw-demo-code">caller123</span>
               </div>
-            </div>
+            </div> */}
 
             <div className="lw-footer">© 2025 AOTMS · Secure & Encrypted</div>
 
