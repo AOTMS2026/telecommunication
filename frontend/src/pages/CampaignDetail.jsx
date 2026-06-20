@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { campaignsAPI, leadsAPI } from '../services/api';
+import { campaignsAPI, leadsAPI, usersAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -186,6 +187,133 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
   );
 }
 
+// ─── Initiate Call Modal (same flow as LeadProfile — sends push notification) ──
+function CallModal({ lead, callers, currentUser, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const isCaller = currentUser?.role === 'caller';
+  const [selectedCaller, setSelectedCaller] = useState(
+    isCaller ? currentUser?._id : (lead?.assignedTo?._id || '')
+  );
+
+  const handleSend = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await leadsAPI.initiateCall(lead._id, selectedCaller || undefined);
+      setResult({ success: true, message: res.data.message });
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      setResult({ success: false, message: err.response?.data?.message || 'Failed to send notification' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const callersList = (callers || []).filter(c => c.role === 'caller');
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
+        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>📲 Initiate Call</div>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Send notification to caller's mobile app</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ padding: '18px 20px' }}>
+          <div style={{ background: P_LIGHT, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: MUTED }}>Lead</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{lead?.name}</div>
+            <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace' }}>{lead?.phone}</div>
+          </div>
+
+          {isCaller ? (
+            <div style={{ background: '#eef6ff', border: '1px solid #d6e8ff', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: '#1d4ed8', marginBottom: 14 }}>
+              📱 Sending to your mobile: <strong>{currentUser?.name}</strong>
+            </div>
+          ) : callersList.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 6, textTransform: 'uppercase' }}>Send notification to</div>
+              <select
+                value={selectedCaller}
+                onChange={e => setSelectedCaller(e.target.value)}
+                style={{ width: '100%', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, color: TEXT }}
+              >
+                <option value="">-- Assigned Caller ({lead?.assignedTo?.name || 'None'}) --</option>
+                {callersList.map(c => (
+                  <option key={c._id} value={c._id}>{c.name} ({c.email})</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {result && (
+            <div style={{ borderRadius: 10, padding: '10px 14px', fontSize: 12.5, fontWeight: 600, marginBottom: 4, background: result.success ? '#ecfdf5' : '#fef2f2', color: result.success ? '#15803d' : '#b91c1c', border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}` }}>
+              {result.success ? '✅ ' : '❌ '}{result.message}
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>
+            {result?.success ? 'Close' : 'Cancel'}
+          </button>
+          {!result?.success && (
+            <button onClick={handleSend} disabled={loading} style={{ flex: 1, padding: '9px 14px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', background: '#22c55e', color: '#fff' }}>
+              {loading ? 'Sending...' : 'Send Notification'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add Note Modal ─────────────────────────────────────────────────────────────
+function AddNoteModal({ lead, onClose, onSubmit }) {
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!note.trim()) return;
+    setSaving(true);
+    try {
+      await onSubmit(note);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
+        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Add Note — {lead?.name}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ padding: '18px 20px' }}>
+          <textarea
+            autoFocus
+            rows={4}
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Write a note about this student..."
+            style={{ width: '100%', border: `1px solid ${BORDER}`, borderRadius: 10, padding: 10, fontSize: 13, color: TEXT, resize: 'none', outline: 'none', fontFamily: 'inherit' }}
+          />
+        </div>
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>Cancel</button>
+          <button onClick={handleSave} disabled={saving || !note.trim()} style={{ flex: 1, padding: '9px 14px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: (saving || !note.trim()) ? 'not-allowed' : 'pointer', background: P, color: '#fff' }}>
+            {saving ? 'Saving...' : 'Save Note'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Lead Detail Panel ────────────────────────────────────────────────────────
 function LeadDetailPanel({ lead, onAction }) {
   if (!lead) return (
@@ -211,8 +339,6 @@ function LeadDetailPanel({ lead, onAction }) {
   const actions = [
     { label: 'Call', color: '#22c55e', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
     { label: 'Call Later', color: '#f59e0b', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
-    { label: 'WhatsApp', color: '#25d366', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.554 4.107 1.522 5.836L.057 23.999l6.304-1.654A11.93 11.93 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-4.99-1.364l-.358-.213-3.713.973.99-3.618-.233-.371A9.785 9.785 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/></svg> },
-    { label: 'Send SMS', color: '#3b82f6', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
     { label: 'Add Note', color: P, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
   ];
 
@@ -246,7 +372,7 @@ function LeadDetailPanel({ lead, onAction }) {
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
         {actions.map(({ label, color, icon }) => (
           <button key={label} onClick={() => onAction?.(label, lead)}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8 }}>
@@ -296,6 +422,7 @@ function LeadDetailPanel({ lead, onAction }) {
 export default function CampaignDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
 
   const [campaign, setCampaign] = useState(null);
   const [leads, setLeads] = useState([]);
@@ -308,6 +435,39 @@ export default function CampaignDetail() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [callers, setCallers] = useState([]);
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
+
+  useEffect(() => {
+    usersAPI.getAll().then(res => setCallers(res.data.users || [])).catch(() => {});
+  }, []);
+
+  // Re-fetch the selected lead's full record (so Activity History reflects new
+  // calls/notes immediately) and refresh the list/stat panels in the background.
+  const refreshSelectedLead = useCallback(async () => {
+    if (!selectedLead?._id) return;
+    try {
+      const res = await leadsAPI.getOne(selectedLead._id);
+      setSelectedLead(res.data.lead);
+    } catch (err) { console.error(err); }
+  }, [selectedLead]);
+
+  const handleLeadAction = async (action, lead) => {
+    if (action === 'Call') {
+      setShowCallModal(true);
+    } else if (action === 'Call Later') {
+      try {
+        await leadsAPI.updateStatus(lead._id, { status: 'Call Back Later' });
+        await refreshSelectedLead();
+        fetchLeads(page);
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to update status');
+      }
+    } else if (action === 'Add Note') {
+      setShowAddNoteModal(true);
+    }
+  };
 
   const fetchCampaign = useCallback(async () => {
     try {
@@ -538,10 +698,7 @@ export default function CampaignDetail() {
       </div>
 
       {/* ─── RIGHT PANEL: Lead Detail ─────────────────────────────────────────── */}
-      <LeadDetailPanel lead={selectedLead} onAction={(action, lead) => {
-        // Extend: hook up to your call/sms actions here
-        console.log('Action:', action, lead);
-      }} />
+      <LeadDetailPanel lead={selectedLead} onAction={handleLeadAction} />
 
       {/* ─── Add Leads Modal ──────────────────────────────────────────────────── */}
       {showAddLeads && (
@@ -549,6 +706,35 @@ export default function CampaignDetail() {
           campaignId={id}
           onClose={() => setShowAddLeads(false)}
           onSuccess={() => { fetchAll(); }}
+        />
+      )}
+
+      {/* ─── Initiate Call Modal ──────────────────────────────────────────────── */}
+      {showCallModal && selectedLead && (
+        <CallModal
+          lead={selectedLead}
+          callers={callers}
+          currentUser={currentUser}
+          onClose={() => setShowCallModal(false)}
+          onSuccess={refreshSelectedLead}
+        />
+      )}
+
+      {/* ─── Add Note Modal ───────────────────────────────────────────────────── */}
+      {showAddNoteModal && selectedLead && (
+        <AddNoteModal
+          lead={selectedLead}
+          onClose={() => setShowAddNoteModal(false)}
+          onSubmit={async (note) => {
+            try {
+              await leadsAPI.addNote(selectedLead._id, { note, type: 'note' });
+              await refreshSelectedLead();
+              fetchLeads(page);
+            } catch (err) {
+              alert(err.response?.data?.message || 'Failed to save note');
+              throw err;
+            }
+          }}
         />
       )}
     </div>

@@ -350,6 +350,75 @@ function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
   );
 }
 
+// ── Schedule Demo Date Modal ──────────────────────────────────────────────────
+function ScheduleDemoModal({ lead, onClose, onSave }) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const [date, setDate] = useState(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`);
+  const [time, setTime] = useState(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    if (!date || !time) { setError('Please pick a date and time for the demo.'); return; }
+    const demoScheduledDate = new Date(`${date}T${time}`);
+    if (isNaN(demoScheduledDate.getTime())) { setError('Invalid date/time.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await onSave(demoScheduledDate);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to schedule demo');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-100">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-purple-600" />
+            </div>
+            <h3 className="font-bold text-gray-900 text-base">Schedule Demo</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          For <strong>{lead.name}</strong> ({lead.phone}) — pick when the demo will happen.
+        </p>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+          <input
+            type="time"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+        </div>
+        {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
+        <div className="flex gap-2.5">
+          <button onClick={onClose} className="btn-secondary flex-1 rounded-xl py-2.5 font-semibold text-sm">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? 'Saving...' : 'Schedule Demo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LeadProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -370,6 +439,7 @@ export default function LeadProfile() {
   const [showLogCallModal, setShowLogCallModal] = useState(false);
   const [showInitiateCallModal, setShowInitiateCallModal] = useState(false); // NEW
   const [showCallbackModal, setShowCallbackModal] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockEntryId, setBlockEntryId] = useState(null);
@@ -474,11 +544,25 @@ export default function LeadProfile() {
   };
 
   const handleStatusChange = async (newStatus) => {
+    // "Demo Scheduled" needs a date/time, so collect that first instead of
+    // saving immediately — otherwise the demo silently has no date and never
+    // shows up on the dashboard's "Demos Scheduled" widgets.
+    if (newStatus === 'Demo Scheduled') {
+      setShowDemoModal(true);
+      return;
+    }
     try {
       const res = await leadsAPI.updateStatus(lead._id, { status: newStatus });
       setLead(res.data.lead);
       setEditForm(prev => ({ ...prev, status: newStatus }));
     } catch (err) { console.error(err); }
+  };
+
+  const handleScheduleDemo = async (demoScheduledDate) => {
+    const res = await leadsAPI.updateStatus(lead._id, { status: 'Demo Scheduled', demoScheduledDate: demoScheduledDate.toISOString() });
+    setLead(res.data.lead);
+    setEditForm(prev => ({ ...prev, status: 'Demo Scheduled' }));
+    setShowDemoModal(false);
   };
 
   const handleRatingChange = async (newRating) => {
@@ -1087,6 +1171,7 @@ export default function LeadProfile() {
       {showNoteModal && <AddNoteModal onClose={() => setShowNoteModal(false)} onSubmit={handleAddNote} />}
       {showLogCallModal && <LogCallModal lead={lead} onClose={() => setShowLogCallModal(false)} onSubmit={handleLogManualCall} />}
       {showCallbackModal && lead && <CallbackTimeModal lead={lead} currentUser={user} onClose={() => setShowCallbackModal(false)} onScheduled={handleCallbackScheduled} />}
+      {showDemoModal && lead && <ScheduleDemoModal lead={lead} onClose={() => setShowDemoModal(false)} onSave={handleScheduleDemo} />}
 
       {/* NEW: Initiate Call Modal */}
       {showInitiateCallModal && (

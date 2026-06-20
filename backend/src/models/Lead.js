@@ -21,6 +21,7 @@ const leadSchema = new mongoose.Schema({
   },
   rating: { type: Number, min: 0, max: 5, default: 0 },
   leadSource: { type: String, default: 'Manual' },
+  leadSourceNote: { type: String, default: '' }, // custom message when leadSource is "Other"
   preferredCourses: [{ type: String }],
   courseInterest: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
   mode: { type: String, enum: ['Online', 'Offline', 'Hybrid', ''], default: '' },

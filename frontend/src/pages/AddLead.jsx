@@ -5,7 +5,7 @@ import { leadsAPI, campaignsAPI, usersAPI, coursesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
-const SOURCES = ['Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel', 'Referral'];
+const SOURCES = ['Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel', 'Instagram','Referral','Other' ];
 const COURSES = ['MBA', 'BBA', 'B.Tech', 'MCA', 'B.Sc', 'M.Tech', 'B.Com', 'M.Com'];
 
 // ✅ Moved OUTSIDE component to prevent remounting on every render
@@ -30,7 +30,7 @@ export default function AddLead() {
   const [courses, setCourses] = useState([]);
   const [form, setForm] = useState({
     name: '', phone: '', alternatePhone: '', email: '',
-    status: 'Fresh', leadSource: 'Manual', preferredCourses: [],
+    status: 'Fresh', leadSource: 'Manual', leadSourceNote: '', preferredCourses: [],
     courseInterest: '', mode: '',
     budget: '', location: '', lastQualification: '',
     nextFollowupDate: '', demoScheduledDate: '', demoDoneDate: '',
@@ -51,6 +51,7 @@ export default function AddLead() {
         setForm({
           name: l.name || '', phone: l.phone || '', alternatePhone: l.alternatePhone || '',
           email: l.email || '', status: l.status || 'Fresh', leadSource: l.leadSource || 'Manual',
+          leadSourceNote: l.leadSourceNote || '',
           preferredCourses: l.preferredCourses || [], budget: l.budget || '',
           courseInterest: l.courseInterest?._id || l.courseInterest || '',
           mode: l.mode || '',
@@ -168,7 +169,15 @@ export default function AddLead() {
           <h3 className="font-semibold text-gray-800 text-sm">Lead Details</h3>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Lead Source">
-              <select className="input-field" value={form.leadSource} onChange={e => set('leadSource', e.target.value)}>
+              <select
+                className="input-field"
+                value={form.leadSource}
+                onChange={e => {
+                  const v = e.target.value;
+                  set('leadSource', v);
+                  if (v !== 'Other') set('leadSourceNote', '');
+                }}
+              >
                 {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
@@ -178,6 +187,18 @@ export default function AddLead() {
               </select>
             </Field>
           </div>
+          {form.leadSource === 'Other' && (
+            <Field label="Lead Source Note" required>
+              <textarea
+                className="input-field resize-none"
+                rows={2}
+                value={form.leadSourceNote}
+                onChange={e => set('leadSourceNote', e.target.value)}
+                placeholder="Describe where this lead came from..."
+                required
+              />
+            </Field>
+          )}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <Field label="Interested Course">
               <select
@@ -206,7 +227,7 @@ export default function AddLead() {
               </select>
             </Field>
           </div>
-          <Field label="Preferred Courses">
+          <Field label="Pursuing Courses">
             <div className="flex flex-wrap gap-2">
               {COURSES.map(c => (
                 <button

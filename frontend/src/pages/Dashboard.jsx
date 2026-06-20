@@ -273,6 +273,7 @@ export default function Dashboard() {
   const [newStatus, setNewStatus] = useState('');
   const [nextFollowupDate, setNextFollowupDate] = useState('');
   const [nextFollowupNote, setNextFollowupNote] = useState('');
+  const [demoDate, setDemoDate] = useState('');
   const [savingCall, setSavingCall] = useState(false);
 
   const isAdmin = user?.role === 'admin';
@@ -421,6 +422,7 @@ export default function Dashboard() {
       setNewStatus('');
       setNextFollowupDate('');
       setNextFollowupNote('');
+      setDemoDate('');
       
       leadsAPI.getOne(leadId)
         .then(res => {
@@ -447,7 +449,11 @@ export default function Dashboard() {
 
       // 2. Update status if updated in UI
       if (newStatus && newStatus !== workspaceLead.status) {
-        await leadsAPI.updateStatus(workspaceLead._id, { status: newStatus });
+        const statusPayload = { status: newStatus };
+        if (newStatus === 'Demo Scheduled') {
+          statusPayload.demoScheduledDate = demoDate ? new Date(demoDate).toISOString() : new Date().toISOString();
+        }
+        await leadsAPI.updateStatus(workspaceLead._id, statusPayload);
       }
 
       // 3. Create follow-up if date is set
@@ -1986,6 +1992,18 @@ export default function Dashboard() {
                           <option value="Wrong Number">Wrong Number</option>
                         </select>
                       </div>
+
+                      {newStatus === 'Demo Scheduled' && (
+                        <div>
+                          <label style={{ fontSize: 11.5, fontWeight: 700, color: PURPLE, display: 'block', marginBottom: 4 }}>📅 Demo Date & Time</label>
+                          <input
+                            type="datetime-local"
+                            value={demoDate}
+                            onChange={e => setDemoDate(e.target.value)}
+                            style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                          />
+                        </div>
+                      )}
 
                       <div>
                         <label style={{ fontSize: 11.5, fontWeight: 700, color: TEXT_MAIN, display: 'block', marginBottom: 4 }}>Call Note / Note details</label>

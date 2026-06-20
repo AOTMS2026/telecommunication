@@ -498,11 +498,24 @@ router.post('/:id/note', protect, async (req, res) => {
 // PUT /api/leads/:id/status
 router.put('/:id/status', protect, async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, demoScheduledDate } = req.body;
     const lead = await Lead.findById(req.params.id).populate('assignedTo', 'name _id');
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     const prevStatus = lead.status;
     lead.status = status;
+
+    // Whenever a lead is marked "Demo Scheduled", make sure demoScheduledDate is set.
+    // Without this, the lead never appears in dashboard/report widgets that filter
+    // on demoScheduledDate (e.g. "Demos Scheduled This Week"), even though the
+    // status itself was updated correctly.
+    if (status === 'Demo Scheduled') {
+      if (demoScheduledDate) {
+        lead.demoScheduledDate = new Date(demoScheduledDate);
+      } else if (!lead.demoScheduledDate) {
+        lead.demoScheduledDate = new Date();
+      }
+    }
+
     lead.activities.unshift({
       type: 'status_change',
       description: `Status changed from ${prevStatus} to ${status}`,
