@@ -1,4 +1,5 @@
 const Notification = require('../models/Notification');
+const User = require('../models/User');
 
 /**
  * Create a notification for a user
@@ -34,7 +35,6 @@ async function notifyLeadAssigned({ lead, assignedToId, performedBy }) {
  */
 async function notifyLeadStatusChanged({ lead, prevStatus, newStatus, assignedToId, performedByUser }) {
   if (!assignedToId) return null;
-  // Don't notify if the caller changed it themselves
   if (performedByUser?._id?.toString() === assignedToId?.toString()) return null;
 
   return createNotification({
@@ -100,6 +100,99 @@ async function notifyCallInitiated({ lead, callerId, performedByUser }) {
   });
 }
 
+/**
+ * Notify all Admin & Super Admin users whenever ANY task / follow-up is created —
+ * whether by a caller or by another admin. The creator themself is skipped.
+ * Also notify the assigned caller if they're not the creator.
+ */
+async function notifyAdminsTaskCreated({ followup, performedByUser }) {
+  try {
+    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    const adminRecipients = admins
+      .map(a => a._id)
+      .filter(id => id.toString() !== performedByUser?._id?.toString());
+
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'To-do task' : 'Call follow-up';
+    const noteSnippet = followup.note ? `: "${followup.note.slice(0, 80)}"` : '';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+
+    const notifications = [];
+
+    // Notify admins/super admins
+    if (adminRecipients.length > 0) {
+      const adminNotifs = adminRecipients.map(recipient => createNotification({
+        recipient,
+        type: 'task_created',
+        title: isTodo ? '🗒️ New To-do Task Created' : '📞 New Call Follow-up Created',
+        message: `${performedByUser?.name || 'Someone'} created a ${taskLabel.toLowerCase()}${leadSuffix}${noteSnippet}`,
+        lead: followup.lead?._id || followup.lead,
+        performedBy: performedByUser?._id,
+        data: { followupId: followup._id, taskType: followup.type },
+      }));
+      notifications.push(...adminNotifs);
+    }
+
+    // Notify the assigned caller if they are NOT the one creating the task
+    const assignedToId = followup.assignedTo?._id || followup.assignedTo;
+    if (
+      assignedToId &&
+      assignedToId.toString() !== performedByUser?._id?.toString()
+    ) {
+      // Check that the assigned user is a caller (not an admin who would already be notified)
+      const assignedUser = await User.findById(assignedToId).select('role');
+      if (assignedUser && assignedUser.role === 'caller') {
+        notifications.push(createNotification({
+          recipient: assignedToId,
+          type: 'task_assigned',
+          title: isTodo ? '🗒️ New Task Assigned to You' : '📞 New Call Follow-up Assigned to You',
+          message: `${performedByUser?.name || 'Admin'} assigned you a ${taskLabel.toLowerCase()}${leadSuffix}${noteSnippet}`,
+          lead: followup.lead?._id || followup.lead,
+          performedBy: performedByUser?._id,
+          data: { followupId: followup._id, taskType: followup.type },
+        }));
+      }
+    }
+
+    return Promise.all(notifications);
+  } catch (err) {
+    console.error('Failed to notify admins of new task:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Notify all Admin & Super Admin users when a caller edits a task.
+ */
+async function notifyAdminsTaskEdited({ followup, performedByUser }) {
+  try {
+    // Only send this notification when the editor is a caller
+    if (!performedByUser || !['caller'].includes(performedByUser.role)) return [];
+
+    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    const recipients = admins.map(a => a._id);
+
+    if (recipients.length === 0) return [];
+
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'to-do task' : 'call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+
+    return Promise.all(recipients.map(recipient => createNotification({
+      recipient,
+      type: 'task_edited',
+      title: '✏️ Task Edited by Caller',
+      message: `${performedByUser.name} edited a ${taskLabel}${leadSuffix}`,
+      lead: followup.lead?._id || followup.lead,
+      performedBy: performedByUser._id,
+      data: { followupId: followup._id, taskType: followup.type },
+    })));
+  } catch (err) {
+    console.error('Failed to notify admins of task edit:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   createNotification,
   notifyLeadAssigned,
@@ -107,4 +200,6 @@ module.exports = {
   notifyLeadUpdated,
   notifyNewLeadCreated,
   notifyCallInitiated,
+  notifyAdminsTaskCreated,
+  notifyAdminsTaskEdited,
 };

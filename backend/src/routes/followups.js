@@ -3,10 +3,22 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const FollowUp = require('../models/FollowUp');
 const Lead = require('../models/Lead');
-const { protect } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
+const { notifyAdminsTaskCreated, notifyAdminsTaskEdited } = require('../services/notificationService');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Safe fire-and-forget wrapper — notification failures must NEVER break the main response
+function fireAndForget(fn) {
+  try {
+    Promise.resolve(fn()).catch(err =>
+      console.error('[notification] fire-and-forget error:', err.message)
+    );
+  } catch (err) {
+    console.error('[notification] sync error:', err.message);
+  }
+}
 
 // GET /api/followups
 router.get('/', protect, async (req, res) => {
@@ -20,20 +32,24 @@ router.get('/', protect, async (req, res) => {
     }
 
     // 1. assignedTo filtering (Me vs Team)
-    const forMe = forMeQuery === 'true' || forMeQuery === true;
+    const forMe = forMeQuery === 'true';
+    const forTeam = forMeQuery === 'false';
+
     if (forMe) {
       query.assignedTo = req.user._id;
-    } else if (forMeQuery === 'false' || forMeQuery === false) {
+    } else if (forTeam) {
+      // Team view: callers only see their own; admins/super admins see all
+      if (req.user.role === 'caller') {
+        query.assignedTo = req.user._id;
+      }
+      // else: no assignedTo filter → returns all tasks
       if (callerId && callerId !== 'all') {
         query.assignedTo = callerId;
       }
     } else {
+      // No forMe param at all
       if (req.user.role === 'caller') {
         query.assignedTo = req.user._id;
-      } else {
-        if (callerId && callerId !== 'all') {
-          query.assignedTo = callerId;
-        }
       }
     }
 
@@ -66,7 +82,6 @@ router.get('/', protect, async (req, res) => {
         const startOfWeek = new Date(start);
         startOfWeek.setDate(start.getDate() - day);
         startOfWeek.setHours(0, 0, 0, 0);
-        
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
         endOfWeek.setHours(23, 59, 59, 999);
@@ -82,24 +97,35 @@ router.get('/', protect, async (req, res) => {
     const followups = await FollowUp.find(query)
       .populate('lead', 'name phone status')
       .populate('assignedTo', 'name avatar')
+      .populate('assignedBy', 'name avatar')
       .sort({ scheduledAt: 1 });
 
     res.json({ followups });
   } catch (err) {
+    console.error('[GET /followups]', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// POST /api/followups
+// POST /api/followups — create a task/follow-up
 router.post('/', protect, async (req, res) => {
   try {
     const followup = await FollowUp.create({
       ...req.body,
       assignedTo: req.body.assignedTo || req.user._id,
+      assignedBy: req.body.assignedBy || req.user._id,
     });
+
     await followup.populate('lead', 'name phone status');
+    await followup.populate('assignedTo', 'name email');
+    await followup.populate('assignedBy', 'name email');
+
+    // Fire-and-forget: notification failures must NOT affect the 201 response
+    fireAndForget(() => notifyAdminsTaskCreated({ followup, performedByUser: req.user }));
+
     res.status(201).json({ followup });
   } catch (err) {
+    console.error('[POST /followups]', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -112,25 +138,35 @@ router.put('/:id', protect, async (req, res) => {
       update.completedAt = new Date();
     }
     const followup = await FollowUp.findByIdAndUpdate(req.params.id, update, { new: true })
-      .populate('lead', 'name phone status');
+      .populate('lead', 'name phone status')
+      .populate('assignedTo', 'name email')
+      .populate('assignedBy', 'name email');
+
     if (!followup) return res.status(404).json({ message: 'Follow-up not found' });
+
+    // Notify admins when a caller edits — fire-and-forget
+    fireAndForget(() => notifyAdminsTaskEdited({ followup, performedByUser: req.user }));
+
     res.json({ followup });
   } catch (err) {
+    console.error('[PUT /followups/:id]', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// DELETE /api/followups/:id
-router.delete('/:id', protect, async (req, res) => {
+// DELETE /api/followups/:id — only admin & super admin allowed
+router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
   try {
-    await FollowUp.findByIdAndDelete(req.params.id);
+    const deleted = await FollowUp.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Task not found' });
     res.json({ message: 'Deleted' });
   } catch (err) {
+    console.error('[DELETE /followups/:id]', err);
     res.status(500).json({ message: err.message });
   }
 });
 
-// POST /api/followups/import
+// POST /api/followups/import — bulk import from Excel/CSV
 router.post('/import', protect, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -156,7 +192,7 @@ router.post('/import', protect, upload.single('file'), async (req, res) => {
 
         const note = normalizedRow.note || normalizedRow.description || normalizedRow.task || '';
         const scheduledAtStr = normalizedRow.date || normalizedRow.scheduledat || normalizedRow.due_date || normalizedRow.duedate;
-        
+
         let scheduledAt = new Date();
         if (scheduledAtStr) {
           const parsedDate = new Date(scheduledAtStr);
@@ -164,10 +200,10 @@ router.post('/import', protect, upload.single('file'), async (req, res) => {
             scheduledAt = parsedDate;
           }
         }
-        
+
         const priority = (normalizedRow.priority || 'medium').trim().toLowerCase();
         const type = (normalizedRow.type || 'call_followup').trim().toLowerCase();
-        
+
         let leadId = undefined;
         const leadPhone = normalizedRow.phone || normalizedRow.lead_phone;
         if (leadPhone) {
@@ -186,16 +222,18 @@ router.post('/import', protect, upload.single('file'), async (req, res) => {
           scheduledAt,
           priority: ['low', 'medium', 'high'].includes(priority) ? priority : 'medium',
           type: finalType,
-          assignedTo: req.user._id
+          assignedTo: req.user._id,
+          assignedBy: req.user._id,
         });
         created++;
       } catch (rowError) {
-        console.error('Error importing bulk row:', row, rowError);
+        console.error('Error importing bulk row:', row, rowError.message);
       }
     }
 
     res.json({ message: 'Import completed successfully', count: created, total: rows.length });
   } catch (err) {
+    console.error('[POST /followups/import]', err);
     res.status(500).json({ message: err.message });
   }
 });

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { followupsAPI } from '../services/api';
+import { followupsAPI, leadsAPI, usersAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const PURPLE = '#5b3fc7';
 const PURPLE_LIGHT = '#f0ecff';
@@ -28,6 +29,7 @@ function EditModal({ task, onClose, onSaved }) {
     scheduledAt: task.scheduledAt ? task.scheduledAt.slice(0, 16) : '',
     priority: task.priority || 'medium',
     status: task.status || 'upcoming',
+    title: task.title || task.note || task.description || '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +40,7 @@ function EditModal({ task, onClose, onSaved }) {
     try {
       const update = {
         note: form.note,
+        title: task.type === 'todo' ? form.note : (form.title || ''),
         scheduledAt: form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
         priority: form.priority,
         status: form.status,
@@ -217,6 +220,236 @@ function UploadModal({ onClose, onImported }) {
   );
 }
 
+// ── Add Task Modal ────────────────────────────────────────────────────────────
+function AddTaskModal({ type, onClose, onCreated }) {
+  const { user: currentUser } = useAuth();
+  const isCallFollowup = type === 'call_followup';
+  // Only Admins / Super Admins are allowed to list all users (GET /api/users is
+  // restricted on the backend), so only they get the Assigned To / Assigned By
+  // pickers. Callers always create tasks for themselves, as before.
+  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'super admin';
+
+  const [title, setTitle] = useState('');
+  const [note, setNote] = useState('');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [priority, setPriority] = useState('medium');
+  const [leadQuery, setLeadQuery] = useState('');
+  const [leadResults, setLeadResults] = useState([]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const [users, setUsers] = useState([]);
+  const [assignedTo, setAssignedTo] = useState(currentUser?._id || '');
+  const [assignedBy, setAssignedBy] = useState(currentUser?._id || '');
+
+  // Load the user list for the Assigned To / Assigned By dropdowns (admins only)
+  useEffect(() => {
+    if (!canAssign) return;
+    usersAPI.getAll()
+      .then(res => setUsers(res.data.users || []))
+      .catch(() => setUsers([]));
+  }, [canAssign]);
+
+  // Debounced lead search — optional for Call Followups, just helps link a lead if you want
+  useEffect(() => {
+    if (!isCallFollowup || selectedLead || leadQuery.trim().length < 2) {
+      setLeadResults([]);
+      return;
+    }
+    setSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await leadsAPI.getAll({ search: leadQuery.trim(), limit: 6 });
+        setLeadResults(res.data.leads || []);
+      } catch (err) {
+        setLeadResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [leadQuery, isCallFollowup, selectedLead]);
+
+  const handleCreate = async () => {
+    setError('');
+    if (!scheduledAt) {
+      setError('Please choose a due date & time');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        type,
+        title: !isCallFollowup ? note : '',
+        note,
+        scheduledAt: new Date(scheduledAt).toISOString(),
+        priority,
+      };
+      // Lead is optional — only attach it if one was actually picked
+      if (isCallFollowup && selectedLead) payload.lead = selectedLead._id;
+      if (canAssign) {
+        payload.assignedTo = assignedTo || currentUser._id;
+        payload.assignedBy = assignedBy || currentUser._id;
+      }
+      const res = await followupsAPI.create(payload);
+      onCreated(res.data.followup);  // notify parent first (sets forFilter / triggers fetch)
+      onClose();                     // then close the modal
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create task');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>
+            Add {isCallFollowup ? 'Call Follow-up' : 'Task'}
+          </h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {isCallFollowup && (
+            <div style={{ position: 'relative' }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Lead (optional)</label>
+              {selectedLead ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f5f3ff', borderRadius: 10, padding: '9px 12px' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: PURPLE }}>{selectedLead.name}</div>
+                    <div style={{ fontSize: 11, color: TEXT_MUTED }}>{selectedLead.phone}</div>
+                  </div>
+                  <span
+                    onClick={() => { setSelectedLead(null); setLeadQuery(''); }}
+                    style={{ cursor: 'pointer', color: TEXT_MUTED, fontWeight: 700, fontSize: 16 }}
+                  >×</span>
+                </div>
+              ) : (
+                <>
+                  <input
+                    value={leadQuery}
+                    onChange={e => setLeadQuery(e.target.value)}
+                    placeholder="Search lead by name or phone..."
+                    style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  {leadQuery.trim().length >= 2 && (
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, marginTop: 4, maxHeight: 160, overflowY: 'auto', background: '#fff', boxShadow: '0 4px 16px rgba(91,63,199,0.1)' }}>
+                      {searching ? (
+                        <div style={{ padding: 10, fontSize: 12, color: TEXT_MUTED }}>Searching...</div>
+                      ) : leadResults.length === 0 ? (
+                        <div style={{ padding: 10, fontSize: 12, color: TEXT_MUTED }}>No leads found</div>
+                      ) : (
+                        leadResults.map(l => (
+                          <div
+                            key={l._id}
+                            onClick={() => { setSelectedLead(l); setLeadResults([]); }}
+                            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13 }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <div style={{ fontWeight: 600, color: TEXT_MAIN }}>{l.name}</div>
+                            <div style={{ fontSize: 11, color: TEXT_MUTED }}>{l.phone}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>
+              {isCallFollowup ? 'Description / Note' : 'Task Title'}
+            </label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={3}
+              placeholder={isCallFollowup ? 'What should this call be about?' : 'What needs to be done?'}
+              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Due Date & Time</label>
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Priority</label>
+            <select
+              value={priority}
+              onChange={e => setPriority(e.target.value)}
+              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+            >
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+
+          {canAssign && (
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Assigned To</label>
+                <select
+                  value={assignedTo}
+                  onChange={e => setAssignedTo(e.target.value)}
+                  style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+                >
+                  {users.map(u => (
+                    <option key={u._id} value={u._id}>
+                      {u.name}{u._id === currentUser?._id ? ' (You)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Assigned By</label>
+                <select
+                  value={assignedBy}
+                  onChange={e => setAssignedBy(e.target.value)}
+                  style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+                >
+                  {users.map(u => (
+                    <option key={u._id} value={u._id}>
+                      {u.name}{u._id === currentUser?._id ? ' (You)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 10 }}>{error}</p>}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
+          <button
+            onClick={handleCreate}
+            disabled={saving}
+            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? 'Creating...' : 'Create Task'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Download helper ───────────────────────────────────────────────────────────
 function downloadCSV(tasks, tab) {
   const headers = ['Lead Name', 'Phone', 'Description', 'Assignee', 'Status', 'Due Date', 'Priority'];
@@ -257,8 +490,12 @@ export default function Tasks() {
   const [sortDir, setSortDir] = useState('asc');
   const [editingTask, setEditingTask] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const { user: currentUser } = useAuth();
+  const canDelete = currentUser?.role === 'admin' || currentUser?.role === 'super admin';
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       const isAll = statusFilter.length === 4; // all 4 options selected = no filter
@@ -284,14 +521,12 @@ export default function Tasks() {
       // Refine upcoming into pending vs late on the frontend
       if (!isAll) {
         if (wantsLate && !wantsPending) {
-          // Only overdue: upcoming AND past scheduled time
           items = items.filter(t =>
             (t.status === 'done' && wantsDone) ||
             (t.status === 'cancelled' && wantsCancelled) ||
             (t.status === 'upcoming' && new Date(t.scheduledAt) < new Date())
           );
         } else if (wantsPending && !wantsLate) {
-          // Only upcoming: upcoming AND NOT past scheduled time
           items = items.filter(t =>
             (t.status === 'done' && wantsDone) ||
             (t.status === 'cancelled' && wantsCancelled) ||
@@ -310,10 +545,13 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, forFilter, dueFilter, statusFilter.join(','), priorityFilter]);
 
-  useEffect(() => { fetchTasks(); }, [activeTab, forFilter, dueFilter, statusFilter.join(','), priorityFilter]);
+  useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
+  const fetchTasksRef = useRef(fetchTasks);
+  useEffect(() => { fetchTasksRef.current = fetchTasks; }, [fetchTasks]);
   const additionalRef = useRef(null);
   useEffect(() => {
     const handler = (e) => {
@@ -332,19 +570,22 @@ export default function Tasks() {
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const handleDelete = async (taskId) => {
-    if (!window.confirm('Delete this follow-up? This cannot be undone.')) return;
-    try {
-      await followupsAPI.delete(taskId);
-      setTasks(prev => prev.filter(t => t._id !== taskId));
-    } catch (err) {
-      alert('Failed to delete: ' + (err.response?.data?.message || err.message));
-    }
-  };
-
   const handleEditSaved = (updated) => {
     setTasks(prev => prev.map(t => t._id === updated._id ? { ...t, ...updated } : t));
     setEditingTask(null);
+  };
+
+  const handleDelete = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    try {
+      setDeletingTaskId(taskId);
+      await followupsAPI.delete(taskId);
+      setTasks(prev => prev.filter(t => t._id !== taskId));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete task');
+    } finally {
+      setDeletingTaskId(null);
+    }
   };
 
   const SortIcon = ({ field }) => (
@@ -373,6 +614,19 @@ export default function Tasks() {
         />
       )}
 
+      {showAddModal && (
+        <AddTaskModal
+          type={activeTab === 'Call Followups' ? 'call_followup' : 'todo'}
+          onClose={() => setShowAddModal(false)}
+          onCreated={(newTask) => {
+            // Re-fetch the task list so the new task appears immediately.
+            // We do NOT change forFilter here — if the user is on "Me" view
+            // and created a task for themselves, it should show up right there.
+            fetchTasksRef.current();
+          }}
+        />
+      )}
+
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
@@ -390,6 +644,22 @@ export default function Tasks() {
             </span>
           </div>
         </div>
+
+        {/* ADD — small + button, opens popup to create a single task */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          title="Add Task"
+          style={{
+            width: 30, height: 30, borderRadius: '50%',
+            border: 'none', background: PURPLE, color: '#fff',
+            fontSize: 18, fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            lineHeight: 1, boxShadow: '0 2px 8px rgba(91,63,199,0.3)',
+            flexShrink: 0
+          }}
+        >
+          +
+        </button>
       </div>
 
       {/* Tabs */}
@@ -649,6 +919,7 @@ export default function Tasks() {
                 { label: 'Lead', field: 'lead' },
                 { label: 'Description', field: 'description' },
                 { label: 'Assignee', field: 'assignee' },
+                { label: 'Assigned By', field: 'assignedBy' },
                 { label: 'Status', field: 'status' },
                 { label: 'Due date', field: 'dueDate', highlight: !!dueFilter },
                 { label: 'Priority', field: 'priority' },
@@ -668,7 +939,7 @@ export default function Tasks() {
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {col.label}
-                    {col.field && col.field !== 'description' && col.field !== 'assignee' && (
+                    {col.field && col.field !== 'description' && col.field !== 'assignee' && col.field !== 'assignedBy' && (
                       <SortIcon field={col.field} />
                     )}
                     {col.field === 'dueDate' && (
@@ -684,14 +955,14 @@ export default function Tasks() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} style={{ padding: '48px 16px', textAlign: 'center' }}>
+                <td colSpan={8} style={{ padding: '48px 16px', textAlign: 'center' }}>
                   <div style={{ width: 24, height: 24, border: `3px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin 0.7s linear infinite' }} />
                   <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </td>
               </tr>
             ) : tasks.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '80px 16px', textAlign: 'center' }}>
+                <td colSpan={8} style={{ padding: '80px 16px', textAlign: 'center' }}>
                   <div style={{ fontSize: 32, color: '#ccc', fontWeight: 300, letterSpacing: 2 }}>No Tasks</div>
                 </td>
               </tr>
@@ -724,7 +995,7 @@ export default function Tasks() {
                   {/* Description */}
                   <td style={{ padding: '12px 16px', fontSize: 13, color: '#555', maxWidth: 200 }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {task.note || task.description || '—'}
+                      {task.title || task.note || task.description || '—'}
                     </div>
                   </td>
                   {/* Assignee */}
@@ -741,6 +1012,26 @@ export default function Tasks() {
                       <span style={{ fontSize: 12, color: TEXT_MAIN }}>
                         {task.assignedTo?.name || task.assignee?.name || 'Me'}
                       </span>
+                    </div>
+                  </td>
+                  {/* Assigned By */}
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                      {task.assignedBy?.name ? (
+                        <>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            background: '#fef3c7', color: '#92400e',
+                            fontSize: 11, fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}>
+                            {task.assignedBy.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span style={{ fontSize: 12, color: TEXT_MAIN }}>{task.assignedBy.name}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 12, color: TEXT_MUTED }}>—</span>
+                      )}
                     </div>
                   </td>
                   {/* Status */}
@@ -792,20 +1083,24 @@ export default function Tasks() {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
                       </button>
-                      {/* Delete */}
-                      <button
-                        title="Delete"
-                        onClick={() => handleDelete(task._id)}
-                        style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                        onMouseEnter={e => e.currentTarget.style.borderColor = '#e53e3e'}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e2f5'}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                          <path d="M10 11v6"/><path d="M14 11v6"/>
-                          <path d="M9 6V4h6v2"/>
-                        </svg>
-                      </button>
+                      {/* Delete — only for admin / super admin */}
+                      {canDelete && (
+                        <button
+                          title="Delete"
+                          onClick={() => handleDelete(task._id)}
+                          disabled={deletingTaskId === task._id}
+                          style={{ background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s', opacity: deletingTaskId === task._id ? 0.5 : 1 }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = '#e53e3e'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = '#fecaca'}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                            <path d="M9 6V4h6v2"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
