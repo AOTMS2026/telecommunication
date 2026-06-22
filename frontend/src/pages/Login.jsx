@@ -290,12 +290,12 @@ export default function Login() {
 
             <div className="lw-portal-badge">
               <div className="lw-portal-dot" />
-              <span className="lw-portal-text">Caller Portal</span>
+              <span className="lw-portal-text">AOTMS CRM Portal</span>
             </div>
 
             <div className="lw-welcome">
               <h1>Welcome back 👋</h1>
-              <p>Sign in to your caller dashboard</p>
+              <p>Sign in to your AOTMS CRM dashboard</p>
             </div>
 
             {error && (

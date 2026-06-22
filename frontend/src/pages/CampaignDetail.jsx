@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { campaignsAPI, leadsAPI, usersAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import { campaignsAPI, leadsAPI } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import LeadDetailsPage from '../components/LeadDetails/LeadDetailsPage';
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
 const P = '#5b3fc7';
@@ -187,242 +187,10 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
   );
 }
 
-// ─── Initiate Call Modal (same flow as LeadProfile — sends push notification) ──
-function CallModal({ lead, callers, currentUser, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const isCaller = currentUser?.role === 'caller';
-  const [selectedCaller, setSelectedCaller] = useState(
-    isCaller ? currentUser?._id : (lead?.assignedTo?._id || '')
-  );
-
-  const handleSend = async () => {
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await leadsAPI.initiateCall(lead._id, selectedCaller || undefined);
-      setResult({ success: true, message: res.data.message });
-      if (onSuccess) onSuccess();
-    } catch (err) {
-      setResult({ success: false, message: err.response?.data?.message || 'Failed to send notification' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const callersList = (callers || []).filter(c => c.role === 'caller');
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
-        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>📲 Initiate Call</div>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Send notification to caller's mobile app</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>✕</button>
-        </div>
-        <div style={{ padding: '18px 20px' }}>
-          <div style={{ background: P_LIGHT, borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: MUTED }}>Lead</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{lead?.name}</div>
-            <div style={{ fontSize: 12, color: MUTED, fontFamily: 'monospace' }}>{lead?.phone}</div>
-          </div>
-
-          {isCaller ? (
-            <div style={{ background: '#eef6ff', border: '1px solid #d6e8ff', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: '#1d4ed8', marginBottom: 14 }}>
-              📱 Sending to your mobile: <strong>{currentUser?.name}</strong>
-            </div>
-          ) : callersList.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 6, textTransform: 'uppercase' }}>Send notification to</div>
-              <select
-                value={selectedCaller}
-                onChange={e => setSelectedCaller(e.target.value)}
-                style={{ width: '100%', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 10px', fontSize: 13, color: TEXT }}
-              >
-                <option value="">-- Assigned Caller ({lead?.assignedTo?.name || 'None'}) --</option>
-                {callersList.map(c => (
-                  <option key={c._id} value={c._id}>{c.name} ({c.email})</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {result && (
-            <div style={{ borderRadius: 10, padding: '10px 14px', fontSize: 12.5, fontWeight: 600, marginBottom: 4, background: result.success ? '#ecfdf5' : '#fef2f2', color: result.success ? '#15803d' : '#b91c1c', border: `1px solid ${result.success ? '#bbf7d0' : '#fecaca'}` }}>
-              {result.success ? '✅ ' : '❌ '}{result.message}
-            </div>
-          )}
-        </div>
-        <div style={{ padding: '14px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>
-            {result?.success ? 'Close' : 'Cancel'}
-          </button>
-          {!result?.success && (
-            <button onClick={handleSend} disabled={loading} style={{ flex: 1, padding: '9px 14px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', background: '#22c55e', color: '#fff' }}>
-              {loading ? 'Sending...' : 'Send Notification'}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Add Note Modal ─────────────────────────────────────────────────────────────
-function AddNoteModal({ lead, onClose, onSubmit }) {
-  const [note, setNote] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!note.trim()) return;
-    setSaving(true);
-    try {
-      await onSubmit(note);
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
-        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Add Note — {lead?.name}</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#aaa', lineHeight: 1 }}>✕</button>
-        </div>
-        <div style={{ padding: '18px 20px' }}>
-          <textarea
-            autoFocus
-            rows={4}
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="Write a note about this student..."
-            style={{ width: '100%', border: `1px solid ${BORDER}`, borderRadius: 10, padding: 10, fontSize: 13, color: TEXT, resize: 'none', outline: 'none', fontFamily: 'inherit' }}
-          />
-        </div>
-        <div style={{ padding: '14px 20px', borderTop: `1px solid ${BORDER}`, display: 'flex', gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving || !note.trim()} style={{ flex: 1, padding: '9px 14px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: (saving || !note.trim()) ? 'not-allowed' : 'pointer', background: P, color: '#fff' }}>
-            {saving ? 'Saving...' : 'Save Note'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Lead Detail Panel ────────────────────────────────────────────────────────
-function LeadDetailPanel({ lead, onAction }) {
-  if (!lead) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED, flexDirection: 'column', gap: 8 }}>
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span style={{ fontSize: 13 }}>Select a student to view details</span>
-    </div>
-  );
-
-  const fields = [
-    { label: 'Mobile Number', value: lead.phone },
-    { label: 'Email Address', value: lead.email || '—' },
-    { label: 'Lead Source', value: lead.leadSource || '—' },
-    { label: 'City / Location', value: lead.location || '—' },
-    { label: 'Course Interest', value: lead.preferredCourses?.join(', ') || '—' },
-    { label: 'Budget', value: lead.budget ? `₹${Number(lead.budget).toLocaleString('en-IN')}` : '—' },
-    { label: 'Qualification', value: lead.lastQualification || '—' },
-    { label: 'Learning Mode', value: lead.mode || '—' },
-    { label: 'Total Calls Made', value: lead.totalCalls ?? 0 },
-    { label: 'Next Follow-up', value: lead.nextFollowupDate ? new Date(lead.nextFollowupDate).toLocaleDateString('en-IN') : '—' },
-  ];
-
-  const actions = [
-    { label: 'Call', color: '#22c55e', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
-    { label: 'Call Later', color: '#f59e0b', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> },
-    { label: 'Add Note', color: P, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> },
-  ];
-
-  return (
-    <div style={{ flex: 1, overflowY: 'auto', background: '#fff', padding: '20px 24px' }}>
-      {/* Student header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Avatar name={lead.name} size={46} />
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: TEXT }}>{lead.name}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <MiniStatus status={lead.status} />
-              {lead.assignedTo?.name && (
-                <span style={{ fontSize: 12, color: MUTED }}>Assigned to: {lead.assignedTo.name}</span>
-              )}
-            </div>
-          </div>
-        </div>
-        <Avatar name={lead.assignedTo?.name || 'U'} size={34} />
-      </div>
-
-      {/* Fields grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        {fields.map(({ label, value }) => (
-          <div key={label} style={{ border: `1px solid ${BORDER}`, borderRadius: 10, padding: '10px 14px', background: '#faf9ff' }}>
-            <div style={{ fontSize: 11, color: MUTED, marginBottom: 3 }}>{label}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: value === '—' ? '#ccc' : TEXT }}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Action buttons */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
-        {actions.map(({ label, color, icon }) => (
-          <button key={label} onClick={() => onAction?.(label, lead)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 4px', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: color + '18', color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {icon}
-            </div>
-            <span style={{ fontSize: 10, color: MUTED, textAlign: 'center', lineHeight: 1.2 }}>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Activity history */}
-      <div style={{ border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px' }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 10 }}>Activity History</div>
-        {!lead.activities?.length ? (
-          <div style={{ textAlign: 'center', color: MUTED, fontSize: 12, padding: '16px 0' }}>No activities recorded yet</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {lead.activities.slice(0, 10).map((a, i) => {
-              const isCall = a.type === 'call';
-              return (
-                <div key={i} style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: isCall ? '#dcfce7' : P_LIGHT, color: isCall ? '#16a34a' : P, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {isCall
-                      ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.22 19a19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                      : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    }
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: TEXT }}>{a.description || `${a.type}${a.callStatus ? ` — ${a.callStatus}` : ''}`}</div>
-                    <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-                      {a.callDuration > 0 && `${Math.floor(a.callDuration / 60)}m ${a.callDuration % 60}s • `}
-                      {a.createdAt ? new Date(a.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function CampaignDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
 
   const [campaign, setCampaign] = useState(null);
   const [leads, setLeads] = useState([]);
@@ -435,39 +203,6 @@ export default function CampaignDetail() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [callers, setCallers] = useState([]);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
-
-  useEffect(() => {
-    usersAPI.getAll().then(res => setCallers(res.data.users || [])).catch(() => {});
-  }, []);
-
-  // Re-fetch the selected lead's full record (so Activity History reflects new
-  // calls/notes immediately) and refresh the list/stat panels in the background.
-  const refreshSelectedLead = useCallback(async () => {
-    if (!selectedLead?._id) return;
-    try {
-      const res = await leadsAPI.getOne(selectedLead._id);
-      setSelectedLead(res.data.lead);
-    } catch (err) { console.error(err); }
-  }, [selectedLead]);
-
-  const handleLeadAction = async (action, lead) => {
-    if (action === 'Call') {
-      setShowCallModal(true);
-    } else if (action === 'Call Later') {
-      try {
-        await leadsAPI.updateStatus(lead._id, { status: 'Call Back Later' });
-        await refreshSelectedLead();
-        fetchLeads(page);
-      } catch (err) {
-        alert(err.response?.data?.message || 'Failed to update status');
-      }
-    } else if (action === 'Add Note') {
-      setShowAddNoteModal(true);
-    }
-  };
 
   const fetchCampaign = useCallback(async () => {
     try {
@@ -487,10 +222,18 @@ export default function CampaignDetail() {
       setLeads(fetched);
       setTotalPages(res.data.pages || 1);
       setTotalCount(res.data.total || fetched.length);
-      if (fetched.length > 0 && (!selectedLead || pg === 1)) setSelectedLead(fetched[0]);
+      if (fetched.length > 0 && !selectedLead) setSelectedLead(fetched[0]);
     } catch (err) { console.error(err); }
     finally { setLeadsLoading(false); }
   }, [id, statusFilter, search, selectedLead]);
+
+  // Re-fetch the leads list in the background whenever the shared
+  // LeadDetailsPage panel reports a change (status, call log, note, etc.) so
+  // the student list / stat widgets in the other two columns stay in sync.
+  const handleLeadDetailsChange = (updatedLead) => {
+    setSelectedLead(prev => (prev && updatedLead?._id === prev._id ? updatedLead : prev));
+    fetchLeads(page);
+  };
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -698,7 +441,22 @@ export default function CampaignDetail() {
       </div>
 
       {/* ─── RIGHT PANEL: Lead Detail ─────────────────────────────────────────── */}
-      <LeadDetailPanel lead={selectedLead} onAction={handleLeadAction} />
+      {/* Same component used at /leads/:id — Call, Callback Later, Notes,
+          Activity History, Status Changes, Call Logs all work identically here. */}
+      {selectedLead ? (
+        <LeadDetailsPage
+          key={selectedLead._id}
+          leadId={selectedLead._id}
+          embedded
+          onDeleted={() => { setSelectedLead(null); fetchLeads(page); }}
+          onChange={handleLeadDetailsChange}
+        />
+      ) : (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MUTED, flexDirection: 'column', gap: 8 }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span style={{ fontSize: 13 }}>Select a student to view details</span>
+        </div>
+      )}
 
       {/* ─── Add Leads Modal ──────────────────────────────────────────────────── */}
       {showAddLeads && (
@@ -706,35 +464,6 @@ export default function CampaignDetail() {
           campaignId={id}
           onClose={() => setShowAddLeads(false)}
           onSuccess={() => { fetchAll(); }}
-        />
-      )}
-
-      {/* ─── Initiate Call Modal ──────────────────────────────────────────────── */}
-      {showCallModal && selectedLead && (
-        <CallModal
-          lead={selectedLead}
-          callers={callers}
-          currentUser={currentUser}
-          onClose={() => setShowCallModal(false)}
-          onSuccess={refreshSelectedLead}
-        />
-      )}
-
-      {/* ─── Add Note Modal ───────────────────────────────────────────────────── */}
-      {showAddNoteModal && selectedLead && (
-        <AddNoteModal
-          lead={selectedLead}
-          onClose={() => setShowAddNoteModal(false)}
-          onSubmit={async (note) => {
-            try {
-              await leadsAPI.addNote(selectedLead._id, { note, type: 'note' });
-              await refreshSelectedLead();
-              fetchLeads(page);
-            } catch (err) {
-              alert(err.response?.data?.message || 'Failed to save note');
-              throw err;
-            }
-          }}
         />
       )}
     </div>
