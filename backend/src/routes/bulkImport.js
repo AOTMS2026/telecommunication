@@ -55,6 +55,48 @@ function parseDate(val) {
   const d = new Date(val); return isNaN(d) ? undefined : d;
 }
 
+// ── Dynamic header detection ──────────────────────────────────────────────────
+// Different colleges/teams export sheets in different shapes — sometimes the
+// real column headers sit in row 1, sometimes a title row (e.g. "Students -
+// Agiripalli", often a merged cell) sits above the real headers. XLSX's
+// default sheet_to_json() always trusts row 1, which on the second shape
+// produces useless "__EMPTY", "__EMPTY_1" columns instead of the real names
+// like "Full Name", "Mobile Number", etc. This scans the first few rows,
+// picks whichever one actually looks like a header row (most filled-in
+// cells), and builds the row objects from there — so every sheet shape still
+// resolves to its real, respective column names automatically.
+function sheetToRows(ws) {
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (!raw.length) return { rows: [], columns: [] };
+
+  const scanLimit = Math.min(raw.length, 10);
+  let headerIdx = 0, bestCount = -1;
+  for (let i = 0; i < scanLimit; i++) {
+    const r = raw[i] || [];
+    const nonEmpty = r.filter(c => String(c).trim() !== '').length;
+    if (nonEmpty > bestCount) { bestCount = nonEmpty; headerIdx = i; }
+  }
+
+  const headerRow = raw[headerIdx] || [];
+  const seen = {};
+  const columns = headerRow.map((h, idx) => {
+    let name = String(h).trim();
+    if (!name) name = `Column ${idx + 1}`;
+    if (seen[name]) { seen[name] += 1; name = `${name} (${seen[name]})`; } else { seen[name] = 1; }
+    return name;
+  });
+
+  const rows = [];
+  for (let i = headerIdx + 1; i < raw.length; i++) {
+    const r = raw[i] || [];
+    if (!r.some(c => String(c).trim() !== '')) continue; // skip fully blank rows
+    const obj = {};
+    columns.forEach((col, idx) => { obj[col] = r[idx] !== undefined ? r[idx] : ''; });
+    rows.push(obj);
+  }
+  return { rows, columns };
+}
+
 function applyMapping(row, fieldMapping, campaignId, importId) {
   const lead = {
     name:'',phone:'',email:'',alternatePhone:'',collegeName:'',status:'Fresh',
@@ -109,8 +151,7 @@ router.post('/parse-file', protect, authorize('admin','super admin'), upload.sin
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
     const sheetNames = wb.SheetNames;
     const ws = wb.Sheets[sheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
-    const columns = rows.length ? Object.keys(rows[0]) : [];
+    const { rows, columns } = sheetToRows(ws);
     res.json({ sheetNames, defaultSheet:sheetNames[0], columns, preview:rows.slice(0,5), totalRows:rows.length, fileName:req.file.originalname });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
@@ -123,8 +164,7 @@ router.post('/select-sheet', protect, authorize('admin','super admin'), upload.s
     const name = req.body.sheetName || wb.SheetNames[0];
     const ws = wb.Sheets[name];
     if (!ws) return res.status(400).json({ message: `Sheet "${name}" not found` });
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
-    const columns = rows.length ? Object.keys(rows[0]) : [];
+    const { rows, columns } = sheetToRows(ws);
     res.json({ sheetName:name, columns, preview:rows.slice(0,5), totalRows:rows.length });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
@@ -137,7 +177,7 @@ router.post('/check-duplicates', protect, authorize('admin','super admin'), uplo
     const fieldMapping = JSON.parse(rawMapping || '{}');
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
     const ws = wb.Sheets[sheetName || wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    const { rows } = sheetToRows(ws);
     const phoneCol = Object.keys(fieldMapping).find(k => fieldMapping[k] === 'phone');
     const phonesSeen = new Set();
     const fileDuplicates = [];
@@ -185,7 +225,7 @@ router.post('/import', protect, authorize('admin','super admin'), upload.single(
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
     const ws = wb.Sheets[sheetName || wb.SheetNames[0]];
     if (!ws) return res.status(400).json({ message: 'Sheet not found' });
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    const { rows } = sheetToRows(ws);
     if (!rows.length) return res.status(400).json({ message: 'File is empty' });
 
     const importRecord = await ImportHistory.create({
@@ -400,9 +440,9 @@ router.post('/preview', protect, authorize('admin','super admin'), upload.single
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval:'' });
+    const { rows, columns } = sheetToRows(ws);
     if (!rows.length) return res.status(400).json({ message: 'File is empty' });
-    res.json({ columns:Object.keys(rows[0]), preview:rows.slice(0,5), totalRows:rows.length });
+    res.json({ columns, preview:rows.slice(0,5), totalRows:rows.length });
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
