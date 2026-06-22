@@ -117,6 +117,106 @@ function EditModal({ task, onClose, onSaved }) {
   );
 }
 
+// ── Upload Modal ──────────────────────────────────────────────────────────────
+function UploadModal({ onClose, onImported }) {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      setError('');
+      setResult(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setError('Please choose an Excel or CSV file first');
+      return;
+    }
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await followupsAPI.import(formData);
+      setResult({ count: res.data.count, total: res.data.total });
+      onImported();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Upload Tasks</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
+        </div>
+        <p style={{ fontSize: 12, color: TEXT_MUTED, margin: '0 0 18px' }}>
+          Bulk-create follow-ups / to-dos from an Excel or CSV file. Expected columns: <b>Note/Description</b>, <b>Due Date</b>, <b>Priority</b>, <b>Phone</b> (optional, links to a lead) and <b>Type</b> (optional — call_followup or todo).
+        </p>
+
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            border: `2px dashed ${file ? PURPLE : '#e5e2f5'}`, borderRadius: 12,
+            padding: '24px 16px', textAlign: 'center', cursor: 'pointer',
+            background: file ? PURPLE_LIGHT : '#faf9ff', transition: 'all 0.15s'
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2" style={{ marginBottom: 8 }}>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div style={{ fontSize: 13, fontWeight: 600, color: file ? PURPLE : TEXT_MAIN }}>
+            {file ? file.name : 'Click to choose a file'}
+          </div>
+          <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 3 }}>.xlsx, .xls or .csv</div>
+        </div>
+
+        {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 12 }}>{error}</p>}
+        {result && (
+          <p style={{ color: '#22a163', fontSize: 12, marginTop: 12, fontWeight: 600 }}>
+            Imported {result.count} of {result.total} row{result.total === 1 ? '' : 's'} successfully.
+          </p>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>
+            {result ? 'Close' : 'Cancel'}
+          </button>
+          {!result && (
+            <button
+              onClick={handleUpload}
+              disabled={uploading || !file}
+              style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (uploading || !file) ? 0.6 : 1 }}
+            >
+              {uploading ? 'Uploading...' : 'Upload'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Download helper ───────────────────────────────────────────────────────────
 function downloadCSV(tasks, tab) {
   const headers = ['Lead Name', 'Phone', 'Description', 'Assignee', 'Status', 'Due Date', 'Priority'];
@@ -156,6 +256,7 @@ export default function Tasks() {
   const [sortField, setSortField] = useState('dueDate');
   const [sortDir, setSortDir] = useState('asc');
   const [editingTask, setEditingTask] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -262,6 +363,13 @@ export default function Tasks() {
           task={editingTask}
           onClose={() => setEditingTask(null)}
           onSaved={handleEditSaved}
+        />
+      )}
+
+      {showUploadModal && (
+        <UploadModal
+          onClose={() => setShowUploadModal(false)}
+          onImported={fetchTasks}
         />
       )}
 
@@ -490,6 +598,24 @@ export default function Tasks() {
         </div>
 
         <div style={{ flex: 1 }} />
+
+        {/* UPLOAD — bulk import tasks via Excel/CSV */}
+        <button
+          onClick={() => setShowUploadModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, color: PURPLE, fontWeight: 600
+          }}
+          title="Upload tasks from Excel/CSV"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload
+        </button>
 
         {/* DOWNLOAD — exports real filtered data as CSV */}
         <button
