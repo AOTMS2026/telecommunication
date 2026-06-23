@@ -193,8 +193,24 @@ async function notifyAdminsTaskEdited({ followup, performedByUser }) {
   }
 }
 
+/**
+ * Generic notification emitted by a workflow/automation "Notify Team Member" action.
+ */
+async function notifyWorkflowAction({ recipient, lead, title, message }) {
+  if (!recipient) return null;
+  return createNotification({
+    recipient,
+    type: 'workflow_action',
+    title: title || '🤖 Workflow Notification',
+    message: message || 'An automation ran for one of your leads',
+    lead: lead?._id || lead,
+    data: { leadName: lead?.name },
+  });
+}
+
 module.exports = {
   createNotification,
+  notifyWorkflowAction,
   notifyLeadAssigned,
   notifyLeadStatusChanged,
   notifyLeadUpdated,

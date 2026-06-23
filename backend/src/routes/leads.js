@@ -11,6 +11,8 @@ const {
   notifyNewLeadCreated,
   notifyCallInitiated,
 } = require('../services/notificationService');
+const { fireEvent } = require('../services/workflowEngine');
+const { broadcastWebhooks } = require('../services/automationRunners');
 
 const router = express.Router();
 
@@ -406,10 +408,39 @@ router.put('/:id', protect, async (req, res) => {
       body.courseInterest = body.courseInterest[0] || undefined;
     }
 
+    // Snapshot for automation trigger detection
+    const before = {
+      assignedTo: lead.assignedTo?.toString(),
+      rating: lead.rating,
+      status: lead.status,
+    };
+
     const updated = await Lead.findByIdAndUpdate(req.params.id, body, { new: true, runValidators: true })
       .populate('assignedTo', 'name email avatar')
       .populate('campaign', 'name')
       .populate('courseInterest');
+
+    // ── Fire automation events based on what actually changed ──────────────────
+    const newAssigneeId = updated.assignedTo?._id?.toString();
+    if ('assignedTo' in body && newAssigneeId !== before.assignedTo) {
+      fireEvent('lead.assignee_changed', {
+        lead: updated, user: req.user,
+        changes: { field: 'assignedTo', from: before.assignedTo, to: newAssigneeId },
+      }).catch(() => {});
+    }
+    if ('rating' in body && Number(body.rating) !== Number(before.rating)) {
+      fireEvent('lead.rating_changed', {
+        lead: updated, user: req.user,
+        changes: { field: 'rating', from: before.rating, to: updated.rating },
+      }).catch(() => {});
+    }
+    // Generic "Lead Field Change" — fires for any other edited field
+    const otherFields = Object.keys(body).filter(k => !['assignedTo', 'rating', 'status'].includes(k));
+    for (const field of otherFields) {
+      fireEvent('lead.field_changed', {
+        lead: updated, user: req.user, changes: { field, to: body[field] },
+      }).catch(() => {});
+    }
 
     // Handle reassignment
     const prevAssignedTo = lead.assignedTo?.toString();
@@ -530,6 +561,16 @@ router.put('/:id/status', protect, async (req, res) => {
         newStatus: status,
         assignedToId: lead.assignedTo._id,
         performedByUser: req.user,
+      }).catch(() => {});
+    }
+    // Fire automation: Workflows + Schedules subscribed to Lead Status Change
+    if (prevStatus !== status) {
+      fireEvent('lead.status_changed', {
+        lead, user: req.user, changes: { field: 'status', from: prevStatus, to: status },
+      }).catch(() => {});
+      broadcastWebhooks('lead.status_changed', {
+        lead: { id: lead._id, name: lead.name, phone: lead.phone, status },
+        changes: { from: prevStatus, to: status },
       }).catch(() => {});
     }
     res.json({ lead });

@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     enum: [
       'lead_assigned', 'lead_status_changed', 'lead_updated', 'new_lead',
       'call_initiated', 'callback_due', 'task_created', 'task_assigned',
-      'task_edited', 'general'
+      'task_edited', 'workflow_action', 'general'
     ],
     required: true
   },

@@ -139,3 +139,70 @@ export const notificationsAPI = {
   markRead: (id) => api.put(`/notifications/${id}/read`),
   markAllRead: () => api.put('/notifications/read-all'),
 };
+
+// ── Automation & API suite ────────────────────────────────────────────────────
+export const workflowsAPI = {
+  meta: () => api.get('/workflows/meta'),
+  getAll: (params) => api.get('/workflows', { params }), // params: { kind, status, search }
+  getOne: (id) => api.get(`/workflows/${id}`),
+  getExecutions: (id, params) => api.get(`/workflows/${id}/executions`, { params }),
+  create: (data) => api.post('/workflows', data),
+  update: (id, data) => api.put(`/workflows/${id}`, data),
+  setStatus: (id, status) => api.patch(`/workflows/${id}/status`, { status }),
+  delete: (id) => api.delete(`/workflows/${id}`),
+};
+
+export const salesformsAPI = {
+  getAll: (params) => api.get('/salesforms', { params }),
+  getActive: (params) => api.get('/salesforms/active', { params }),
+  getOne: (id) => api.get(`/salesforms/${id}`),
+  getSubmissions: (id) => api.get(`/salesforms/${id}/submissions`),
+  create: (data) => api.post('/salesforms', data),
+  update: (id, data) => api.put(`/salesforms/${id}`, data),
+  setStatus: (id, status) => api.patch(`/salesforms/${id}/status`, { status }),
+  submit: (id, data) => api.post(`/salesforms/${id}/submit`, data),
+  delete: (id) => api.delete(`/salesforms/${id}`),
+};
+
+export const apiTemplatesAPI = {
+  getAll: () => api.get('/api-templates'),
+  getOne: (id) => api.get(`/api-templates/${id}`),
+  create: (data) => api.post('/api-templates', data),
+  update: (id, data) => api.put(`/api-templates/${id}`, data),
+  test: (id, data) => api.post(`/api-templates/${id}/test`, data),
+  delete: (id) => api.delete(`/api-templates/${id}`),
+};
+
+export const webhooksAPI = {
+  getAll: () => api.get('/webhooks'),
+  getOne: (id) => api.get(`/webhooks/${id}`),
+  create: (data) => api.post('/webhooks', data),
+  update: (id, data) => api.put(`/webhooks/${id}`, data),
+  test: (id) => api.post(`/webhooks/${id}/test`),
+  delete: (id) => api.delete(`/webhooks/${id}`),
+};
+
+export const accessTokensAPI = {
+  getAll: () => api.get('/access-tokens'),
+  create: (data) => api.post('/access-tokens', data),
+  revoke: (id) => api.patch(`/access-tokens/${id}/revoke`),
+  delete: (id) => api.delete(`/access-tokens/${id}`),
+};
+
+export const mcpAPI = {
+  status: () => api.get('/mcp/status'),
+  requestAccess: (provider) => api.post('/mcp/request-access', { provider }),
+  approve: (id) => api.patch(`/mcp/${id}/approve`),
+  revoke: (id) => api.patch(`/mcp/${id}/revoke`),
+};
+
+export const callIqAPI = {
+  templates: () => api.get('/call-iq-agents/templates'),
+  getAll: () => api.get('/call-iq-agents'),
+  getOne: (id) => api.get(`/call-iq-agents/${id}`),
+  create: (data) => api.post('/call-iq-agents', data),
+  update: (id, data) => api.put(`/call-iq-agents/${id}`, data),
+  delete: (id) => api.delete(`/call-iq-agents/${id}`),
+  run: (id, data) => api.post(`/call-iq-agents/${id}/run`, data),
+  getAudits: (id) => api.get(`/call-iq-agents/${id}/audits`),
+};

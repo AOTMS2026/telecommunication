@@ -7,6 +7,7 @@ const LOGO_COLORS = {
   whatsapp_cloud: '#25D366', '99acres': '#E01E1E', callerdesk: '#FF5722',
   google_meet: '#00BCD4', google_sheets: '#34A853', housing: '#F26522',
   indiamart: '#E31E25', knowlarity: '#6C3483', magicbricks: '#E74C3C',
+  maqsam: '#C0392B',
   sulekha: '#FF6B35', tradeindia: '#0066CC', webhook: '#6366f1',
 };
 

@@ -19,6 +19,7 @@ const AVAILABLE_INTEGRATIONS = [
   { type: 'indiamart', name: 'IndiaMart', description: 'Integrate IndiaMart in your Telecrm account', logo: 'im' },
   { type: 'knowlarity', name: 'Knowlarity', description: 'Integrate Knowlarity in your Telecrm account', logo: 'kn' },
   { type: 'magicbricks', name: 'MagicBricks', description: 'Integrate MagicBricks in your Telecrm account', logo: 'mb' },
+  { type: 'maqsam', name: 'Maqsam', description: 'Integrate Maqsam in your Telecrm account', logo: 'mq' },
   { type: 'sulekha', name: 'Sulekha', description: 'Capture Sulekha Leads in your Telecrm account', logo: 'sl' },
   { type: 'tradeindia', name: 'TradeIndia', description: 'Capture TradeIndia Leads in your Telecrm account', logo: 'ti' },
   { type: 'webhook', name: 'Custom Webhook', description: 'Receive leads from any source via webhook', logo: 'wh' },

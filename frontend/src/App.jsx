@@ -23,6 +23,14 @@ import TeamOperations from './pages/TeamOperations';
 import LeadProfile from './pages/LeadProfile';
 import Integrations from './pages/Integrations';
 import IntegrationDetail from './pages/IntegrationDetail';
+import Workflows from './pages/Workflows';
+import Schedules from './pages/Schedules';
+import Salesforms from './pages/Salesforms';
+import ApiTemplates from './pages/ApiTemplates';
+import Webhooks from './pages/Webhooks';
+import AccessTokens from './pages/AccessTokens';
+import CallIqAgents from './pages/CallIqAgents';
+import Mcp from './pages/Mcp';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -73,6 +81,14 @@ export default function App() {
             <Route path="team-operations" element={<TeamOperations />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="integrations/:id" element={<IntegrationDetail />} />
+            <Route path="workflows" element={<Workflows />} />
+            <Route path="schedules" element={<Schedules />} />
+            <Route path="salesforms" element={<Salesforms />} />
+            <Route path="api-templates" element={<ApiTemplates />} />
+            <Route path="webhooks" element={<Webhooks />} />
+            <Route path="access-tokens" element={<AccessTokens />} />
+            <Route path="call-iq-agents" element={<CallIqAgents />} />
+            <Route path="mcp" element={<Mcp />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
