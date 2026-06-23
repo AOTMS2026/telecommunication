@@ -72,6 +72,7 @@ app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
 app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
 app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
 app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
+app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 

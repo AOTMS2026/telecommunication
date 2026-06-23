@@ -49,7 +49,7 @@ export default function Sidebar() {
     return location.pathname.startsWith(path);
   };
 
-  const automationPaths = ['/workflows', '/schedules', '/salesforms', '/api-templates', '/webhooks'];
+  const automationPaths = ['/workflows', '/schedules', '/salesforms', '/api-templates', '/webhooks', '/n8n-settings'];
   const isAutomationActive = automationPaths.some(p => location.pathname.startsWith(p));
 
   const addLeadPaths = ['/leads/new', '/bulk-import'];
@@ -205,6 +205,7 @@ export default function Sidebar() {
                     { to: '/salesforms', icon: Icons.salesform, label: 'Salesform' },
                     { to: '/api-templates', icon: Icons.apiTemplates, label: 'API Templates' },
                     { to: '/webhooks', icon: Icons.webhooks, label: 'Webhooks' },
+                    { to: '/n8n-settings', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>, label: 'n8n' },
                   ].map(({ to, icon, label }) => {
                     const active = location.pathname.startsWith(to);
                     return (

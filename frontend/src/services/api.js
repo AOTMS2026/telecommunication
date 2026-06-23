@@ -206,3 +206,14 @@ export const callIqAPI = {
   run: (id, data) => api.post(`/call-iq-agents/${id}/run`, data),
   getAudits: (id) => api.get(`/call-iq-agents/${id}/audits`),
 };
+
+export const n8nAPI = {
+  getConfig: () => api.get('/n8n/config'),
+  saveConfig: (data) => api.post('/n8n/config', data),
+  test: () => api.post('/n8n/test'),
+  listWorkflows: () => api.get('/n8n/workflows'),
+  cachedWorkflows: () => api.get('/n8n/workflows/cached'),
+  getWorkflow: (id) => api.get(`/n8n/workflows/${id}`),
+  trigger: (id, payload) => api.post(`/n8n/workflows/${id}/trigger`, { payload }),
+  getExecutions: (id, limit) => api.get(`/n8n/workflows/${id}/executions`, { params: { limit } }),
+};

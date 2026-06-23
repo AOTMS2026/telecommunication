@@ -31,6 +31,7 @@ import Webhooks from './pages/Webhooks';
 import AccessTokens from './pages/AccessTokens';
 import CallIqAgents from './pages/CallIqAgents';
 import Mcp from './pages/Mcp';
+import N8nSettings from './pages/N8nSettings';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -89,6 +90,7 @@ export default function App() {
             <Route path="access-tokens" element={<AccessTokens />} />
             <Route path="call-iq-agents" element={<CallIqAgents />} />
             <Route path="mcp" element={<Mcp />} />
+            <Route path="n8n-settings" element={<N8nSettings />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
