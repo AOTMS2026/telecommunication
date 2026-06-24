@@ -116,6 +116,15 @@ export const messageTemplatesAPI = {
   delete: (id) => api.delete(`/message-templates/${id}`),
 };
 
+// ── Email Campaign (Message Templates → Email → Create Email Campaign) ───────
+export const emailCampaignsAPI = {
+  previewRecipients: (campaignIds) => api.post('/email-campaigns/preview-recipients', { campaignIds }),
+  send: (data) => api.post('/email-campaigns/send', data),
+  getAll: () => api.get('/email-campaigns'),
+  getOne: (id) => api.get(`/email-campaigns/${id}`),
+  delete: (id) => api.delete(`/email-campaigns/${id}`),
+};
+
 export const bulkImportAPI = {
   preview: (formData) => api.post('/bulk-import/preview', formData),
   import: (formData) => api.post('/bulk-import/import', formData),
@@ -217,3 +226,4 @@ export const n8nAPI = {
   trigger: (id, payload) => api.post(`/n8n/workflows/${id}/trigger`, { payload }),
   getExecutions: (id, limit) => api.get(`/n8n/workflows/${id}/executions`, { params: { limit } }),
 };
+

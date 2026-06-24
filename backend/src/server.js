@@ -58,6 +58,7 @@ app.use('/api/users', apiLimiter, require('./routes/users'));
 app.use('/api/courses', apiLimiter, require('./routes/courses'));
 app.use('/api/blocklist', apiLimiter, require('./routes/blocklist'));
 app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates'));
+app.use('/api/email-campaigns', apiLimiter, require('./routes/emailCampaigns'));
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));

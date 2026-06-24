@@ -27,7 +27,7 @@ router.get('/', protect, async (req, res) => {
 // POST /api/message-templates
 router.post('/', protect, async (req, res) => {
   try {
-    const { type, shortcut, message, isShared } = req.body;
+    const { type, shortcut, message, isShared, subject, bodyFormat } = req.body;
     if (!type || !shortcut || !message) {
       return res.status(400).json({ message: 'type, shortcut and message are required' });
     }
@@ -36,6 +36,8 @@ router.post('/', protect, async (req, res) => {
       shortcut,
       message,
       isShared: isShared || false,
+      subject: subject || '',
+      bodyFormat: bodyFormat === 'html' ? 'html' : 'text',
       createdBy: req.user._id,
     });
     await template.populate('createdBy', 'name');
