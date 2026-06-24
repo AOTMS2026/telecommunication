@@ -99,13 +99,12 @@ function LogCallModal({ lead, onClose, onSubmit }) {
   );
 }
 
-// ── Initiate Call Modal (website → mobile push notification) ─────────────────
+// ── Initiate Call Modal ───────────────────────────────────────────────────────
 function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
 
   const isCaller = currentUser?.role === 'caller';
-  // Caller sends to themselves; admin can pick any caller
   const [selectedCaller, setSelectedCaller] = useState(
     isCaller ? currentUser?._id : (lead?.assignedTo?._id || '')
   );
@@ -129,7 +128,6 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100">
-        {/* Header */}
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
@@ -148,7 +146,6 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Lead info */}
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Lead</p>
             <p className="font-bold text-gray-800 text-lg">{lead?.name}</p>
@@ -158,7 +155,6 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Caller selector — only show for admin; caller always sends to themselves */}
           {isCaller ? (
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
               <p className="text-indigo-700 text-sm font-semibold">
@@ -182,14 +178,12 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Info */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
             <p className="text-blue-700 text-xs leading-relaxed">
               💡 The caller will receive a push notification on their mobile app showing this lead's name and phone number. They can tap it to call directly.
             </p>
           </div>
 
-          {/* Result */}
           {result && (
             <div className={`rounded-xl p-4 border ${result.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
               <p className={`text-sm font-semibold ${result.success ? 'text-green-700' : 'text-red-700'}`}>
@@ -199,7 +193,6 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-gray-100 flex gap-3">
           <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-semibold text-sm">
             {result?.success ? 'Close' : 'Cancel'}
@@ -223,7 +216,6 @@ function InitiateCallModal({ lead, callers, currentUser, onClose, onSuccess }) {
   );
 }
 
-
 // ── Callback Time Picker Modal ────────────────────────────────────────────────
 function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
   const PRESETS = [
@@ -242,12 +234,8 @@ function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
   const [error, setError] = useState('');
 
   const getScheduledAt = () => {
-    if (selected !== null) {
-      return new Date(Date.now() + selected * 60000);
-    }
-    if (manualDate && manualTime) {
-      return new Date(`${manualDate}T${manualTime}`);
-    }
+    if (selected !== null) return new Date(Date.now() + selected * 60000);
+    if (manualDate && manualTime) return new Date(`${manualDate}T${manualTime}`);
     return null;
   };
 
@@ -307,27 +295,17 @@ function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
         <div className="mb-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Or set manually</p>
           <div className="flex gap-2">
-            <input
-              type="date"
-              value={manualDate}
-              min={new Date().toISOString().split('T')[0]}
+            <input type="date" value={manualDate} min={new Date().toISOString().split('T')[0]}
               onChange={e => { setManualDate(e.target.value); setSelected(null); }}
-              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-            <input
-              type="time"
-              value={manualTime}
+              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            <input type="time" value={manualTime}
               onChange={e => { setManualTime(e.target.value); setSelected(null); }}
-              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
+              className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400" />
           </div>
         </div>
         <textarea
           className="w-full border border-gray-200 rounded-xl p-3 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-orange-400 mb-4"
-          rows={2}
-          placeholder="Add a note (optional)..."
-          value={note}
-          onChange={e => setNote(e.target.value)}
+          rows={2} placeholder="Add a note (optional)..." value={note} onChange={e => setNote(e.target.value)}
         />
         {scheduledAt && !isNaN(scheduledAt.getTime()) && (
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs text-orange-700 font-semibold">
@@ -337,11 +315,8 @@ function CallbackTimeModal({ lead, currentUser, onClose, onScheduled }) {
         {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
         <div className="flex gap-2.5">
           <button onClick={onClose} className="btn-secondary flex-1 rounded-xl py-2.5 font-semibold text-sm">Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !scheduledAt || isNaN(scheduledAt?.getTime())}
-            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
+          <button onClick={handleSave} disabled={saving || !scheduledAt || isNaN(scheduledAt?.getTime())}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             {saving ? 'Saving...' : 'Schedule'}
           </button>
         </div>
@@ -390,27 +365,16 @@ function ScheduleDemoModal({ lead, onClose, onSave }) {
           For <strong>{lead.name}</strong> ({lead.phone}) — pick when the demo will happen.
         </p>
         <div className="flex gap-2 mb-4">
-          <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
-          />
-          <input
-            type="time"
-            value={time}
-            onChange={e => setTime(e.target.value)}
-            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400"
-          />
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400" />
+          <input type="time" value={time} onChange={e => setTime(e.target.value)}
+            className="flex-1 border border-gray-200 rounded-xl p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-400" />
         </div>
         {error && <p className="text-xs text-red-600 mb-3">{error}</p>}
         <div className="flex gap-2.5">
           <button onClick={onClose} className="btn-secondary flex-1 rounded-xl py-2.5 font-semibold text-sm">Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl font-bold text-sm bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             {saving ? 'Saving...' : 'Schedule Demo'}
           </button>
         </div>
@@ -419,26 +383,58 @@ function ScheduleDemoModal({ lead, onClose, onSave }) {
   );
 }
 
-// ── Shared Lead Details Component ────────────────────────────────────────────
-// This is the SAME fully-working lead detail experience used at /leads/:id —
-// also reused inside the Campaign page's lead panel, so there is only one
-// source of truth and every feature (calls, callback later, notes, activity
-// history, status changes, call logs) works identically everywhere.
-//
-// Props:
-//   leadId          (required) the lead to display
-//   embedded        true when hosted inside another page's layout (e.g. the
-//                    Campaign detail panel) instead of as its own full route —
-//                    fills available height instead of forcing min-h-screen
-//   showBackButton  defaults to true for the standalone route, false when
-//                    embedded (the host page already provides its own way back)
-//   backLabel       text for the "Lead Not Found" back button
-//   onBack          called when the back arrow/button is clicked; defaults to
-//                    navigating to /leads when not provided
-//   onDeleted       called after a successful delete; defaults to navigating
-//                    to /leads when not provided
-//   onChange        called with the fresh lead object every time it's
-//                    (re)fetched — lets a host page refresh its own list/stats
+// ── AI State Banner ───────────────────────────────────────────────────────────
+// Shows a non-intrusive info strip when the lead is currently being handled
+// by the AI engine (locked = actively calling; queued = waiting for a slot).
+function AIStateBanner({ lead }) {
+  const isLocked = lead?.aiLock?.expiresAt && new Date(lead.aiLock.expiresAt) > new Date();
+  const isQueued = !isLocked && lead?.aiCallState === 'queued';
+
+  if (!isLocked && !isQueued) return null;
+
+  if (isLocked) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: '#f0fdf4', border: '1px solid #86efac',
+        borderRadius: 10, padding: '8px 14px', margin: '0 0 4px',
+      }}>
+        {/* pulsing green dot */}
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%', background: '#22c55e', flexShrink: 0,
+          boxShadow: '0 0 0 3px #bbf7d0',
+          animation: 'aibanner-pulse 1.5s infinite',
+        }} />
+        <style>{`@keyframes aibanner-pulse{0%,100%{box-shadow:0 0 0 0 #bbf7d0}50%{box-shadow:0 0 0 5px #bbf7d000}}`}</style>
+        <div className="flex-1">
+          <span className="text-xs font-bold text-green-800">🤖 AI is calling this lead right now</span>
+          {lead.aiLock.lockedBy && lead.aiLock.lockedBy !== 'ai-engine' && (
+            <span className="text-xs text-green-600 ml-2">· locked by {lead.aiLock.lockedBy}</span>
+          )}
+        </div>
+        <span className="text-[10px] text-green-600 font-semibold whitespace-nowrap">
+          Until {format(new Date(lead.aiLock.expiresAt), 'hh:mm a')}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: '#eff6ff', border: '1px solid #bfdbfe',
+      borderRadius: 10, padding: '8px 14px', margin: '0 0 4px',
+    }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <span className="text-xs font-bold text-blue-800">Queued for AI callback</span>
+      <span className="text-[10px] text-blue-500 ml-auto">Waiting for an available AI slot</span>
+    </div>
+  );
+}
+
+// ── Shared Lead Details Component ─────────────────────────────────────────────
 export default function LeadDetailsPage({
   leadId,
   embedded = false,
@@ -465,7 +461,7 @@ export default function LeadDetailsPage({
   const [isCalling, setIsCalling] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLogCallModal, setShowLogCallModal] = useState(false);
-  const [showInitiateCallModal, setShowInitiateCallModal] = useState(false); // NEW
+  const [showInitiateCallModal, setShowInitiateCallModal] = useState(false);
   const [showCallbackModal, setShowCallbackModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [copiedText, setCopiedText] = useState('');
@@ -521,7 +517,6 @@ export default function LeadDetailsPage({
     }).catch(console.error);
   }, [id]);
 
-  // Check blocklist status when lead loads
   useEffect(() => {
     if (!lead?.phone) return;
     blocklistAPI.check(lead.phone).then(res => {
@@ -573,9 +568,6 @@ export default function LeadDetailsPage({
   };
 
   const handleStatusChange = async (newStatus) => {
-    // "Demo Scheduled" needs a date/time, so collect that first instead of
-    // saving immediately — otherwise the demo silently has no date and never
-    // shows up on the dashboard's "Demos Scheduled" widgets.
     if (newStatus === 'Demo Scheduled') {
       setShowDemoModal(true);
       return;
@@ -634,7 +626,6 @@ export default function LeadDetailsPage({
 
   const handleCallbackScheduled = async (followup, scheduledAt) => {
     setShowCallbackModal(false);
-    // Also update lead status to 'Call Back Later'
     try {
       await leadsAPI.updateStatus(lead._id, { status: 'Call Back Later' });
       await fetchLeadDetails();
@@ -646,15 +637,6 @@ export default function LeadDetailsPage({
     try {
       await leadsAPI.addNote(lead._id, { note, type });
       setShowNoteModal(false);
-      await fetchLeadDetails();
-    } catch (err) { console.error(err); }
-    finally { setSavingInfo(false); }
-  };
-
-  const handleInstantActivity = async (type, desc) => {
-    setSavingInfo(true);
-    try {
-      await leadsAPI.addNote(lead._id, { note: desc, type });
       await fetchLeadDetails();
     } catch (err) { console.error(err); }
     finally { setSavingInfo(false); }
@@ -706,6 +688,10 @@ export default function LeadDetailsPage({
     return <Clock className="w-4 h-4 text-indigo-600" />;
   };
 
+  // Derived AI state flags (used in multiple places below)
+  const isAILocked = lead.aiLock?.expiresAt && new Date(lead.aiLock.expiresAt) > new Date();
+  const isAIQueued = !isAILocked && lead.aiCallState === 'queued';
+
   return (
     <div className={embedded ? 'h-full bg-gray-50/50 overflow-y-auto' : 'min-h-screen bg-gray-50/50 pb-12'}>
       {/* Top Navigation Banner */}
@@ -722,13 +708,36 @@ export default function LeadDetailsPage({
               <button onClick={handleToggleStar} className="text-yellow-400 hover:scale-110 transition-transform active:scale-90">
                 <Star className={`w-5 h-5 ${lead.isStarred ? 'fill-yellow-400' : 'text-gray-300'}`} />
               </button>
+              {/* ── AI state badges in the header ── */}
+              {isAILocked && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: '#dcfce7', color: '#15803d',
+                  borderRadius: 20, padding: '2px 9px',
+                  fontSize: 11, fontWeight: 700, border: '1px solid #86efac',
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+                  AI calling now
+                </span>
+              )}
+              {isAIQueued && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: '#dbeafe', color: '#1d4ed8',
+                  borderRadius: 20, padding: '2px 9px',
+                  fontSize: 11, fontWeight: 700, border: '1px solid #93c5fd',
+                }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Queued for AI
+                </span>
+              )}
             </div>
             <p className="text-xs text-gray-500 font-mono mt-0.5">{lead._id}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* ── Initiate Call Button (all users) ── */}
+          {/* Initiate Call Button */}
           <button
             onClick={() => setShowInitiateCallModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
@@ -736,7 +745,6 @@ export default function LeadDetailsPage({
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-              <path d="M17.5 1a8.5 8.5 0 0 1 0 17" opacity="0"/>
               <path d="M16 5.3a5 5 0 0 1 0 6.4" stroke="currentColor" strokeOpacity="0.7"/>
               <path d="M19 3a9 9 0 0 1 0 11" stroke="currentColor" strokeOpacity="0.5"/>
             </svg>
@@ -875,6 +883,9 @@ export default function LeadDetailsPage({
         <div className="lg:col-span-8 space-y-6">
           {isCalling && <CallTimer onStop={handleCallEnded} />}
 
+          {/* ── AI State Banner (shown below call timer, above other cards) ── */}
+          <AIStateBanner lead={lead} />
+
           {/* Course Section */}
           <div className="card bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="p-5 border-b border-gray-100 bg-gray-50/40 flex items-center justify-between">
@@ -895,7 +906,6 @@ export default function LeadDetailsPage({
                         setEditForm(prev => ({
                           ...prev,
                           courseInterest: e.target.value,
-                          // Auto-fill budget with course fee if budget is empty or was previously auto-filled
                           budget: selectedCourse ? selectedCourse.cost : prev.budget,
                         }));
                       }}
@@ -911,7 +921,6 @@ export default function LeadDetailsPage({
                       {MODES.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
-                  {/* Editable course fee override */}
                   <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
                       Budget / Negotiated Fee (₹)
@@ -956,14 +965,10 @@ export default function LeadDetailsPage({
                         {lead.courseInterest?.cost ? `₹${lead.courseInterest.cost.toLocaleString()}` : '—'}
                       </h4>
                       {lead.budget > 0 && lead.budget !== lead.courseInterest?.cost && (
-                        <p className="text-xs text-emerald-600 mt-1 font-semibold">
-                          Budget: ₹{lead.budget.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-emerald-600 mt-1 font-semibold">Budget: ₹{lead.budget.toLocaleString()}</p>
                       )}
                       {lead.budget > 0 && !lead.courseInterest && (
-                        <p className="text-xs text-emerald-600 mt-1 font-semibold">
-                          Budget: ₹{lead.budget.toLocaleString()}
-                        </p>
+                        <p className="text-xs text-emerald-600 mt-1 font-semibold">Budget: ₹{lead.budget.toLocaleString()}</p>
                       )}
                     </div>
                     <div className="pt-4 border-t border-emerald-100/50 mt-4 flex items-center justify-between">
@@ -989,28 +994,24 @@ export default function LeadDetailsPage({
             )}
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Quick Action Center</h3>
-              <div className="flex items-center gap-2">
-                {/* Block / Unblock button */}
-                <button
-                  onClick={handleBlockToggle}
-                  disabled={blockingAction}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: blockingAction ? 'not-allowed' : 'pointer',
-                    border: isBlocked ? '1px solid #86efac' : '1px solid #fca5a5',
-                    background: isBlocked ? '#f0fdf4' : '#fff0f0',
-                    color: isBlocked ? '#16a34a' : '#dc2626',
-                    opacity: blockingAction ? 0.6 : 1,
-                  }}
-                >
-                  {isBlocked ? (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>{blockingAction ? '…' : 'Unblock'}</>
-                  ) : (
-                    <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>{blockingAction ? '…' : 'Block'}</>
-                  )}
-                </button>
-
-              </div>
+              <button
+                onClick={handleBlockToggle}
+                disabled={blockingAction}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 11px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: blockingAction ? 'not-allowed' : 'pointer',
+                  border: isBlocked ? '1px solid #86efac' : '1px solid #fca5a5',
+                  background: isBlocked ? '#f0fdf4' : '#fff0f0',
+                  color: isBlocked ? '#16a34a' : '#dc2626',
+                  opacity: blockingAction ? 0.6 : 1,
+                }}
+              >
+                {isBlocked ? (
+                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>{blockingAction ? '…' : 'Unblock'}</>
+                ) : (
+                  <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>{blockingAction ? '…' : 'Block'}</>
+                )}
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -1077,7 +1078,6 @@ export default function LeadDetailsPage({
             {/* Timeline */}
             <div className="relative border-l border-gray-100 ml-4 space-y-6">
               {(() => {
-                // For 'followup' tab, show leadFollowups from DB
                 if (activityFilter === 'followup') {
                   if (leadFollowups.length === 0) {
                     return (
@@ -1094,9 +1094,7 @@ export default function LeadDetailsPage({
                       </div>
                       <div className="bg-orange-50/50 rounded-xl p-3.5 border border-orange-100 hover:border-orange-200 transition-colors shadow-2xs">
                         <div className="flex items-center justify-between gap-4 flex-wrap">
-                          <div className="font-bold text-sm text-gray-800">
-                            📅 Callback Scheduled
-                          </div>
+                          <div className="font-bold text-sm text-gray-800">📅 Callback Scheduled</div>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${f.status === 'upcoming' ? 'bg-orange-100 text-orange-700' : f.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                             {f.status === 'upcoming' ? '⏳ Upcoming' : f.status === 'completed' ? '✅ Done' : f.status}
                           </span>
@@ -1106,21 +1104,17 @@ export default function LeadDetailsPage({
                         )}
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100/30 text-[10px] text-gray-400 font-semibold">
                           <span>ASSIGNED TO: {f.assignedTo?.name || 'Unassigned'}</span>
-                          {f.scheduledAt && (
-                            <span>📅 {format(new Date(f.scheduledAt), 'dd MMM yyyy, hh:mm a')}</span>
-                          )}
+                          {f.scheduledAt && <span>📅 {format(new Date(f.scheduledAt), 'dd MMM yyyy, hh:mm a')}</span>}
                         </div>
                       </div>
                     </div>
                   ));
                 }
 
-                // For 'all' tab, combine activities + followups
                 const activityItems = activityFilter === 'all'
                   ? (lead.activities || [])
                   : (lead.activities || []).filter(a => a.type === activityFilter);
 
-                // Merge followups into 'all' view as virtual activity items
                 const followupItems = activityFilter === 'all'
                   ? leadFollowups.map(f => ({
                       _followup: true,
@@ -1138,9 +1132,7 @@ export default function LeadDetailsPage({
                   (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
                 );
 
-                const filtered = allItems;
-
-                if (filtered.length === 0) {
+                if (allItems.length === 0) {
                   return (
                     <div className="text-center py-10">
                       <Clock className="w-10 h-10 text-gray-200 mx-auto mb-2" />
@@ -1151,7 +1143,7 @@ export default function LeadDetailsPage({
                   );
                 }
 
-                return filtered.map((a, i) => (
+                return allItems.map((a, i) => (
                   <div key={a._id || i} className="relative pl-6">
                     <div className={`absolute -left-3.5 top-0 w-7 h-7 rounded-full bg-white border shadow-xs flex items-center justify-center ${a._followup ? 'border-orange-200' : 'border-gray-200'}`}>
                       {a._followup ? <Clock className="w-4 h-4 text-orange-500" /> : activityIcon(a.type)}
@@ -1205,8 +1197,6 @@ export default function LeadDetailsPage({
       {showLogCallModal && <LogCallModal lead={lead} onClose={() => setShowLogCallModal(false)} onSubmit={handleLogManualCall} />}
       {showCallbackModal && lead && <CallbackTimeModal lead={lead} currentUser={user} onClose={() => setShowCallbackModal(false)} onScheduled={handleCallbackScheduled} />}
       {showDemoModal && lead && <ScheduleDemoModal lead={lead} onClose={() => setShowDemoModal(false)} onSave={handleScheduleDemo} />}
-
-      {/* NEW: Initiate Call Modal */}
       {showInitiateCallModal && (
         <InitiateCallModal
           lead={lead}

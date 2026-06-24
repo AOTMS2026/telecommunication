@@ -73,6 +73,196 @@ function StatCard({ label, value, color = TEXT }) {
   );
 }
 
+// ─── AI Calling Panel ────────────────────────────────────────────────────────
+function AICallingPanel({ campaignId, campaign, onStatusChange }) {
+  const [aiStatus, setAiStatus] = useState(null);
+  const [aiConcurrency, setAiConcurrency] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const refreshStatus = useCallback(async () => {
+    try {
+      const res = await campaignsAPI.aiStatus(campaignId);
+      setAiStatus(res.data);
+    } catch (err) {
+      // silently ignore if endpoint not available yet
+    }
+  }, [campaignId]);
+
+  // Poll every 5s while panel is mounted
+  useEffect(() => {
+    if (!campaignId) return;
+    refreshStatus();
+    const interval = setInterval(refreshStatus, 5000);
+    return () => clearInterval(interval);
+  }, [campaignId, refreshStatus]);
+
+  const handleStart = async () => {
+    setLoading(true);
+    try {
+      await campaignsAPI.aiStart(campaignId, { aiConcurrencyLimit: aiConcurrency });
+      await refreshStatus();
+      if (onStatusChange) onStatusChange();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to start AI calling');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePause = async () => {
+    setLoading(true);
+    try {
+      await campaignsAPI.aiPause(campaignId);
+      await refreshStatus();
+      if (onStatusChange) onStatusChange();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to pause AI calling');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isEnabled = aiStatus?.aiCallingEnabled;
+
+  return (
+    <div style={{
+      background: isEnabled ? '#f0fdf4' : '#fafafa',
+      border: `1.5px solid ${isEnabled ? '#86efac' : BORDER}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+      transition: 'border-color 0.3s, background 0.3s',
+    }}>
+      {/* Header row */}
+      <div
+        style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Animated dot */}
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: isEnabled ? '#22c55e' : '#d1d5db',
+            boxShadow: isEnabled ? '0 0 0 3px #bbf7d0' : 'none',
+            animation: isEnabled ? 'aipulse 1.5s infinite' : 'none',
+            flexShrink: 0,
+          }} />
+          <style>{`@keyframes aipulse{0%,100%{box-shadow:0 0 0 0 #bbf7d0}50%{box-shadow:0 0 0 5px #bbf7d000}}`}</style>
+          <span style={{ fontSize: 12, fontWeight: 700, color: isEnabled ? '#15803d' : TEXT }}>
+            AI Calling {isEnabled ? '— Active' : '— Paused'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {aiStatus && (
+            <span style={{ fontSize: 11, color: MUTED, fontVariantNumeric: 'tabular-nums' }}>
+              {aiStatus.inProgress ?? 0} active · {aiStatus.queued ?? 0} queued
+            </span>
+          )}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2.5"
+            style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Expanded body */}
+      {expanded && (
+        <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${isEnabled ? '#bbf7d0' : BORDER}` }}>
+          {/* Stats row */}
+          {aiStatus && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, margin: '10px 0' }}>
+              {[
+                { label: 'In Progress', value: aiStatus.inProgress ?? 0, color: '#16a34a' },
+                { label: 'Queued', value: aiStatus.queued ?? 0, color: '#f59e0b' },
+                { label: 'Done Today', value: aiStatus.completedToday ?? 0, color: P },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: MUTED, marginBottom: 2 }}>{label}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Concurrency input (only when not active) */}
+          {!isEnabled && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <label style={{ fontSize: 11, color: MUTED, fontWeight: 600, whiteSpace: 'nowrap' }}>Concurrent calls:</label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={aiConcurrency}
+                onChange={e => setAiConcurrency(Math.max(1, Math.min(20, Number(e.target.value))))}
+                style={{
+                  width: 56, padding: '5px 8px', borderRadius: 7,
+                  border: `1px solid ${BORDER}`, fontSize: 12, color: TEXT,
+                  fontWeight: 600, outline: 'none', textAlign: 'center',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Action button */}
+          {isEnabled ? (
+            <button
+              onClick={handlePause}
+              disabled={loading}
+              style={{
+                width: '100%', padding: '8px', borderRadius: 8,
+                background: loading ? '#fef9c3' : '#fef08a',
+                border: '1px solid #fde047', color: '#854d0e',
+                fontSize: 12, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{ width: 12, height: 12, border: '2px solid #854d0e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Pausing…
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+                  </svg>
+                  Pause AI Calling
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleStart}
+              disabled={loading}
+              style={{
+                width: '100%', padding: '8px', borderRadius: 8,
+                background: loading ? '#d4c9f7' : P,
+                border: 'none', color: '#fff',
+                fontSize: 12, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {loading ? (
+                <>
+                  <div style={{ width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  Starting…
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  Start AI Calling
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Add Leads Modal ─────────────────────────────────────────────────────────
 function AddLeadsModal({ campaignId, onClose, onSuccess }) {
   const [allLeads, setAllLeads] = useState([]);
@@ -82,10 +272,8 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Fetch leads NOT already in this campaign (campaign=null or other)
     leadsAPI.getAll({ limit: 200 })
       .then(res => {
-        // Show only leads that are not in THIS campaign
         const all = res.data.leads || [];
         setAllLeads(all.filter(l => !l.campaign || l.campaign._id !== campaignId));
       })
@@ -160,7 +348,7 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
                   <input type="checkbox" readOnly checked={selected.has(lead._id)} style={{ accentColor: P, width: 15, height: 15, flexShrink: 0 }} />
                   <Avatar name={lead.name} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, truncate: true }}>{lead.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{lead.name}</div>
                     <div style={{ fontSize: 11, color: MUTED }}>{lead.phone}</div>
                   </div>
                   <MiniStatus status={lead.status} />
@@ -227,9 +415,6 @@ export default function CampaignDetail() {
     finally { setLeadsLoading(false); }
   }, [id, statusFilter, search, selectedLead]);
 
-  // Re-fetch the leads list in the background whenever the shared
-  // LeadDetailsPage panel reports a change (status, call log, note, etc.) so
-  // the student list / stat widgets in the other two columns stay in sync.
   const handleLeadDetailsChange = (updatedLead) => {
     setSelectedLead(prev => (prev && updatedLead?._id === prev._id ? updatedLead : prev));
     fetchLeads(page);
@@ -242,8 +427,6 @@ export default function CampaignDetail() {
   }, [fetchCampaign, fetchLeads]);
 
   useEffect(() => { fetchAll(); }, [id]);
-
-  // Re-fetch leads when filter/search/page changes
   useEffect(() => { fetchLeads(page); }, [statusFilter, page]);
 
   const handleSearchSubmit = (e) => { if (e.key === 'Enter') { setPage(1); fetchLeads(1); } };
@@ -252,10 +435,8 @@ export default function CampaignDetail() {
   const totalLeads = campaign?.totalLeads || statusBreakdown.reduce((a, b) => a + b.count, 0) || 0;
   const freshLeads = statusBreakdown.find(s => s._id === 'Fresh')?.count || 0;
   const wonLeads = statusBreakdown.find(s => s._id === 'Won')?.count || 0;
-  const connectedLeads = statusBreakdown.find(s => s._id === 'Connected')?.count || 0;
   const lostReasons = campaign?.lostReasons || [];
 
-  // All unique statuses for filter dropdown
   const allStatuses = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
 
   if (loading) return <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spinner /></div>;
@@ -263,6 +444,7 @@ export default function CampaignDetail() {
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 48px)', fontFamily: 'inherit', overflow: 'hidden' }}>
+
       {/* ─── LEFT PANEL: Student List ─────────────────────────────────────────── */}
       <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Back + campaign info */}
@@ -287,6 +469,15 @@ export default function CampaignDetail() {
               <StatCard label="Won" value={wonLeads} color="#22c55e" />
               <StatCard label="Callers" value={campaign.assignedCallers?.length || 0} color={TEXT} />
             </div>
+          </div>
+
+          {/* ── AI Calling Panel (below summary card) ─────────────────────────── */}
+          <div style={{ marginTop: 10 }}>
+            <AICallingPanel
+              campaignId={id}
+              campaign={campaign}
+              onStatusChange={fetchCampaign}
+            />
           </div>
         </div>
 
@@ -334,7 +525,16 @@ export default function CampaignDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <Avatar name={lead.name} size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.name}</div>
+                    {/* AI lock indicator on list item */}
+                    {lead.aiLock?.expiresAt && new Date(lead.aiLock.expiresAt) > new Date() && (
+                      <span style={{ fontSize: 9, background: '#dcfce7', color: '#15803d', borderRadius: 10, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>AI</span>
+                    )}
+                    {lead.aiCallState === 'queued' && !lead.aiLock?.expiresAt && (
+                      <span style={{ fontSize: 9, background: '#e0f2fe', color: '#0369a1', borderRadius: 10, padding: '1px 5px', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>Q</span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11, color: MUTED, fontFamily: 'monospace' }}>{lead.phone}</div>
                 </div>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
@@ -441,8 +641,6 @@ export default function CampaignDetail() {
       </div>
 
       {/* ─── RIGHT PANEL: Lead Detail ─────────────────────────────────────────── */}
-      {/* Same component used at /leads/:id — Call, Callback Later, Notes,
-          Activity History, Status Changes, Call Logs all work identically here. */}
       {selectedLead ? (
         <LeadDetailsPage
           key={selectedLead._id}
