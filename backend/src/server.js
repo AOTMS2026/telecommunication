@@ -10,8 +10,9 @@ const { initFCM } = require('./services/fcm');
 const http = require('node:http');
 require('./models/ImportHistory'); // add this line
 const { WebSocketServer } = require('ws');
-const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
-const { startSchedulePoller } = require('./services/workflowEngine');
+const { handleConversationRelay } = require('./services/aiCaller/relayHandler'); // DEPRECATED — see note below
+const campaignEngine = require('./services/aiCaller/campaignEngine'); // NEW
+const callbackEngine = require('./services/aiCaller/callbackEngine'); // NEW
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -58,20 +59,13 @@ app.use('/api/users', apiLimiter, require('./routes/users'));
 app.use('/api/courses', apiLimiter, require('./routes/courses'));
 app.use('/api/blocklist', apiLimiter, require('./routes/blocklist'));
 app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates'));
+app.use('/api/email-campaigns', apiLimiter, require('./routes/emailCampaigns'));
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
-
-// ── Automation & API suite (Workflows, Schedules, Salesforms, API Templates,
-//    Webhooks, Access Tokens, Call-IQ Agents) ──────────────────────────────────
-app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
-app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
-app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
-app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
-app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
-app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
-app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
+app.use('/api/lead-stages',  apiLimiter, require('./routes/leadStages'));
+app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
@@ -85,13 +79,26 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 // ── WebSocket server for Twilio ConversationRelay ─────────────────────────────
+// DEPRECATED, NOT REMOVED: audio is now routed to the RunPod pod via raw Media
+// Streams (see routes/aiCaller.js's /twiml handler), so this mount receives no
+// traffic under the new flow. Left registered (harmless — Twilio simply never
+// opens a connection here anymore) for one full release cycle as a same-process
+// rollback path: reverting routes/aiCaller.js's TwiML back to
+// connect.conversationRelay(...) brings this path back online instantly with
+// zero further code changes. Remove only after the RunPod flow is confirmed
+// stable in production (see migration plan §9, Rollback Plan).
 const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
 wss.on('connection', (ws) => handleConversationRelay(ws));
 
+// ── NEW: AI Telecaller background engines ─────────────────────────────────────
+// Autonomous campaign dialer + intelligent callback re-dialer. Both follow the
+// same setInterval poller pattern as workflowEngine.startSchedulePoller(), so no
+// new job-queue dependency (Redis/Bull) is introduced.
+campaignEngine.startPoller();
+callbackEngine.startPoller();
+
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   server.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
-  // Poll for due SCHEDULE-kind workflow executions every minute.
-  startSchedulePoller(60 * 1000);
 }
 
 module.exports = app;

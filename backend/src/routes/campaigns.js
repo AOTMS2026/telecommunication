@@ -1,3 +1,15 @@
+// backend/src/routes/campaigns.js
+//
+// UPDATED for the RunPod + GPT-4.1-mini migration:
+//  - All existing routes (GET /, GET /:id, POST /, PUT /:id, DELETE /:id,
+//    POST /:id/add-leads, DELETE /:id/remove-lead/:leadId) are UNCHANGED.
+//  - NEW: POST /:id/ai-start, POST /:id/ai-pause, GET /:id/ai-status —
+//    control surface for the autonomous AI Campaign Execution Engine
+//    (services/aiCaller/campaignEngine.js). The engine itself polls the
+//    Campaign collection directly, so these routes simply flip
+//    Campaign.aiCallingEnabled / read live counters — no new job-scheduling
+//    logic lives in the route layer.
+
 const express = require('express');
 const Campaign = require('../models/Campaign');
 const Lead = require('../models/Lead');
@@ -131,6 +143,74 @@ router.delete('/:id/remove-lead/:leadId', protect, authorize('admin', 'super adm
   try {
     await Lead.findByIdAndUpdate(req.params.leadId, { $unset: { campaign: '' } });
     res.json({ message: 'Lead removed from campaign' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ====================== NEW ROUTES (AI Telecaller upgrade) ======================
+
+// POST /api/campaigns/:id/ai-start  — enable autonomous AI dialing for this campaign
+router.post('/:id/ai-start', protect, authorize('admin', 'super admin'), async (req, res) => {
+  try {
+    const { aiConcurrencyLimit, aiCallWindow, aiAgentConfig, aiIncludesAssignedLeads } = req.body;
+    const update = { aiCallingEnabled: true };
+    if (aiConcurrencyLimit != null) update.aiConcurrencyLimit = aiConcurrencyLimit;
+    if (aiCallWindow) update.aiCallWindow = aiCallWindow;
+    if (aiAgentConfig) update.aiAgentConfig = aiAgentConfig;
+    if (aiIncludesAssignedLeads != null) update.aiIncludesAssignedLeads = aiIncludesAssignedLeads;
+
+    const campaign = await Campaign.findByIdAndUpdate(req.params.id, update, { new: true });
+    if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+
+    res.json({ campaign, message: 'AI calling enabled for this campaign.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/campaigns/:id/ai-pause  — stop the AI engine from picking up new leads
+// (in-flight calls already placed are allowed to finish naturally; their lock
+// auto-releases via outcomeService when the call ends)
+router.post('/:id/ai-pause', protect, authorize('admin', 'super admin'), async (req, res) => {
+  try {
+    const campaign = await Campaign.findByIdAndUpdate(
+      req.params.id,
+      { aiCallingEnabled: false },
+      { new: true }
+    );
+    if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+
+    res.json({ campaign, message: 'AI calling paused for this campaign.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// GET /api/campaigns/:id/ai-status  — live counters for the dashboard panel
+router.get('/:id/ai-status', protect, async (req, res) => {
+  try {
+    const campaign = await Campaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
+
+    const [inProgress, queued, completedToday] = await Promise.all([
+      Lead.countDocuments({ campaign: campaign._id, aiCallState: 'in_progress' }),
+      Lead.countDocuments({ campaign: campaign._id, aiCallState: 'queued' }),
+      Lead.countDocuments({
+        campaign: campaign._id,
+        aiCallState: 'completed',
+        lastCalledAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+      }),
+    ]);
+
+    res.json({
+      aiCallingEnabled: campaign.aiCallingEnabled,
+      aiConcurrencyLimit: campaign.aiConcurrencyLimit,
+      aiCallWindow: campaign.aiCallWindow,
+      inProgress,
+      queued,
+      completedToday,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -67,6 +67,10 @@ export const campaignsAPI = {
   delete: (id) => api.delete(`/campaigns/${id}`),
   addLeads: (id, leadIds) => api.post(`/campaigns/${id}/add-leads`, { leadIds }),
   removeLead: (id, leadId) => api.delete(`/campaigns/${id}/remove-lead/${leadId}`),
+  // ====================== NEW (AI Telecaller upgrade) ======================
+  aiStart: (id, config) => api.post(`/campaigns/${id}/ai-start`, config),
+  aiPause: (id) => api.post(`/campaigns/${id}/ai-pause`),
+  aiStatus: (id) => api.get(`/campaigns/${id}/ai-status`),
 };
 
 export const reportsAPI = {
@@ -114,6 +118,15 @@ export const messageTemplatesAPI = {
   create: (data) => api.post('/message-templates', data),
   update: (id, data) => api.put(`/message-templates/${id}`, data),
   delete: (id) => api.delete(`/message-templates/${id}`),
+};
+
+// ── Email Campaign (Message Templates → Email → Create Email Campaign) ───────
+export const emailCampaignsAPI = {
+  previewRecipients: (campaignIds) => api.post('/email-campaigns/preview-recipients', { campaignIds }),
+  send: (data) => api.post('/email-campaigns/send', data),
+  getAll: () => api.get('/email-campaigns'),
+  getOne: (id) => api.get(`/email-campaigns/${id}`),
+  delete: (id) => api.delete(`/email-campaigns/${id}`),
 };
 
 export const bulkImportAPI = {
@@ -206,3 +219,62 @@ export const callIqAPI = {
   run: (id, data) => api.post(`/call-iq-agents/${id}/run`, data),
   getAudits: (id) => api.get(`/call-iq-agents/${id}/audits`),
 };
+
+// ── Workspace Settings ────────────────────────────────────────────────────────
+export const leadStagesAPI = {
+  get: () => api.get('/lead-stages'),
+  addStatus: (data) => api.post('/lead-stages/statuses', data),
+  updateStatus: (id, data) => api.put(`/lead-stages/statuses/${id}`, data),
+  setDefault: (id) => api.patch(`/lead-stages/statuses/${id}/default`),
+  archiveStatus: (id, archived) => api.patch(`/lead-stages/statuses/${id}/archive`, { archived }),
+  deleteStatus: (id) => api.delete(`/lead-stages/statuses/${id}`),
+  reorder: (data) => api.put('/lead-stages/reorder', data),
+  addLostReason: (name) => api.post('/lead-stages/lost-reasons', { name }),
+  updateLostReason: (id, name) => api.put(`/lead-stages/lost-reasons/${id}`, { name }),
+  deleteLostReason: (id) => api.delete(`/lead-stages/lost-reasons/${id}`),
+};
+
+export const callFeedbackAPI = {
+  get: () => api.get('/call-feedback'),
+  updateMinDuration: (minConnectedDuration) => api.put('/call-feedback/min-duration', { minConnectedDuration }),
+  addStatus: (name) => api.post('/call-feedback/statuses', { name }),
+  updateStatus: (id, name) => api.put(`/call-feedback/statuses/${id}`, { name }),
+  setDefault: (id) => api.patch(`/call-feedback/statuses/${id}/default`),
+  archiveStatus: (id, archived) => api.patch(`/call-feedback/statuses/${id}/archive`, { archived }),
+  deleteStatus: (id) => api.delete(`/call-feedback/statuses/${id}`),
+  reorder: (orderedIds) => api.put('/call-feedback/reorder', { orderedIds }),
+};
+
+export const customActionsAPI = {
+  getAll: (status) => api.get('/custom-actions', { params: { status } }),
+  getOne: (id) => api.get(`/custom-actions/${id}`),
+  create: (data) => api.post('/custom-actions', data),
+  update: (id, data) => api.put(`/custom-actions/${id}`, data),
+  archive: (id) => api.patch(`/custom-actions/${id}/archive`),
+  delete: (id) => api.delete(`/custom-actions/${id}`),
+};
+
+export const workspacePreferencesAPI = {
+  get: () => api.get('/workspace-preferences'),
+  update: (data) => api.put('/workspace-preferences', data),
+};
+
+export const permissionTemplatesAPI = {
+  getAll: (filter) => api.get('/permission-templates', { params: filter ? { filter } : {} }),
+  getOne: (id) => api.get(`/permission-templates/${id}`),
+  create: (data) => api.post('/permission-templates', data),
+  update: (id, data) => api.put(`/permission-templates/${id}`, data),
+  delete: (id) => api.delete(`/permission-templates/${id}`),
+};
+
+export const n8nAPI = {
+  getConfig: () => api.get('/n8n/config'),
+  saveConfig: (data) => api.post('/n8n/config', data),
+  test: () => api.post('/n8n/test'),
+  listWorkflows: () => api.get('/n8n/workflows'),
+  cachedWorkflows: () => api.get('/n8n/workflows/cached'),
+  getWorkflow: (id) => api.get(`/n8n/workflows/${id}`),
+  trigger: (id, payload) => api.post(`/n8n/workflows/${id}/trigger`, { payload }),
+  getExecutions: (id, limit) => api.get(`/n8n/workflows/${id}/executions`, { params: { limit } }),
+};
+

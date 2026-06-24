@@ -9,6 +9,17 @@ const activitySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// --- NEW: AI lock sub-schema (lead-locking mechanism) ---
+// Prevents AI and human telecallers from double-dialing the same lead at the
+// same time. Acquired/released atomically by services/aiCaller/leadLock.js
+// using findOneAndUpdate — never read-then-write — to avoid race conditions
+// under concurrent campaign execution.
+const aiLockSchema = new mongoose.Schema({
+  lockedBy: { type: String, default: '' },      // 'ai-engine' or a worker/instance id
+  lockedAt: { type: Date },
+  expiresAt: { type: Date },                    // TTL self-heals stranded locks (e.g. crashed call)
+}, { _id: false });
+
 const leadSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   phone: { type: String, required: true },
@@ -16,9 +27,9 @@ const leadSchema = new mongoose.Schema({
   email: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'],
     default: 'Fresh'
   },
+  lostReason: { type: String, default: '' },
   rating: { type: Number, min: 0, max: 5, default: 0 },
   leadSource: { type: String, default: 'Manual' },
   leadSourceNote: { type: String, default: '' }, // custom message when leadSource is "Other"
@@ -42,6 +53,26 @@ const leadSchema = new mongoose.Schema({
   customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportHistory' },
   collegeName: { type: String, default: '' },
+
+  // ====================== NEW FIELDS (AI Telecaller upgrade) ======================
+  // Lead-locking — see backend/src/services/aiCaller/leadLock.js
+  aiLock: { type: aiLockSchema, default: undefined },
+
+  // Tracks where this lead is in the autonomous AI dialing lifecycle.
+  // 'none'        -> not currently part of any AI dial attempt
+  // 'queued'      -> campaignEngine / callbackEngine has marked this for the next dial pass
+  // 'in_progress' -> Twilio call placed, RunPod session active
+  // 'completed'   -> last AI call finished (outcome already applied)
+  aiCallState: { type: String, enum: ['none', 'queued', 'in_progress', 'completed'], default: 'none' },
+
+  // Full structured GPT-4.1-mini output from the most recent AI call. Used by
+  // conversationMemory.js to build "last time we spoke..." context for the next call.
+  lastAiOutcome: { type: mongoose.Schema.Types.Mixed, default: null },
+
+  // Detected/preferred spoken language for this lead (Telugu / English / Hinglish),
+  // learned from the first AI call and reused so subsequent calls open in the right language.
+  language: { type: String, enum: ['Telugu', 'English', 'Hinglish', ''], default: '' },
+  // =================================================================================
 }, { timestamps: true });
 
 leadSchema.index({ phone: 1 });
@@ -49,5 +80,7 @@ leadSchema.index({ assignedTo: 1 });
 leadSchema.index({ status: 1 });
 leadSchema.index({ campaign: 1 });
 leadSchema.index({ importId: 1 });
+leadSchema.index({ 'aiLock.expiresAt': 1 }); // NEW — fast lookup of unlocked/expired leads
+leadSchema.index({ campaign: 1, aiCallState: 1 }); // NEW — campaignEngine eligibility query
 
 module.exports = mongoose.model('Lead', leadSchema);
