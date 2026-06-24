@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { leadsAPI, usersAPI, blocklistAPI } from '../services/api';
+import { leadsAPI, usersAPI, blocklistAPI, leadStagesAPI } from '../services/api';
 import StatusBadge from '../components/common/StatusBadge';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
@@ -18,7 +18,7 @@ const PURPLE = '#5b3fc7';
 const PURPLE_LIGHT = '#f0ecff';
 const COLORS = ['#5b3fc7','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6','#EC4899','#14B8A6','#F97316','#6366F1'];
 
-const STATUSES = ['All', 'Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
+const FALLBACK_STATUSES = ['All', 'Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
 const SOURCES = ['All', 'Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel'];
 
 
@@ -82,6 +82,7 @@ export default function Leads() {
   const [statsLoading, setStatsLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [statuses, setStatuses] = useState(FALLBACK_STATUSES);
 
   // Load callers list for admin
   useEffect(() => {
@@ -94,6 +95,17 @@ export default function Leads() {
         .catch(console.error);
     }
   }, [user]);
+
+  // Load configurable lead stage statuses (falls back to default list on error)
+  useEffect(() => {
+    leadStagesAPI.get().then(res => {
+      const active = (res.data.config?.statuses || [])
+        .filter(s => !s.archived)
+        .sort((a, b) => a.order - b.order)
+        .map(s => s.name);
+      if (active.length) setStatuses(['All', ...active, 'Blocked']);
+    }).catch(() => {});
+  }, []);
 
   // Fetch leads stats for charts
   const fetchStats = useCallback(async () => {
@@ -387,7 +399,7 @@ export default function Leads() {
                 onChange={e => setStatus(e.target.value)}
                 className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:border-purple-400 text-gray-600"
               >
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
+                {statuses.map(s => <option key={s}>{s}</option>)}
               </select>
 
               <select
