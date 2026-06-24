@@ -17,6 +17,9 @@ const followUpSchema = new mongoose.Schema({
   title: { type: String, default: '' },       // for todo tasks
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   completedAt: { type: Date },
+  // Set once an overdue notification has been sent for this task, so the
+  // background job never sends duplicate "task overdue" alerts.
+  overdueNotifiedAt: { type: Date },
 }, { timestamps: true });
 
 // Indexes for frequent query patterns

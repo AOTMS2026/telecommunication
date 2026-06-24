@@ -137,15 +137,20 @@ export default function CustomActions() {
   const [counts, setCounts] = useState({ activeCount: 0, archivedCount: 0 });
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
 
   const load = async (status = tab) => {
     setLoading(true);
+    setError('');
     try {
       const res = await customActionsAPI.getAll(status);
       setActions(res.data.actions);
       setCounts({ activeCount: res.data.activeCount, archivedCount: res.data.archivedCount });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load custom actions');
+      setActions([]);
     } finally {
       setLoading(false);
     }
@@ -209,6 +214,11 @@ export default function CustomActions() {
         </div>
         {loading ? (
           <div style={{ padding: 30, textAlign: 'center', color: '#888' }}>Loading...</div>
+        ) : error ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error}</p>
+            <button onClick={() => load(tab)} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center' }}>
             <p style={{ color: '#888', marginBottom: 14 }}>No action found!</p>

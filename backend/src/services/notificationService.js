@@ -208,6 +208,39 @@ async function notifyWorkflowAction({ recipient, lead, title, message }) {
   });
 }
 
+/**
+ * Notify the assignee (and admins, if someone else is the assignee) that a
+ * task/follow-up has gone past its scheduled time without being completed.
+ * Called by the overdue-task sweep in server.js — never called directly
+ * from request handlers.
+ */
+async function notifyTaskOverdue({ followup }) {
+  try {
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'To-do task' : 'Call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+    const noteSnippet = followup.note ? `: "${followup.note.slice(0, 80)}"` : (followup.title ? `: "${followup.title.slice(0, 80)}"` : '');
+
+    const recipients = new Set();
+    if (followup.assignedTo) recipients.add(followup.assignedTo._id?.toString() || followup.assignedTo.toString());
+
+    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    admins.forEach(a => recipients.add(a._id.toString()));
+
+    return Promise.all([...recipients].map(recipient => createNotification({
+      recipient,
+      type: 'task_overdue',
+      title: '⏰ Task Overdue',
+      message: `${taskLabel}${leadSuffix}${noteSnippet} is now overdue`,
+      lead: followup.lead?._id || followup.lead,
+      data: { followupId: followup._id, taskType: followup.type, scheduledAt: followup.scheduledAt },
+    })));
+  } catch (err) {
+    console.error('Failed to notify task overdue:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   createNotification,
   notifyWorkflowAction,
@@ -218,4 +251,5 @@ module.exports = {
   notifyCallInitiated,
   notifyAdminsTaskCreated,
   notifyAdminsTaskEdited,
+  notifyTaskOverdue,
 };

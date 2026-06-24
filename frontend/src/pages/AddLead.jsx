@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, leadStagesAPI } from '../services/api';
+import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, leadStagesAPI, leadFieldsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const FALLBACK_STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
@@ -29,6 +29,7 @@ export default function AddLead() {
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
   const [statuses, setStatuses] = useState(FALLBACK_STATUSES);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
   const [form, setForm] = useState({
     name: '', phone: '', alternatePhone: '', email: '',
     status: 'Fresh', leadSource: 'Manual', leadSourceNote: '', preferredCourses: [],
@@ -36,6 +37,7 @@ export default function AddLead() {
     budget: '', location: '', lastQualification: '',
     nextFollowupDate: '', demoScheduledDate: '', demoDoneDate: '',
     assignedTo: '', campaign: '',
+    customFields: {},
   });
 
   useEffect(() => {
@@ -48,6 +50,9 @@ export default function AddLead() {
         .sort((a, b) => a.order - b.order)
         .map(s => s.name);
       if (active.length) setStatuses(active);
+    }).catch(() => {});
+    leadFieldsAPI.getAll({ view: 'Active Fields' }).then(res => {
+      setCustomFieldDefs(res.data.fields || []);
     }).catch(() => {});
     if (user?.role === 'admin' || user?.role === 'super admin') {
       usersAPI.getAll().then(u => setUsers(u.data.users || [])).catch(() => {});
@@ -68,12 +73,14 @@ export default function AddLead() {
           demoScheduledDate: l.demoScheduledDate?.slice(0, 16) || '',
           demoDoneDate: l.demoDoneDate?.slice(0, 16) || '',
           assignedTo: l.assignedTo?._id || '', campaign: l.campaign?._id || '',
+          customFields: l.customFields || {},
         });
       }).finally(() => setLoading(false));
     }
   }, [id]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setCustomField = (name, v) => setForm(f => ({ ...f, customFields: { ...f.customFields, [name]: v } }));
 
   const toggleCourse = (c) =>
     set('preferredCourses',
@@ -305,6 +312,50 @@ export default function AddLead() {
             </Field>
           </div>
         </div>
+
+        {/* Custom Fields — defined in Workspace Settings > Lead Fields, reflected here automatically */}
+        {customFieldDefs.length > 0 && (
+          <div className="card p-5 space-y-4">
+            <h3 className="font-semibold text-gray-800 text-sm">Additional Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {customFieldDefs.map(cf => (
+                <Field key={cf._id} label={cf.name}>
+                  {cf.type === 'dropdown' ? (
+                    <select
+                      className="input-field"
+                      value={form.customFields[cf.name] || ''}
+                      onChange={e => setCustomField(cf.name, e.target.value)}
+                    >
+                      <option value="">Select {cf.name}</option>
+                      {(cf.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : cf.type === 'checkbox' ? (
+                    <input
+                      type="checkbox"
+                      checked={!!form.customFields[cf.name]}
+                      onChange={e => setCustomField(cf.name, e.target.checked)}
+                    />
+                  ) : cf.type === 'textarea' ? (
+                    <textarea
+                      className="input-field resize-none"
+                      rows={2}
+                      value={form.customFields[cf.name] || ''}
+                      onChange={e => setCustomField(cf.name, e.target.value)}
+                    />
+                  ) : (
+                    <input
+                      type={cf.type === 'date' ? 'date' : cf.type === 'number' || cf.type === 'money' ? 'number' : cf.type === 'email' ? 'email' : 'text'}
+                      className="input-field"
+                      value={form.customFields[cf.name] || ''}
+                      onChange={e => setCustomField(cf.name, e.target.value)}
+                      placeholder={`Enter ${cf.name.toLowerCase()}`}
+                    />
+                  )}
+                </Field>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Assignment */}
         <div className="card p-5 space-y-4">

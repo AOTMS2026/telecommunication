@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen } from 'lucide-react';
-import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI } from '../../services/api';
+import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI, leadStagesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../common/StatusBadge';
 import { formatDistanceToNow, format } from 'date-fns';
 
-const STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
+const FALLBACK_STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
 const SOURCES = ['Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel', 'Referral'];
 const MODES = ['Online', 'Offline', 'Hybrid'];
 
@@ -461,6 +461,7 @@ export default function LeadDetailsPage({
   const [callers, setCallers] = useState([]);
   const [courses, setCourses] = useState([]);
   const [leadFollowups, setLeadFollowups] = useState([]);
+  const [statuses, setStatuses] = useState(FALLBACK_STATUSES);
 
   const [isCalling, setIsCalling] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -519,6 +520,13 @@ export default function LeadDetailsPage({
     usersAPI.getAll().then(res => {
       setCallers((res.data.users || []).filter(u => u.role === 'caller' || u.role === 'admin' || u.role === 'super admin'));
     }).catch(console.error);
+    leadStagesAPI.get().then(res => {
+      const active = (res.data.config?.statuses || [])
+        .filter(s => !s.archived)
+        .sort((a, b) => a.order - b.order)
+        .map(s => s.name);
+      if (active.length) setStatuses(active);
+    }).catch(() => {});
   }, [id]);
 
   // Check blocklist status when lead loads
@@ -748,7 +756,7 @@ export default function LeadDetailsPage({
             onChange={e => handleStatusChange(e.target.value)}
             className="text-xs font-semibold border border-indigo-200 rounded-xl px-3 py-2 bg-indigo-50/40 text-indigo-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all hover:bg-indigo-50"
           >
-            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            {statuses.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
           {isAdmin && (

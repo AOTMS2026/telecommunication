@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { leadStagesAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const COLOR_OPTIONS = [
   '#94a3b8', '#f6c453', '#60a5fa', '#c084fc', '#f87171', '#fb923c',
@@ -74,7 +75,7 @@ function AddStatusModal({ stage, onClose, onSave }) {
   );
 }
 
-function StatusRow({ status, onEdit, onDelete, onSetDefault, dragHandlers }) {
+function StatusRow({ status, onEdit, onDelete, onSetDefault, dragHandlers, canEdit }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(status.name);
 
@@ -106,7 +107,7 @@ function StatusRow({ status, onEdit, onDelete, onSetDefault, dragHandlers }) {
         <span style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: '#2d2d2d' }}>{status.name}</span>
       )}
       {status.isDefault && <span style={{ fontSize: 11, fontWeight: 700, color: '#7c5cf0', fontStyle: 'italic' }}>Default</span>}
-      {!editing && (
+      {!editing && canEdit && (
         <>
           <span onClick={() => setEditing(true)} title="Edit" style={{ cursor: 'pointer', color: '#7c5cf0' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -123,17 +124,24 @@ function StatusRow({ status, onEdit, onDelete, onSetDefault, dragHandlers }) {
 }
 
 export default function LeadStage() {
+  const { user } = useAuth();
+  const canEdit = user?.role === 'admin' || user?.role === 'super admin';
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [modalStage, setModalStage] = useState(null);
   const [newReason, setNewReason] = useState('');
   const [showDeleted, setShowDeleted] = useState(false);
   const dragItem = useRef(null);
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
       const res = await leadStagesAPI.get();
       setConfig(res.data.config);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load lead stages');
     } finally {
       setLoading(false);
     }
@@ -141,7 +149,14 @@ export default function LeadStage() {
 
   useEffect(() => { load(); }, []);
 
-  if (loading || !config) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+
+  if (error || !config) return (
+    <div style={{ padding: 40, textAlign: 'center' }}>
+      <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error || 'Something went wrong while loading.'}</p>
+      <button onClick={load} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+    </div>
+  );
 
   const byStage = (stage) => config.statuses.filter(s => s.stage === stage && !s.archived).sort((a, b) => a.order - b.order);
   const initial = byStage('initial');
@@ -216,14 +231,14 @@ export default function LeadStage() {
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <Column title="Initial stage" color="#64748b">
           {initial.map(s => (
-            <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} />
+            <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} canEdit={canEdit} />
           ))}
         </Column>
 
-        <Column title="Active stage" color="#16a34a" showAdd onAdd={() => setModalStage('active')}>
+        <Column title="Active stage" color="#16a34a" showAdd={canEdit} onAdd={() => setModalStage('active')}>
           {active.map(s => (
             <div key={s._id} draggable onDragStart={() => onDragStart(s._id)} onDragOver={e => e.preventDefault()} onDrop={() => onDrop('active', s._id)}>
-              <StatusRow status={s} onEdit={editStatus} onDelete={deleteStatus} />
+              <StatusRow status={s} onEdit={editStatus} onDelete={deleteStatus} canEdit={canEdit} />
             </div>
           ))}
         </Column>
@@ -234,7 +249,7 @@ export default function LeadStage() {
               <span style={{ fontWeight: 700, color: '#16a34a', fontSize: 14 }}>Won</span>
             </div>
             <div style={{ border: '1px solid #16a34a33', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: 12 }}>
-              {won.map(s => <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} />)}
+              {won.map(s => <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} canEdit={canEdit} />)}
             </div>
           </div>
 
@@ -243,29 +258,33 @@ export default function LeadStage() {
               <span style={{ fontWeight: 700, color: '#ef4444', fontSize: 14 }}>Lost</span>
             </div>
             <div style={{ border: '1px solid #ef444433', borderTop: 'none', borderRadius: '0 0 10px 10px', padding: 12 }}>
-              {lost.map(s => <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} />)}
+              {lost.map(s => <StatusRow key={s._id} status={s} onEdit={editStatus} onDelete={deleteStatus} canEdit={canEdit} />)}
 
               <div style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#444' }}>Reason for Lost leads ({config.lostReasons.length}/25)</span>
-                  <span onClick={addReason} style={{ fontSize: 12, color: '#7c5cf0', fontWeight: 600, cursor: 'pointer' }}>+ Add</span>
+                  {canEdit && <span onClick={addReason} style={{ fontSize: 12, color: '#7c5cf0', fontWeight: 600, cursor: 'pointer' }}>+ Add</span>}
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  <input
-                    value={newReason}
-                    onChange={e => setNewReason(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addReason()}
-                    placeholder="New reason..."
-                    style={{ flex: 1, padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 12.5 }}
-                  />
-                </div>
+                {canEdit && (
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                    <input
+                      value={newReason}
+                      onChange={e => setNewReason(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && addReason()}
+                      placeholder="New reason..."
+                      style={{ flex: 1, padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 12.5 }}
+                    />
+                  </div>
+                )}
                 {config.lostReasons.map(r => (
                   <div key={r._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f5f3ff' }}>
                     <span style={{ color: '#bbb', fontSize: 12 }}>⠿</span>
                     <span style={{ flex: 1, fontSize: 13, color: '#333' }}>{r.name}</span>
-                    <span onClick={() => deleteReason(r._id)} style={{ cursor: 'pointer', color: '#e53e3e' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                    </span>
+                    {canEdit && (
+                      <span onClick={() => deleteReason(r._id)} style={{ cursor: 'pointer', color: '#e53e3e' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -283,7 +302,9 @@ export default function LeadStage() {
             {config.statuses.filter(s => s.archived).map(s => (
               <div key={s._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#f7f6fb', borderRadius: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: 13, color: '#666' }}>{s.name}</span>
-                <button onClick={async () => { const res = await leadStagesAPI.archiveStatus(s._id, false); setConfig(res.data.config); }} style={{ fontSize: 12, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Restore</button>
+                {canEdit && (
+                  <button onClick={async () => { const res = await leadStagesAPI.archiveStatus(s._id, false); setConfig(res.data.config); }} style={{ fontSize: 12, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Restore</button>
+                )}
               </div>
             ))}
             {archivedCount === 0 && <p style={{ fontSize: 12, color: '#aaa' }}>No deleted statuses.</p>}
@@ -291,7 +312,7 @@ export default function LeadStage() {
         )}
       </div>
 
-      {modalStage && (
+      {modalStage && canEdit && (
         <AddStatusModal stage={modalStage} onClose={() => setModalStage(null)} onSave={addStatus} />
       )}
     </div>

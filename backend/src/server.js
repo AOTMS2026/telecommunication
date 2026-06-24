@@ -1,4 +1,4 @@
-// Nodemon restart trigger v3
+// Nodemon restart trigger v5
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,6 +11,8 @@ const http = require('node:http');
 require('./models/ImportHistory'); // add this line
 const { WebSocketServer } = require('ws');
 const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
+const { startSchedulePoller } = require('./services/workflowEngine');
+const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -57,13 +59,29 @@ app.use('/api/users', apiLimiter, require('./routes/users'));
 app.use('/api/courses', apiLimiter, require('./routes/courses'));
 app.use('/api/blocklist', apiLimiter, require('./routes/blocklist'));
 app.use('/api/message-templates', apiLimiter, require('./routes/messageTemplates'));
-app.use('/api/email-campaigns', apiLimiter, require('./routes/emailCampaigns'));
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
-app.use('/api/lead-stages',  apiLimiter, require('./routes/leadStages'));
-app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
+
+// ── Automation & API suite (Workflows, Schedules, Salesforms, API Templates,
+//    Webhooks, Access Tokens, Call-IQ Agents) ──────────────────────────────────
+app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
+app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
+app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
+app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
+app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
+app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
+app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
+
+// ── Workspace Settings (Lead Stage, Call Feedback, Custom Actions, Preferences,
+//    Permission Templates) ────────────────────────────────────────────────────
+app.use('/api/lead-stages', apiLimiter, require('./routes/leadStages'));
+app.use('/api/lead-fields', apiLimiter, require('./routes/leadFields'));
+app.use('/api/call-feedback', apiLimiter, require('./routes/callFeedback'));
+app.use('/api/custom-actions', apiLimiter, require('./routes/customActions'));
+app.use('/api/workspace-preferences', apiLimiter, require('./routes/workspacePreferences'));
+app.use('/api/permission-templates', apiLimiter, require('./routes/permissionTemplates'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
@@ -82,6 +100,10 @@ wss.on('connection', (ws) => handleConversationRelay(ws));
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   server.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
+  // Poll for due SCHEDULE-kind workflow executions every minute.
+  startSchedulePoller(60 * 1000);
+  // Sweep for overdue tasks/follow-ups every 5 minutes and notify once each.
+  startOverdueTaskChecker(5 * 60 * 1000);
 }
 
 module.exports = app;
