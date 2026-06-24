@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { leadsAPI, campaignsAPI, usersAPI, coursesAPI } from '../services/api';
+import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, leadStagesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
+const FALLBACK_STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
 const SOURCES = ['Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel', 'Instagram','Referral','Other' ];
 const COURSES = ['MBA', 'BBA', 'B.Tech', 'MCA', 'B.Sc', 'M.Tech', 'B.Com', 'M.Com'];
 
@@ -28,6 +28,7 @@ export default function AddLead() {
   const [campaigns, setCampaigns] = useState([]);
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [statuses, setStatuses] = useState(FALLBACK_STATUSES);
   const [form, setForm] = useState({
     name: '', phone: '', alternatePhone: '', email: '',
     status: 'Fresh', leadSource: 'Manual', leadSourceNote: '', preferredCourses: [],
@@ -41,6 +42,13 @@ export default function AddLead() {
     // Fetch independently so a permission error on one doesn't block others
     coursesAPI.getAll().then(cr => setCourses(cr.data.courses || [])).catch(console.error);
     campaignsAPI.getAll().then(c => setCampaigns(c.data.campaigns || [])).catch(() => {});
+    leadStagesAPI.get().then(res => {
+      const active = (res.data.config?.statuses || [])
+        .filter(s => !s.archived)
+        .sort((a, b) => a.order - b.order)
+        .map(s => s.name);
+      if (active.length) setStatuses(active);
+    }).catch(() => {});
     if (user?.role === 'admin' || user?.role === 'super admin') {
       usersAPI.getAll().then(u => setUsers(u.data.users || [])).catch(() => {});
     }
@@ -183,7 +191,7 @@ export default function AddLead() {
             </Field>
             <Field label="Status">
               <select className="input-field" value={form.status} onChange={e => set('status', e.target.value)}>
-                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
           </div>
