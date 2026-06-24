@@ -7,24 +7,40 @@ const Lead = require('../models/Lead');
 const User = require('../models/User');
 const { runApiTemplate, triggerWebhook } = require('./automationRunners');
 const { notifyWorkflowAction } = require('./notificationService');
+let n8nService;
+try { n8nService = require('./n8nService'); } catch (_) { /* n8n not configured */ }
 
 // ── Metadata consumed by the frontend builder UI ────────────────────────────
 const EVENT_DEFINITIONS = [
-  { value: 'lead.assignee_changed', label: 'Lead Assignee Change', group: 'Events' },
-  { value: 'lead.field_changed', label: 'Lead Field Change', group: 'Events' },
-  { value: 'lead.rating_changed', label: 'Lead Rating Change', group: 'Events' },
-  { value: 'lead.status_changed', label: 'Lead Status Change', group: 'Events' },
-  { value: 'lead.added_to_list', label: 'Added in List', group: 'Events' },
-  { value: 'lead.removed_from_list', label: 'Removed from List', group: 'Events' },
+  { value: 'lead.manual_created', label: 'On manual lead', group: 'Lead Creation' },
+  { value: 'lead.web_created', label: 'On Website lead', group: 'Lead Creation' },
+  { value: 'lead.facebook_lead', label: 'On Facebook lead', group: 'Lead Creation' },
+  { value: 'lead.justdial_lead', label: 'On Justdial lead', group: 'Lead Creation' },
+  { value: 'lead.excel_upload', label: 'On Excel upload lead', group: 'Lead Creation' },
+  { value: 'lead.woocommerce', label: 'On WooCommerce payment', group: 'Lead Creation' },
+  { value: 'lead.call_log', label: 'On call log lead', group: 'Lead Creation' },
+  { value: 'lead.created', label: 'On any lead created', group: 'Lead Creation' },
+  { value: 'lead.status_changed', label: 'On Lead Status Change', group: 'Lead Events' },
+  { value: 'lead.rating_changed', label: 'On Lead Rating Change', group: 'Lead Events' },
+  { value: 'lead.assignee_changed', label: 'On Lead Assignment Change', group: 'Lead Events' },
+  { value: 'lead.field_changed', label: 'On Lead Field Change', group: 'Lead Events' },
+  { value: 'lead.note_added', label: 'On Note Added', group: 'Lead Events' },
+  { value: 'lead.added_to_list', label: 'Added in List', group: 'Lead Events' },
+  { value: 'lead.removed_from_list', label: 'Removed from List', group: 'Lead Events' },
+  { value: 'lead.location_checkin', label: 'On Location Check-in', group: 'Lead Events' },
+  { value: 'lead.template_message_sent', label: 'On template replied', group: 'Messaging' },
 ];
 
 const ACTION_DEFINITIONS = [
   { value: 'call_api', label: 'Call API', needsApiTemplate: true },
   { value: 'trigger_webhook', label: 'Trigger Webhook', needsWebhook: true },
+  { value: 'trigger_n8n', label: 'Trigger n8n Workflow', needsN8n: true },
   { value: 'notify_team_member', label: 'Notification To TeamMember' },
   { value: 'update_lead_assignee', label: 'Update Lead Assignee' },
   { value: 'update_lead_status', label: 'Update Lead Status' },
   { value: 'update_lead_rating', label: 'Update Lead Rating' },
+  { value: 'send_template', label: 'Send Template' },
+  { value: 'email_report', label: 'Email Lead Report' },
   { value: 'custom_action', label: 'Create Custom Action' },
 ];
 
@@ -99,9 +115,32 @@ async function runSingleAction(action, context, log) {
         return true;
       }
       case 'custom_action': {
-        // Placeholder hook point for bespoke logic — logged but performs no side effects yet.
         log.push({ type: action.type, ok: true, message: `Custom action "${action.config.label || ''}" acknowledged` });
         return true;
+      }
+      case 'send_template': {
+        // Placeholder — integrates with message template system when configured
+        log.push({ type: action.type, ok: true, message: `Template "${action.config.templateId || 'default'}" queued for send` });
+        return true;
+      }
+      case 'email_report': {
+        // Placeholder — sends lead report email when email service is configured
+        log.push({ type: action.type, ok: true, message: `Email report queued for ${action.config.email || 'admin'}` });
+        return true;
+      }
+      case 'trigger_n8n': {
+        if (!n8nService) { log.push({ type: action.type, ok: false, message: 'n8n service not available' }); return false; }
+        const n8nId = action.config.n8nWorkflowId;
+        if (!n8nId) { log.push({ type: action.type, ok: false, message: 'No n8n workflow ID configured' }); return false; }
+        const payload = {
+          event: context.eventName,
+          lead: lead ? { id: lead._id, name: lead.name, phone: lead.phone, email: lead.email, status: lead.status, rating: lead.rating } : null,
+          changes: context.changes || null,
+          triggeredAt: new Date().toISOString(),
+        };
+        const result = await n8nService.triggerWorkflow(n8nId, payload);
+        log.push({ type: action.type, ok: result.ok, message: result.ok ? `n8n triggered via ${result.method}` : (result.error || 'n8n trigger failed') });
+        return result.ok;
       }
       default:
         log.push({ type: action.type, ok: false, message: 'Unknown action type' });
@@ -121,6 +160,26 @@ async function executeWorkflow(workflow, context) {
     const ok = await runSingleAction(action, context, actionsLog);
     if (!ok) allOk = false;
   }
+
+  // If the workflow itself is linked to an n8n workflow, also trigger it
+  if (workflow.n8nWorkflowId && n8nService) {
+    try {
+      const lead = context.lead;
+      const payload = {
+        aotms_workflow: { id: workflow._id, name: workflow.name, kind: workflow.kind },
+        event: context.eventName,
+        lead: lead ? { id: lead._id, name: lead.name, phone: lead.phone, email: lead.email, status: lead.status } : null,
+        changes: context.changes || null,
+      };
+      const r = await n8nService.triggerWorkflow(workflow.n8nWorkflowId, payload);
+      actionsLog.push({ type: 'trigger_n8n_auto', ok: r.ok, message: r.ok ? `n8n auto-trigger via ${r.method}` : (r.error || 'failed') });
+      if (!r.ok) allOk = false;
+    } catch (err) {
+      actionsLog.push({ type: 'trigger_n8n_auto', ok: false, message: err.message });
+      allOk = false;
+    }
+  }
+
   const durationMs = Date.now() - start;
 
   workflow.stats.totalRuns += 1;

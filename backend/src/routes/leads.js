@@ -372,6 +372,9 @@ router.post('/', protect, async (req, res) => {
     ]);
     // Notify assigned caller (if not the creator themselves)
     notifyNewLeadCreated({ lead, assignedToId, performedByUser: req.user }).catch(() => {});
+    // Fire automation events for lead creation
+    fireEvent('lead.created', { lead, user: req.user, changes: { source: 'manual' } }).catch(() => {});
+    fireEvent('lead.manual_created', { lead, user: req.user, changes: { source: 'manual' } }).catch(() => {});
     res.status(201).json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });

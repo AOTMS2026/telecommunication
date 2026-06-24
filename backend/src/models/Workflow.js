@@ -6,7 +6,8 @@ const actionSchema = new mongoose.Schema({
     required: true,
     enum: [
       'call_api', 'notify_team_member', 'update_lead_assignee',
-      'update_lead_status', 'update_lead_rating', 'trigger_webhook', 'custom_action',
+      'update_lead_status', 'update_lead_rating', 'trigger_webhook',
+      'trigger_n8n', 'send_template', 'email_report', 'custom_action',
     ],
   },
   config: { type: mongoose.Schema.Types.Mixed, default: {} },
@@ -30,9 +31,18 @@ const workflowSchema = new mongoose.Schema({
     enum: [
       'lead.assignee_changed', 'lead.field_changed', 'lead.rating_changed',
       'lead.status_changed', 'lead.added_to_list', 'lead.removed_from_list',
+      'lead.created', 'lead.manual_created', 'lead.web_created',
+      'lead.facebook_lead', 'lead.justdial_lead', 'lead.excel_upload',
+      'lead.woocommerce', 'lead.call_log', 'lead.location_checkin',
+      'lead.template_message_sent', 'lead.note_added',
     ],
     required: true,
   },
+  // optional: link this workflow to an n8n workflow so every execution also triggers n8n
+  n8nWorkflowId: { type: String, default: '' },
+  // Visual flowchart editor state (nodes + edges persisted for the canvas)
+  nodes: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  edges: { type: [mongoose.Schema.Types.Mixed], default: [] },
   // e.g. { field: 'leadSource' } when triggerEvent === 'lead.field_changed'
   triggerConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
   conditions: [conditionSchema],

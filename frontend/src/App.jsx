@@ -31,6 +31,12 @@ import Webhooks from './pages/Webhooks';
 import AccessTokens from './pages/AccessTokens';
 import CallIqAgents from './pages/CallIqAgents';
 import Mcp from './pages/Mcp';
+import LeadStage from './pages/LeadStage';
+import CallFeedback from './pages/CallFeedback';
+import CustomActions from './pages/CustomActions';
+import WorkspacePreferences from './pages/WorkspacePreferences';
+import PermissionTemplates from './pages/PermissionTemplates';
+import N8nSettings from './pages/N8nSettings';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -89,6 +95,12 @@ export default function App() {
             <Route path="access-tokens" element={<AccessTokens />} />
             <Route path="call-iq-agents" element={<CallIqAgents />} />
             <Route path="mcp" element={<Mcp />} />
+            <Route path="lead-stage" element={<LeadStage />} />
+            <Route path="call-feedback" element={<CallFeedback />} />
+            <Route path="custom-actions" element={<CustomActions />} />
+            <Route path="workspace-preferences" element={<WorkspacePreferences />} />
+            <Route path="permission-templates" element={<PermissionTemplates />} />
+            <Route path="n8n-settings" element={<N8nSettings />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

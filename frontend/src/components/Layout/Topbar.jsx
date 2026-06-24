@@ -23,6 +23,7 @@ export default function Topbar() {
   const [now, setNow] = useState(new Date());
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   // Track which followup IDs we've already alerted so we don't repeat
@@ -32,6 +33,8 @@ export default function Topbar() {
   const dropRef = useRef(null);
   const profileRef = useRef(null);
   const profileDropRef = useRef(null);
+  const gearRef = useRef(null);
+  const gearDropRef = useRef(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000);
@@ -113,6 +116,10 @@ export default function Topbar() {
       if (profileDropRef.current && !profileDropRef.current.contains(e.target) &&
           profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfile(false);
+      }
+      if (gearDropRef.current && !gearDropRef.current.contains(e.target) &&
+          gearRef.current && !gearRef.current.contains(e.target)) {
+        setShowWorkspaceSettings(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -197,6 +204,35 @@ export default function Topbar() {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : 'Caller';
 
+  const workspaceSettingsGroups = [
+    {
+      label: 'WORKSPACE',
+      items: [
+        { label: 'Lead Fields', path: '/fields', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>) },
+        { label: 'Lead Stage', path: '/lead-stage', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>) },
+        { label: 'Call Feedback', path: '/call-feedback', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>) },
+        { label: 'Custom Actions', path: '/custom-actions', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>) },
+        { label: 'Preferences', path: '/workspace-preferences', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>) },
+      ],
+    },
+    {
+      label: 'TEAM',
+      items: [
+        { label: 'Users', path: '/users', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>) },
+        { label: 'Permission Templates', path: '/permission-templates', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>) },
+      ],
+    },
+    {
+      label: 'BILLING',
+      items: [
+        { label: 'Buy Licenses', path: '/billing/buy-licenses', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>) },
+        { label: 'Transaction History', path: '/billing/transactions', icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3v18h18"/><path d="M18.4 8.6 13 14l-3-3-3.6 3.6"/></svg>) },
+      ],
+    },
+  ];
+
+  const isAdminLike = user?.role === 'admin' || user?.role === 'super admin';
+
   const profileMenuItems = [
     {
       label: 'Profile',
@@ -253,6 +289,69 @@ export default function Topbar() {
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
+
+          {isAdminLike && (
+            <div ref={gearRef} style={{ position: 'relative', marginLeft: 2 }}>
+              <div
+                onClick={() => { setShowWorkspaceSettings(prev => !prev); setShowProfile(false); setShowNotifications(false); }}
+                title="Workspace settings"
+                style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  background: showWorkspaceSettings ? '#f0ecff' : 'transparent'
+                }}
+                onMouseEnter={e => { if (!showWorkspaceSettings) e.currentTarget.style.background = '#f5f3ff'; }}
+                onMouseLeave={e => { if (!showWorkspaceSettings) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showWorkspaceSettings ? '#5b3fc7' : '#888'} strokeWidth="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </div>
+
+              {showWorkspaceSettings && (
+                <div
+                  ref={gearDropRef}
+                  style={{
+                    position: 'absolute', top: 36, left: 0,
+                    width: 220, background: '#fff',
+                    border: '1px solid #e5e2f5', borderRadius: 12,
+                    boxShadow: '0 8px 32px rgba(91,63,199,0.14)',
+                    zIndex: 200, overflow: 'hidden',
+                    animation: 'fadeSlideDown 0.15s ease',
+                    padding: '6px 0'
+                  }}
+                >
+                  <style>{`@keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+                  {workspaceSettingsGroups.map((group, gi) => (
+                    <div key={group.label} style={{ borderTop: gi > 0 ? '1px solid #f0ecff' : 'none', padding: '6px 0' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a0c0', letterSpacing: '0.05em', padding: '4px 16px' }}>
+                        {group.label}
+                      </div>
+                      {group.items.map(item => (
+                        <div
+                          key={item.path}
+                          onClick={() => { setShowWorkspaceSettings(false); navigate(item.path); }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            padding: '8px 16px', cursor: 'pointer',
+                            color: '#2d2d6b', fontSize: 13, fontWeight: 500,
+                            transition: 'background 0.1s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <span style={{ color: '#888', display: 'flex' }}>{item.icon}</span>
+                          {item.label}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: time + clock + bell + avatar */}

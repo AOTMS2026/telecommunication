@@ -162,12 +162,14 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
     if (req.body.phone !== undefined) updates.phone = req.body.phone;
     if (req.body.isActive !== undefined) updates.isActive = req.body.isActive;
     if (req.body.role && req.user.role === 'super admin') updates.role = req.body.role;
+    if (req.body.permissionTemplate !== undefined) updates.permissionTemplate = req.body.permissionTemplate || null;
     if (req.body.password) {
       targetUser.password = req.body.password;
       if (req.body.name) targetUser.name = req.body.name;
       if (req.body.phone !== undefined) targetUser.phone = req.body.phone;
       if (req.body.isActive !== undefined) targetUser.isActive = req.body.isActive;
       if (req.body.role && req.user.role === 'super admin') targetUser.role = req.body.role;
+      if (req.body.permissionTemplate !== undefined) targetUser.permissionTemplate = req.body.permissionTemplate || null;
       await targetUser.save();
       return res.json({ user: targetUser.toJSON() });
     }
