@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
   // FCM token for push notifications to mobile app
   fcmToken: { type: String, default: '' },
   fcmTokenUpdatedAt: { type: Date },
+  permissionTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'PermissionTemplate' },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

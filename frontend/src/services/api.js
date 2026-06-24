@@ -216,6 +216,53 @@ export const callIqAPI = {
   getAudits: (id) => api.get(`/call-iq-agents/${id}/audits`),
 };
 
+// ── Workspace Settings ────────────────────────────────────────────────────────
+export const leadStagesAPI = {
+  get: () => api.get('/lead-stages'),
+  addStatus: (data) => api.post('/lead-stages/statuses', data),
+  updateStatus: (id, data) => api.put(`/lead-stages/statuses/${id}`, data),
+  setDefault: (id) => api.patch(`/lead-stages/statuses/${id}/default`),
+  archiveStatus: (id, archived) => api.patch(`/lead-stages/statuses/${id}/archive`, { archived }),
+  deleteStatus: (id) => api.delete(`/lead-stages/statuses/${id}`),
+  reorder: (data) => api.put('/lead-stages/reorder', data),
+  addLostReason: (name) => api.post('/lead-stages/lost-reasons', { name }),
+  updateLostReason: (id, name) => api.put(`/lead-stages/lost-reasons/${id}`, { name }),
+  deleteLostReason: (id) => api.delete(`/lead-stages/lost-reasons/${id}`),
+};
+
+export const callFeedbackAPI = {
+  get: () => api.get('/call-feedback'),
+  updateMinDuration: (minConnectedDuration) => api.put('/call-feedback/min-duration', { minConnectedDuration }),
+  addStatus: (name) => api.post('/call-feedback/statuses', { name }),
+  updateStatus: (id, name) => api.put(`/call-feedback/statuses/${id}`, { name }),
+  setDefault: (id) => api.patch(`/call-feedback/statuses/${id}/default`),
+  archiveStatus: (id, archived) => api.patch(`/call-feedback/statuses/${id}/archive`, { archived }),
+  deleteStatus: (id) => api.delete(`/call-feedback/statuses/${id}`),
+  reorder: (orderedIds) => api.put('/call-feedback/reorder', { orderedIds }),
+};
+
+export const customActionsAPI = {
+  getAll: (status) => api.get('/custom-actions', { params: { status } }),
+  getOne: (id) => api.get(`/custom-actions/${id}`),
+  create: (data) => api.post('/custom-actions', data),
+  update: (id, data) => api.put(`/custom-actions/${id}`, data),
+  archive: (id) => api.patch(`/custom-actions/${id}/archive`),
+  delete: (id) => api.delete(`/custom-actions/${id}`),
+};
+
+export const workspacePreferencesAPI = {
+  get: () => api.get('/workspace-preferences'),
+  update: (data) => api.put('/workspace-preferences', data),
+};
+
+export const permissionTemplatesAPI = {
+  getAll: (filter) => api.get('/permission-templates', { params: filter ? { filter } : {} }),
+  getOne: (id) => api.get(`/permission-templates/${id}`),
+  create: (data) => api.post('/permission-templates', data),
+  update: (id, data) => api.put(`/permission-templates/${id}`, data),
+  delete: (id) => api.delete(`/permission-templates/${id}`),
+};
+
 export const n8nAPI = {
   getConfig: () => api.get('/n8n/config'),
   saveConfig: (data) => api.post('/n8n/config', data),

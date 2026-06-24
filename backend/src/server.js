@@ -11,7 +11,6 @@ const http = require('node:http');
 require('./models/ImportHistory'); // add this line
 const { WebSocketServer } = require('ws');
 const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
-const { startSchedulePoller } = require('./services/workflowEngine');
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -63,16 +62,7 @@ app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
-
-// ── Automation & API suite (Workflows, Schedules, Salesforms, API Templates,
-//    Webhooks, Access Tokens, Call-IQ Agents) ──────────────────────────────────
-app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
-app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
-app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
-app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
-app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
-app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
-app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
+app.use('/api/lead-stages',  apiLimiter, require('./routes/leadStages'));
 app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
@@ -92,8 +82,6 @@ wss.on('connection', (ws) => handleConversationRelay(ws));
 
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
   server.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
-  // Poll for due SCHEDULE-kind workflow executions every minute.
-  startSchedulePoller(60 * 1000);
 }
 
 module.exports = app;

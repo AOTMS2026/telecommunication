@@ -16,9 +16,9 @@ const leadSchema = new mongoose.Schema({
   email: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'],
     default: 'Fresh'
   },
+  lostReason: { type: String, default: '' },
   rating: { type: Number, min: 0, max: 5, default: 0 },
   leadSource: { type: String, default: 'Manual' },
   leadSourceNote: { type: String, default: '' }, // custom message when leadSource is "Other"

@@ -12,10 +12,29 @@ const statusConfig = {
   'Blocked': { bg: 'bg-rose-100', text: 'text-rose-700', dot: 'bg-rose-500' },
 };
 
-export default function StatusBadge({ status, size = 'sm' }) {
-  const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
+// status: label text. color: optional hex from the configurable Lead Stage
+// (Workspace Settings > Lead Stage). When provided and there's no built-in
+// Tailwind preset for that label, the badge renders using the custom color
+// instead of falling back to plain gray.
+export default function StatusBadge({ status, color, size = 'sm' }) {
+  const preset = statusConfig[status];
+  const sizeClass = size === 'sm' ? 'text-xs' : 'text-sm';
+
+  if (!preset && color) {
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium ${sizeClass}`}
+        style={{ background: `${color}22`, color }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }}></span>
+        {status}
+      </span>
+    );
+  }
+
+  const config = preset || { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium ${config.bg} ${config.text} ${size === 'sm' ? 'text-xs' : 'text-sm'}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium ${config.bg} ${config.text} ${sizeClass}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`}></span>
       {status}
     </span>
