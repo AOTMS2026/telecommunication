@@ -24,6 +24,20 @@ function client(cfg) {
  * Test connection to the n8n instance by fetching /api/v1/workflows?limit=1.
  * Saves the connection status back onto the config doc.
  */
+// Pulls a human-readable message out of any axios/network error — including
+// AggregateError, which Node throws for "localhost" connection refusals (dual-stack
+// IPv6+IPv4 attempts both fail) and whose top-level .message is an empty string.
+function describeError(err) {
+  if (err.response?.data?.message) return err.response.data.message;
+  if (err.message) return err.message;
+  if (Array.isArray(err.errors) && err.errors.length) {
+    const inner = err.errors.map(e => e.message || e.code).filter(Boolean);
+    if (inner.length) return inner.join('; ');
+  }
+  if (err.code) return err.code;
+  return 'Connection failed — is n8n running and reachable at the configured Base URL? (tip: try 127.0.0.1 instead of localhost)';
+}
+
 async function testConnection(cfg) {
   try {
     const api = client(cfg);
@@ -38,7 +52,7 @@ async function testConnection(cfg) {
   } catch (err) {
     cfg.status = 'error';
     cfg.lastCheckedAt = new Date();
-    cfg.lastError = err.response?.data?.message || err.message;
+    cfg.lastError = describeError(err);
     await cfg.save();
     return { ok: false, error: cfg.lastError };
   }
@@ -111,7 +125,7 @@ async function triggerWorkflow(n8nWorkflowId, payload) {
     const res = await api.post(`/workflows/${n8nWorkflowId}/execute`, { data: payload });
     return { ok: true, method: 'api', status: res.status, data: res.data };
   } catch (err) {
-    return { ok: false, error: err.response?.data?.message || err.message };
+    return { ok: false, error: describeError(err) };
   }
 }
 
