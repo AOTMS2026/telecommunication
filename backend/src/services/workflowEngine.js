@@ -12,23 +12,38 @@ try { n8nService = require('./n8nService'); } catch (_) { /* n8n not configured 
 
 // ── Metadata consumed by the frontend builder UI ────────────────────────────
 const EVENT_DEFINITIONS = [
-  { value: 'lead.manual_created', label: 'On manual lead', group: 'Lead Creation' },
-  { value: 'lead.web_created', label: 'On Website lead', group: 'Lead Creation' },
-  { value: 'lead.facebook_lead', label: 'On Facebook lead', group: 'Lead Creation' },
-  { value: 'lead.justdial_lead', label: 'On Justdial lead', group: 'Lead Creation' },
-  { value: 'lead.excel_upload', label: 'On Excel upload lead', group: 'Lead Creation' },
-  { value: 'lead.woocommerce', label: 'On WooCommerce payment', group: 'Lead Creation' },
-  { value: 'lead.call_log', label: 'On call log lead', group: 'Lead Creation' },
-  { value: 'lead.created', label: 'On any lead created', group: 'Lead Creation' },
+  { value: 'lead.whatsapp_lead', label: 'On WhatsApp lead', group: 'Whatsapp' },
+  { value: 'lead.whatsapp_received', label: 'On WhatsApp received', group: 'Whatsapp' },
+  { value: 'lead.template_replied', label: 'On template replied', group: 'Whatsapp' },
+  { value: 'lead.waca_list_replied', label: 'On WACA List Replied', group: 'Whatsapp' },
+  { value: 'lead.field_changed', label: 'On Lead Field Change', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.name', label: 'Name', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.phone', label: 'Phone', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.email', label: 'Email', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.alternatePhone', label: 'Alternate Phone', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.courseInterest', label: 'Preferred Courses', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.location', label: 'Location', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.budget', label: 'Budget', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.nextFollowUpDate', label: 'Next Followup Date', group: 'Lead Field Change' },
+  { value: 'lead.field_changed.demoScheduledDate', label: 'Demo Scheduled Date', group: 'Lead Field Change' },
+  { value: 'lead.facebook_lead', label: 'On Facebook lead', group: 'Lead Sources' },
+  { value: 'lead.web_created', label: 'On Website lead', group: 'Lead Sources' },
+  { value: 'lead.justdial_lead', label: 'On Justdial lead', group: 'Lead Sources' },
+  { value: 'lead.woocommerce', label: 'On WooCommerce payment', group: 'Lead Sources' },
+  { value: 'lead.call_log', label: 'On call log lead', group: 'Lead Sources' },
+  { value: 'lead.excel_upload', label: 'On Excel upload lead', group: 'Lead Sources' },
+  { value: 'lead.manual_created', label: 'On manual lead', group: 'Lead Sources' },
+  { value: 'lead.created', label: 'On any lead created', group: 'Lead Sources' },
   { value: 'lead.status_changed', label: 'On Lead Status Change', group: 'Lead Events' },
   { value: 'lead.rating_changed', label: 'On Lead Rating Change', group: 'Lead Events' },
   { value: 'lead.assignee_changed', label: 'On Lead Assignment Change', group: 'Lead Events' },
-  { value: 'lead.field_changed', label: 'On Lead Field Change', group: 'Lead Events' },
+  { value: 'lead.user_note', label: 'On User Note', group: 'Lead Events' },
+  { value: 'lead.system_note', label: 'On System Note', group: 'Lead Events' },
   { value: 'lead.note_added', label: 'On Note Added', group: 'Lead Events' },
+  { value: 'lead.location_checkin', label: 'On Location Check-in', group: 'Lead Events' },
   { value: 'lead.added_to_list', label: 'Added in List', group: 'Lead Events' },
   { value: 'lead.removed_from_list', label: 'Removed from List', group: 'Lead Events' },
-  { value: 'lead.location_checkin', label: 'On Location Check-in', group: 'Lead Events' },
-  { value: 'lead.template_message_sent', label: 'On template replied', group: 'Messaging' },
+  { value: 'lead.template_message_sent', label: 'On template message sent', group: 'Messaging' },
 ];
 
 const ACTION_DEFINITIONS = [
@@ -63,7 +78,7 @@ async function runSingleAction(action, context, log) {
   try {
     switch (action.type) {
       case 'call_api': {
-        const result = await runApiTemplate(action.config.apiTemplateId, context);
+        const result = await runApiTemplate(action.config.apiTemplateId, { ...context, logActivity: true });
         log.push({ type: action.type, ok: true, message: `API call → ${result.status || 'sent'}` });
         return true;
       }

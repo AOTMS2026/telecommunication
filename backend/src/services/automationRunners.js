@@ -27,9 +27,32 @@ function interpolate(input, context) {
   return input;
 }
 
+// Reads a dot/array-index path like 'message.content' or 'files.0.status' out of a
+// parsed JSON value. Returns undefined if any segment along the way is missing.
+function getByPath(obj, path) {
+  if (!path) return undefined;
+  return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+}
+
+function buildAuthHeaders(auth) {
+  if (!auth || auth.type === 'none') return {};
+  if (auth.type === 'bearer') return auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
+  if (auth.type === 'api_key') return auth.headerName ? { [auth.headerName]: auth.headerValue || '' } : {};
+  if (auth.type === 'basic') {
+    if (!auth.username) return {};
+    const encoded = Buffer.from(`${auth.username}:${auth.password || ''}`).toString('base64');
+    return { Authorization: `Basic ${encoded}` };
+  }
+  return {};
+}
+
 /**
  * Execute a saved API Template. `context` typically contains { lead, user }.
- * Used by the "Call API" workflow action and the API Templates "Run / Test" button.
+ * Used by the "Call API" workflow action and the API Templates "Test Template" button.
+ *
+ * If the template has a responseMapping configured and context.lead is present, the
+ * mapped fields (plus the always-available Status Code / Status Text) are written to
+ * the lead's Activity History as a structured 'api_call' entry.
  */
 async function runApiTemplate(apiTemplateId, context) {
   const tpl = await ApiTemplate.findById(apiTemplateId);
@@ -41,19 +64,51 @@ async function runApiTemplate(apiTemplateId, context) {
   };
 
   const url = interpolate(tpl.endpointUrl, tokenContext);
-  const headers = interpolate(tpl.headers || {}, tokenContext);
+  const headers = { ...interpolate(tpl.headers || {}, tokenContext), ...buildAuthHeaders(tpl.auth) };
+  const params = interpolate(tpl.queryParams || {}, tokenContext);
   const data = interpolate(tpl.bodyTemplate || {}, tokenContext);
 
   const res = await axios({
     method: tpl.method,
     url,
     headers,
+    params,
     data: ['GET', 'DELETE'].includes(tpl.method) ? undefined : data,
-    timeout: 15000,
+    timeout: (tpl.timeout || 3) * 1000,
     validateStatus: () => true,
   });
 
-  return { status: res.status, ok: res.status < 400, body: res.data };
+  const ok = res.status < 400;
+
+  // Cache the raw response so the Response Mapper step can list JSON paths without re-firing.
+  tpl.lastTestResponse = res.data;
+  tpl.lastTestStatus = res.status;
+  tpl.lastTestedAt = new Date();
+  await tpl.save();
+
+  // Apply the saved Response Mapper and log a structured Activity History entry.
+  const mappedFields = (tpl.responseMapping || []).map((m) => ({
+    label: m.label,
+    type: m.type,
+    value: getByPath(res.data, m.jsonPath),
+  }));
+
+  if (context.logActivity && context.lead && typeof context.lead.save === 'function') {
+    context.lead.activities.unshift({
+      type: 'api_call',
+      templateName: tpl.name,
+      description: `${tpl.name} → HTTP ${res.status}`,
+      fields: [
+        { label: 'Status Code', type: 'Number', value: res.status },
+        { label: 'Status Text', type: 'Text', value: ok ? 'OK' : 'Error' },
+        ...mappedFields,
+      ],
+      performedBy: context.user?._id,
+    });
+    await context.lead.save();
+  }
+
+  return { status: res.status, ok, body: res.data, mappedFields };
 }
 
 /**
@@ -93,4 +148,4 @@ async function broadcastWebhooks(eventName, payload) {
   await Promise.all(hooks.map((h) => triggerWebhook(h._id, eventName, payload)));
 }
 
-module.exports = { runApiTemplate, triggerWebhook, broadcastWebhooks, interpolate };
+module.exports = { runApiTemplate, triggerWebhook, broadcastWebhooks, interpolate, getByPath };

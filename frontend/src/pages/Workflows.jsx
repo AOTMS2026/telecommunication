@@ -11,23 +11,42 @@ const lbl={fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',lett
 
 /* ─── event catalog (matches TeleCRM exactly) ─────────────────────────────── */
 const EVENT_CATALOG=[
-  {value:'lead.manual_created',label:'On manual lead',icon:'⚙️',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.web_created',label:'On Website lead',icon:'🌐',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.facebook_lead',label:'On Facebook lead',icon:'📘',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.justdial_lead',label:'On Justdial lead',icon:'📞',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.excel_upload',label:'On Excel upload lead',icon:'📊',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.woocommerce',label:'On WooCommerce payment',icon:'🛒',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.call_log',label:'On call log lead',icon:'📱',group:'Lead Creation',wfType:'Lead Creation'},
-  {value:'lead.created',label:'On any lead created',icon:'➕',group:'Lead Creation',wfType:'Lead Creation'},
+  // Whatsapp group
+  {value:'lead.whatsapp_lead',label:'On WhatsApp lead',icon:'💬',group:'Whatsapp',wfType:'Lead Creation'},
+  {value:'lead.whatsapp_received',label:'On WhatsApp received',icon:'💬',group:'Whatsapp',wfType:'Messaging'},
+  {value:'lead.template_replied',label:'On template replied',icon:'💬',group:'Whatsapp',wfType:'Messaging',hasTemplates:true},
+  {value:'lead.waca_list_replied',label:'On WACA List Replied',icon:'💬',group:'Whatsapp',wfType:'Messaging'},
+  // On Lead Field Change group (expandable with specific fields)
+  {value:'lead.field_changed',label:'On Lead Field Change',icon:'⚙️',group:'Lead Field Change',wfType:'Lead Updation',hasFields:true},
+  {value:'lead.field_changed.name',label:'Name',icon:'T',group:'Lead Field Change',wfType:'Lead Updation',parentField:'name'},
+  {value:'lead.field_changed.phone',label:'Phone',icon:'📞',group:'Lead Field Change',wfType:'Lead Updation',parentField:'phone'},
+  {value:'lead.field_changed.email',label:'Email',icon:'✉️',group:'Lead Field Change',wfType:'Lead Updation',parentField:'email'},
+  {value:'lead.field_changed.alternatePhone',label:'Alternate Phone',icon:'📞',group:'Lead Field Change',wfType:'Lead Updation',parentField:'alternatePhone'},
+  {value:'lead.field_changed.courseInterest',label:'Preferred Courses',icon:'📚',group:'Lead Field Change',wfType:'Lead Updation',parentField:'courseInterest'},
+  {value:'lead.field_changed.location',label:'Location',icon:'T',group:'Lead Field Change',wfType:'Lead Updation',parentField:'location'},
+  {value:'lead.field_changed.budget',label:'Budget',icon:'₹',group:'Lead Field Change',wfType:'Lead Updation',parentField:'budget'},
+  {value:'lead.field_changed.nextFollowUpDate',label:'Next Followup Date',icon:'📅',group:'Lead Field Change',wfType:'Lead Updation',parentField:'nextFollowUpDate'},
+  {value:'lead.field_changed.demoScheduledDate',label:'Demo Scheduled Date',icon:'📅',group:'Lead Field Change',wfType:'Lead Updation',parentField:'demoScheduledDate'},
+  // Lead Creation events
+  {value:'lead.facebook_lead',label:'On Facebook lead',icon:'📘',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.web_created',label:'On Website lead',icon:'🌐',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.justdial_lead',label:'On Justdial lead',icon:'📞',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.woocommerce',label:'On WooCommerce payment',icon:'🛒',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.call_log',label:'On call log lead',icon:'📱',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.excel_upload',label:'On Excel upload lead',icon:'📊',group:'Lead Sources',wfType:'Lead Creation'},
+  {value:'lead.manual_created',label:'On manual lead',icon:'⚙️',group:'Lead Sources',wfType:'Lead Creation'},
+  // Lead Events
   {value:'lead.status_changed',label:'On Lead Status Change',icon:'🏷️',group:'Lead Events',wfType:'Lead Updation'},
   {value:'lead.rating_changed',label:'On Lead Rating Change',icon:'⭐',group:'Lead Events',wfType:'Lead Updation'},
   {value:'lead.assignee_changed',label:'On Lead Assignment Change',icon:'👤',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.field_changed',label:'On Lead Field Change',icon:'✏️',group:'Lead Events',wfType:'Lead Updation'},
+  {value:'lead.user_note',label:'On User Note',icon:'📝',group:'Lead Events',wfType:'Lead Activity'},
+  {value:'lead.system_note',label:'On System Note',icon:'📄',group:'Lead Events',wfType:'Lead Activity'},
   {value:'lead.note_added',label:'On Note Added',icon:'📝',group:'Lead Events',wfType:'Lead Activity'},
+  {value:'lead.location_checkin',label:'On Location Check-in',icon:'📍',group:'Lead Events',wfType:'Lead Activity'},
+  {value:'lead.created',label:'On any lead created',icon:'➕',group:'Lead Events',wfType:'Lead Creation'},
   {value:'lead.added_to_list',label:'Added in List',icon:'📋',group:'Lead Events',wfType:'Lead Updation'},
   {value:'lead.removed_from_list',label:'Removed from List',icon:'🗑️',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.template_message_sent',label:'On template replied',icon:'💬',group:'Messaging',wfType:'Lead Activity'},
-  {value:'lead.location_checkin',label:'On Location Check-in',icon:'📍',group:'Lead Events',wfType:'Lead Activity'},
+  {value:'lead.template_message_sent',label:'On template message sent',icon:'💬',group:'Messaging',wfType:'Lead Activity'},
 ];
 
 /* ─── action palette (matches TeleCRM sidebar) ────────────────────────────── */
