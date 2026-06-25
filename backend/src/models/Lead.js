@@ -1,10 +1,17 @@
 const mongoose = require('mongoose');
 
 const activitySchema = new mongoose.Schema({
-  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup'], required: true },
+  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup', 'api_call'], required: true },
   description: { type: String, default: '' },
   callDuration: { type: Number, default: 0 },
   callStatus: { type: String, enum: ['connected', 'no_answer', 'busy', 'failed', ''], default: '' },
+  // for type: 'api_call' — name of the API Template that ran, and its structured result
+  templateName: { type: String, default: '' },
+  fields: [{
+    label: { type: String },
+    type: { type: String, enum: ['Text', 'Number', 'Date', 'Website', 'Dropdown', 'Money', 'Tags'], default: 'Text' },
+    value: { type: mongoose.Schema.Types.Mixed },
+  }],
   performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });
@@ -53,6 +60,8 @@ const leadSchema = new mongoose.Schema({
   customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportHistory' },
   collegeName: { type: String, default: '' },
+  // Named lists a lead can be added to/removed from (used by Salesform "Add in List" / "Remove from List" actions)
+  lists: { type: [String], default: [] },
 
   // ====================== NEW FIELDS (AI Telecaller upgrade) ======================
   // Lead-locking — see backend/src/services/aiCaller/leadLock.js

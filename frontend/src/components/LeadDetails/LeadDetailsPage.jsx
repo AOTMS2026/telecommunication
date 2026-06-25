@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen } from 'lucide-react';
+import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Zap } from 'lucide-react';
 import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI, leadStagesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../common/StatusBadge';
@@ -693,6 +693,7 @@ export default function LeadDetailsPage({
     if (type === 'whatsapp') return <MessageCircle className="w-4 h-4 text-green-500" />;
     if (type === 'sms') return <MessageSquare className="w-4 h-4 text-blue-600" />;
     if (type === 'status_change') return <Tag className="w-4 h-4 text-orange-600" />;
+    if (type === 'api_call') return <Zap className="w-4 h-4 text-purple-600" />;
     return <Clock className="w-4 h-4 text-indigo-600" />;
   };
 
@@ -1170,6 +1171,8 @@ export default function LeadDetailsPage({
                             <span>Logged Call — {fmtDuration(a.callDuration)} ({a.callStatus?.toUpperCase() || 'CONNECTED'})</span>
                           ) : a.type === 'status_change' ? (
                             <span className="text-orange-700">{a.description}</span>
+                          ) : a.type === 'api_call' ? (
+                            <span className="flex items-center gap-1.5 text-purple-700">⚡ {a.templateName || 'API Template'}</span>
                           ) : (
                             <span>{a.description}</span>
                           )}
@@ -1186,6 +1189,21 @@ export default function LeadDetailsPage({
                       )}
                       {!a._followup && a.type === 'call' && a.description && (
                         <p className="text-xs text-gray-500 italic mt-1.5 bg-white border border-gray-100/50 rounded-lg p-2">"{a.description}"</p>
+                      )}
+                      {!a._followup && a.type === 'api_call' && a.fields?.length > 0 && (
+                        <div className="mt-2 bg-white border border-gray-100 rounded-lg overflow-hidden">
+                          <div className="grid grid-cols-[1fr_2fr] bg-gray-50 text-[10px] font-bold text-gray-500 uppercase px-3 py-1.5 border-b border-gray-100">
+                            <span>Field</span><span>Value</span>
+                          </div>
+                          {a.fields.map((f, fi) => (
+                            <div key={fi} className={`grid grid-cols-[1fr_2fr] px-3 py-2 text-xs ${fi < a.fields.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                              <span className="font-semibold text-gray-700 flex items-center gap-1">
+                                <span className="text-gray-400 font-mono text-[10px]">{f.type === 'Number' ? '#' : 'T'}</span> {f.label}
+                              </span>
+                              <span className="text-gray-600 break-words">{String(f.value ?? '')}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100/30 text-[10px] text-gray-400 font-semibold">
                         <span>BY: {a.performedBy?.name || 'System / Unassigned'}</span>

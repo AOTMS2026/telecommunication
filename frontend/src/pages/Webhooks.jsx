@@ -1,269 +1,193 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { webhooksAPI, workflowsAPI } from '../services/api';
 
-const C = { indigo: '#6366f1', border: '#e5e2f5', ink: '#1e1b4b', sub: '#6b7280', bg: '#f9f8ff' };
-const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12 };
-const btnPrimary = { padding: '8px 18px', borderRadius: 8, border: 'none', background: C.indigo, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' };
-const btnGhost = { padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${C.border}`, background: '#fff', color: C.ink, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
-const inp = { width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' };
-const lbl = { fontSize: 12, fontWeight: 700, color: C.sub, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'block' };
+const C={indigo:'#6366f1',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626'};
+const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
+const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
+const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
+const inp={width:'100%',padding:'9px 12px',border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:'none',boxSizing:'border-box'};
+const lbl={fontSize:12,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5,display:'block'};
 
-function fmt(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-}
+const WIZARD_STEPS=[
+  {num:1,label:'Webhook Details',desc:'Name your webhook and generate its endpoint URL'},
+  {num:2,label:'Sample Request',desc:'Help the system understand the shape of the incoming webhook'},
+  {num:3,label:'Map Lead Identifier',desc:'Identify which field in the request uniquely represents the lead'},
+  {num:4,label:'Duplicate Detection (Optional)',desc:'Select a field to detect and ignore duplicate incoming webhook events'},
+  {num:5,label:'Authentication (Optional)',desc:'Secure your webhook endpoint with authentication'},
+  {num:6,label:'Map Your Data',desc:'Map incoming webhook fields to lead fields in the CRM'},
+  {num:7,label:'Connect Automation',desc:'Connect this webhook to a workflow for automated processing'},
+];
 
-export default function Webhooks() {
-  const [hooks, setHooks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [events, setEvents] = useState([]);
-  const [showCreate, setShowCreate] = useState(false);
-  const [expanded, setExpanded] = useState(null); // webhook _id being edited inline
-  const [testResults, setTestResults] = useState({}); // id -> { loading, msg, ok }
+export default function Webhooks(){
+  const [hooks,setHooks]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [editing,setEditing]=useState(null);
+  const [events,setEvents]=useState([]);
 
-  const load = async () => {
-    setLoading(true);
-    try { setHooks((await webhooksAPI.getAll()).data.webhooks); } catch (e) { console.error(e); }
-    setLoading(false);
-  };
+  const load=async()=>{setLoading(true);try{setHooks((await webhooksAPI.getAll()).data.webhooks)}catch(e){console.error(e)}setLoading(false)};
+  useEffect(()=>{load();workflowsAPI.meta().then(r=>setEvents(r.data.events)).catch(()=>{});},[]);
 
-  useEffect(() => {
-    load();
-    workflowsAPI.meta().then(r => setEvents(r.data.events || [])).catch(() => {});
-  }, []);
+  if(editing) return <WebhookEditor initial={editing} events={events} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);load()}} />;
 
-  const handleTest = async (h) => {
-    setTestResults(p => ({ ...p, [h._id]: { loading: true } }));
-    try {
-      const r = await webhooksAPI.test(h._id);
-      setTestResults(p => ({ ...p, [h._id]: { loading: false, ok: true, msg: r.data.result?.message || 'Test delivered' } }));
-      load();
-    } catch (e) {
-      setTestResults(p => ({ ...p, [h._id]: { loading: false, ok: false, msg: e.response?.data?.message || 'Test failed' } }));
-    }
-    setTimeout(() => setTestResults(p => { const n = { ...p }; delete n[h._id]; return n; }), 4000);
-  };
-
-  const handleDelete = async (h) => {
-    if (!confirm(`Delete webhook "${h.name}"?`)) return;
-    await webhooksAPI.delete(h._id);
-    if (expanded === h._id) setExpanded(null);
-    load();
-  };
-
-  return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: C.ink }}>Webhook Management</h2>
-          <p style={{ margin: '4px 0 0', color: C.sub, fontSize: 14 }}>Manage outbound webhooks and connect to external systems</p>
-        </div>
-        <button style={btnPrimary} onClick={() => { setShowCreate(true); setExpanded(null); }}>+ Create new webhook</button>
+  return(
+  <div style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}}>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+      <div>
+        <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>Webhook Management</h2>
+        <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>Manage inbound & outbound webhooks and connect to external systems</p>
       </div>
-
-      {showCreate && (
-        <div style={{ ...card, marginBottom: 20, padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <h3 style={{ margin: 0, color: C.ink, fontSize: 16 }}>Create New Webhook</h3>
-            <button style={{ ...btnGhost, padding: '4px 10px' }} onClick={() => setShowCreate(false)}>✕</button>
-          </div>
-          <WebhookSettingsForm
-            initial={{ name: '', url: '', events: [], status: 'active' }}
-            events={events}
-            onSaved={() => { setShowCreate(false); load(); }}
-            onCancel={() => setShowCreate(false)}
-          />
-        </div>
-      )}
-
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 50, color: C.sub }}>Loading…</div>
-      ) : hooks.length === 0 ? (
-        <div style={{ ...card, padding: 50, textAlign: 'center' }}>
-          <div style={{ fontSize: 38, marginBottom: 10 }}>🪝</div>
-          <div style={{ fontWeight: 600, color: C.ink, marginBottom: 4 }}>No webhooks yet</div>
-          <div style={{ color: C.sub, fontSize: 14, marginBottom: 16 }}>Create your first webhook to push lead events to other systems.</div>
-          <button style={btnPrimary} onClick={() => setShowCreate(true)}>Create your first webhook</button>
-        </div>
-      ) : (
-        <div style={{ ...card, overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 2fr 0.7fr 0.9fr 1.2fr 0.8fr 160px', padding: '12px 20px', background: C.bg, borderBottom: `1px solid ${C.border}`, fontSize: 11, fontWeight: 700, color: C.sub, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            <span>Name</span>
-            <span>URL</span>
-            <span>Events</span>
-            <span>Status</span>
-            <span>Last Triggered</span>
-            <span>Deliveries</span>
-            <span style={{ textAlign: 'right' }}>Actions</span>
-          </div>
-
-          {hooks.map((h, i) => {
-            const tr = testResults[h._id];
-            const isExpanded = expanded === h._id;
-            return (
-              <div key={h._id}>
-                {/* Row */}
-                <div
-                  style={{ display: 'grid', gridTemplateColumns: '1.4fr 2fr 0.7fr 0.9fr 1.2fr 0.8fr 160px', padding: '14px 20px', alignItems: 'center', borderBottom: `1px solid ${isExpanded ? C.border : i < hooks.length - 1 ? '#f0eef8' : 'transparent'}`, cursor: 'default', background: isExpanded ? '#faf9ff' : '#fff' }}
-                >
-                  <span style={{ fontWeight: 600, color: C.ink, fontSize: 14 }}>{h.name}</span>
-                  <span style={{ fontSize: 12, color: C.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 12 }}>{h.url}</span>
-                  <span style={{ fontSize: 13, color: C.sub }}>{h.events?.length || 0}</span>
-                  <span>
-                    <span style={{ background: h.status === 'active' ? '#d1fae5' : '#f3f4f6', color: h.status === 'active' ? '#059669' : '#6b7280', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                      {h.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
-                  </span>
-                  <span style={{ fontSize: 12, color: C.sub }}>{fmt(h.lastTriggeredAt)}</span>
-                  <span style={{ fontSize: 12 }}>
-                    <span style={{ color: '#059669', fontWeight: 600 }}>{h.successCount || 0}</span>
-                    <span style={{ color: C.sub }}> / </span>
-                    <span style={{ color: '#dc2626', fontWeight: 600 }}>{h.failCount || 0}</span>
-                  </span>
-                  <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-                    <button
-                      style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, color: tr?.ok === false ? '#dc2626' : tr?.ok ? '#059669' : C.ink }}
-                      disabled={tr?.loading}
-                      onClick={() => handleTest(h)}
-                    >
-                      {tr?.loading ? '…' : 'Test'}
-                    </button>
-                    <button
-                      style={{ ...btnGhost, padding: '5px 10px', fontSize: 12, background: isExpanded ? '#f0eeff' : '#fff', color: isExpanded ? C.indigo : C.ink, borderColor: isExpanded ? C.indigo : C.border }}
-                      onClick={() => setExpanded(isExpanded ? null : h._id)}
-                    >
-                      {isExpanded ? 'Close' : 'Settings'}
-                    </button>
-                    <button
-                      style={{ ...btnGhost, padding: '5px 8px', fontSize: 12, color: '#dc2626', borderColor: '#fecaca' }}
-                      onClick={() => handleDelete(h)}
-                    >✕</button>
-                  </span>
-                </div>
-
-                {/* Inline test result */}
-                {tr && !tr.loading && (
-                  <div style={{ padding: '8px 20px', background: tr.ok ? '#f0fdf4' : '#fef2f2', borderBottom: `1px solid ${tr.ok ? '#bbf7d0' : '#fecaca'}`, fontSize: 13, color: tr.ok ? '#15803d' : '#dc2626', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>{tr.ok ? '✓' : '✕'}</span> {tr.msg}
-                  </div>
-                )}
-
-                {/* Expanded settings */}
-                {isExpanded && (
-                  <div style={{ padding: '20px 24px', background: '#faf9ff', borderBottom: i < hooks.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-                    <WebhookSettingsForm
-                      initial={h}
-                      events={events}
-                      onSaved={() => { setExpanded(null); load(); }}
-                      onCancel={() => setExpanded(null)}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <button style={btnP} onClick={()=>setEditing({name:'',url:'',events:[],status:'active',config:{},fieldMappings:[]})}>Create new webhook +</button>
     </div>
-  );
+
+    {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>
+    :hooks.length===0?(
+      <div style={{...card,padding:50,textAlign:'center'}}>
+        <div style={{fontSize:48,marginBottom:12}}>🪝</div>
+        <div style={{fontWeight:600,color:C.ink,marginBottom:4,fontSize:16}}>No webhooks yet</div>
+        <div style={{color:C.sub,fontSize:14,marginBottom:16}}>Create your first webhook to push or receive lead events.</div>
+        <button style={btnP} onClick={()=>setEditing({name:'',url:'',events:[],status:'active',config:{},fieldMappings:[]})}>Create your first webhook</button>
+        <div style={{marginTop:24,color:C.indigo,fontSize:14,cursor:'pointer'}}>📄 View webhook documentation</div>
+      </div>
+    ):(
+      <div style={{...card,overflow:'hidden'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'12px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+          <span>Name</span><span>URL</span><span>Events</span><span>Status</span><span style={{textAlign:'right'}}>Actions</span>
+        </div>
+        {hooks.map((h,i)=>(
+          <div key={h._id} style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'14px 18px',alignItems:'center',borderBottom:i<hooks.length-1?'1px solid #f0eef8':'none'}}>
+            <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(h)}>{h.name}</span>
+            <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.url}</span>
+            <span style={{fontSize:13,color:C.sub}}>{h.events?.length||0}</span>
+            <span><span style={{background:h.status==='active'?'#d1fae5':'#f3f4f6',color:h.status==='active'?C.green:'#6b7280',padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:600}}>{h.status}</span></span>
+            <span style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+              <button style={{...btnG,padding:'5px 10px'}} onClick={async()=>{const r=await webhooksAPI.test(h._id);alert(r.data.result?.message||'Sent');load()}}>Test</button>
+              <button style={{...btnG,padding:'5px 10px'}} onClick={()=>setEditing(h)}>Edit</button>
+              <button style={{...btnG,padding:'5px 10px',color:C.red,borderColor:'#fecaca'}} onClick={async()=>{if(confirm('Delete?')){await webhooksAPI.delete(h._id);load()}}}>🗑</button>
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>);
 }
 
-function WebhookSettingsForm({ initial, events, onSaved, onCancel }) {
-  const [h, setH] = useState({ ...initial });
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const set = (patch) => setH(p => ({ ...p, ...patch }));
+function WebhookEditor({initial,events,onClose,onSaved}){
+  const [h,setH]=useState(initial);
+  const [mainTab,setMainTab]=useState('webhook');
+  const [step,setStep]=useState(1);
+  const [saving,setSaving]=useState(false);
+  const set=p=>setH(x=>({...x,...p}));
+  const setCfg=p=>set({config:{...h.config,...p}});
 
-  const toggleEvent = (val) =>
-    set({ events: h.events?.includes(val) ? h.events.filter(e => e !== val) : [...(h.events || []), val] });
-
-  const copySecret = () => {
-    if (h.secret) {
-      navigator.clipboard.writeText(h.secret).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
-    }
-  };
-
-  const save = async () => {
-    if (!h.name?.trim() || !h.url?.trim()) return alert('Name and URL required');
+  const save=async()=>{
+    if(!h.name.trim())return alert('Name required');
     setSaving(true);
-    try {
-      if (h._id) await webhooksAPI.update(h._id, h);
-      else await webhooksAPI.create(h);
-      onSaved();
-    } catch (e) { alert(e.response?.data?.message || 'Save failed'); }
+    try{if(h._id)await webhooksAPI.update(h._id,h);else{if(!h.url.trim())set({url:`${window.location.origin}/api/webhooks/inbound/${Date.now()}`});await webhooksAPI.create(h)}onSaved();}
+    catch(e){alert(e.response?.data?.message||'Save failed')}
     setSaving(false);
   };
 
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px 28px' }}>
-      {/* Webhook Name */}
-      <div>
-        <label style={lbl}>Webhook Name</label>
-        <input value={h.name || ''} onChange={e => set({ name: e.target.value })} style={inp} placeholder="My Webhook" />
-      </div>
+  const toggleEvent=val=>set({events:h.events?.includes(val)?h.events.filter(e=>e!==val):[...(h.events||[]),val]});
 
-      {/* Target URL */}
-      <div>
-        <label style={lbl}>Target URL</label>
-        <input value={h.url || ''} onChange={e => set({ url: e.target.value })} style={inp} placeholder="https://your-system.com/webhook" />
-      </div>
+  return(
+  <div style={{padding:'24px 28px',maxWidth:960,margin:'0 auto'}}>
+    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+      <button onClick={onClose} style={{...btnG,padding:'6px 12px'}}>←</button>
+      <input value={h.name} onChange={e=>set({name:e.target.value})} placeholder="Webhook name" style={{...inp,fontWeight:700,fontSize:16,maxWidth:300,border:'none',background:'transparent'}}/>
+      {h._id&&<span style={{fontSize:12,color:C.sub}}>⚠ 1 Error</span>}
+      <div style={{flex:1}}/>
+      <button style={btnG}>Clone</button>
+      <button style={btnP} onClick={save} disabled={saving}>{saving?'Saving…':'Edit'}</button>
+    </div>
 
-      {/* Secret */}
-      {h._id && h.secret && (
-        <div>
-          <label style={lbl}>Signing Secret</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={h.secret} readOnly style={{ ...inp, fontFamily: 'monospace', fontSize: 12, color: C.sub, background: C.bg, flex: 1 }} />
-            <button style={{ ...btnGhost, whiteSpace: 'nowrap', color: copied ? '#059669' : C.ink }} onClick={copySecret}>
-              {copied ? '✓ Copied' : 'Copy'}
-            </button>
+    {/* Webhook / Workflow tabs */}
+    <div style={{display:'flex',gap:24,borderBottom:`1px solid ${C.border}`,marginBottom:20}}>
+      {['webhook','workflow'].map(t=>(
+        <button key={t} onClick={()=>setMainTab(t)} style={{background:'none',border:'none',padding:'10px 4px',cursor:'pointer',fontSize:14,fontWeight:600,textTransform:'capitalize',color:mainTab===t?C.indigo:C.sub,borderBottom:mainTab===t?`2.5px solid ${C.indigo}`:'2.5px solid transparent'}}>{t}</button>
+      ))}
+    </div>
+
+    {mainTab==='webhook'?(
+    <div style={{display:'flex',gap:24}}>
+      {/* Left wizard nav */}
+      <div style={{width:220,flexShrink:0}}>
+        <div style={{fontWeight:700,color:C.ink,fontSize:15,marginBottom:4}}>Webhook Setup</div>
+        <div style={{fontSize:13,color:C.sub,marginBottom:16}}>Configure your inbound webhook</div>
+        {WIZARD_STEPS.map(s=>(
+          <div key={s.num} onClick={()=>setStep(s.num)} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',cursor:'pointer'}}>
+            <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,background:step===s.num?C.indigo:'#e5e7eb',color:step===s.num?'#fff':C.sub}}>{s.num}</div>
+            <span style={{fontSize:13,fontWeight:step===s.num?700:400,color:step===s.num?C.indigo:C.ink}}>{s.label}</span>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* Status toggle */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-        <label style={lbl}>Status</label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
-            onClick={() => set({ status: h.status === 'active' ? 'inactive' : 'active' })}
-            style={{ width: 44, height: 24, borderRadius: 12, background: h.status === 'active' ? C.indigo : '#d1d5db', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}
-          >
-            <div style={{ position: 'absolute', top: 3, left: h.status === 'active' ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+      {/* Right steps content */}
+      <div style={{flex:1,display:'flex',flexDirection:'column',gap:16}}>
+        {WIZARD_STEPS.map(s=>(
+          <div key={s.num} style={{...card,padding:'18px 22px',cursor:'pointer',borderColor:step===s.num?C.indigo:C.border}} onClick={()=>setStep(s.num)}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontSize:15,fontWeight:600,color:C.ink}}>Step {s.num}: {s.label}</div>
+                <div style={{fontSize:13,color:C.sub,marginTop:2}}>{s.desc}</div>
+              </div>
+              <span style={{color:C.sub,fontSize:14}}>{step===s.num?'▲':'▼'}</span>
+            </div>
+            {step===s.num&&(
+              <div style={{marginTop:14,borderTop:`1px solid ${C.border}`,paddingTop:14}}>
+                {s.num===1&&(<div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  <div><label style={lbl}>Webhook Name *</label><input value={h.name} onChange={e=>set({name:e.target.value})} style={inp}/></div>
+                  <div><label style={lbl}>Endpoint URL</label><input value={h.url||''} onChange={e=>set({url:e.target.value})} placeholder="Auto-generated on save" style={{...inp,background:'#f9fafb'}}/></div>
+                </div>)}
+                {s.num===2&&(<div><label style={lbl}>Paste a sample JSON request body</label><textarea rows={5} value={h.config?.sampleRequest||''} onChange={e=>setCfg({sampleRequest:e.target.value})} placeholder='{"name":"John","phone":"9876543210"}' style={{...inp,fontFamily:'monospace',fontSize:13}}/></div>)}
+                {s.num===3&&(<div><label style={lbl}>Lead Identifier Field</label><input value={h.config?.leadIdentifier||''} onChange={e=>setCfg({leadIdentifier:e.target.value})} placeholder="e.g. phone, email" style={inp}/></div>)}
+                {s.num===4&&(<div><label style={lbl}>Idempotent Field (dedup key)</label><input value={h.config?.idempotentField||''} onChange={e=>setCfg({idempotentField:e.target.value})} placeholder="e.g. request_id, timestamp" style={inp}/></div>)}
+                {s.num===5&&(<div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  <div><label style={lbl}>Auth Type</label><select value={h.config?.authType||'none'} onChange={e=>setCfg({authType:e.target.value})} style={inp}><option value="none">None</option><option value="bearer">Bearer Token</option><option value="basic">Basic Auth</option><option value="api_key">API Key Header</option></select></div>
+                  {h.config?.authType&&h.config.authType!=='none'&&<div><label style={lbl}>{h.config.authType==='basic'?'Username:Password':'Token/Key'}</label><input value={h.config?.authValue||''} onChange={e=>setCfg({authValue:e.target.value})} style={inp}/></div>}
+                </div>)}
+                {s.num===6&&(<div><label style={lbl}>Field Mappings (webhook field → lead field)</label>
+                  {(h.fieldMappings||[]).map((m,i)=>(
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 20px 1fr 30px',gap:6,alignItems:'center',marginBottom:6}}>
+                      <input value={m.from||''} onChange={e=>{const n=[...h.fieldMappings];n[i]={...n[i],from:e.target.value};set({fieldMappings:n})}} placeholder="webhook_field" style={inp}/>
+                      <span style={{textAlign:'center',color:C.sub}}>→</span>
+                      <input value={m.to||''} onChange={e=>{const n=[...h.fieldMappings];n[i]={...n[i],to:e.target.value};set({fieldMappings:n})}} placeholder="lead_field" style={inp}/>
+                      <button onClick={()=>set({fieldMappings:h.fieldMappings.filter((_,x)=>x!==i)})} style={{...btnG,padding:'4px 6px',color:C.red,borderColor:'#fecaca'}}>✕</button>
+                    </div>
+                  ))}
+                  <button style={btnG} onClick={()=>set({fieldMappings:[...(h.fieldMappings||[]),{from:'',to:''}]})}>+ Add Mapping</button>
+                </div>)}
+                {s.num===7&&(<div>
+                  <label style={lbl}>Subscribe to Events</label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                    {events.map(e=>(
+                      <button key={e.value} onClick={()=>toggleEvent(e.value)} style={{padding:'5px 12px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:500,border:`1.5px solid ${h.events?.includes(e.value)?C.indigo:C.border}`,background:h.events?.includes(e.value)?'#f0eeff':'#fff',color:h.events?.includes(e.value)?C.indigo:C.sub}}>{e.label}</button>
+                    ))}
+                  </div>
+                </div>)}
+              </div>
+            )}
           </div>
-          <span style={{ fontSize: 14, color: h.status === 'active' ? '#059669' : C.sub, fontWeight: 600 }}>
-            {h.status === 'active' ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-      </div>
-
-      {/* Events */}
-      <div style={{ gridColumn: '1 / -1' }}>
-        <label style={lbl}>Subscribed Events</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
-          {events.map(e => (
-            <label key={e.value} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: `1.5px solid ${h.events?.includes(e.value) ? C.indigo : C.border}`, borderRadius: 8, cursor: 'pointer', background: h.events?.includes(e.value) ? '#f0eeff' : '#fff', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                checked={!!(h.events?.includes(e.value))}
-                onChange={() => toggleEvent(e.value)}
-                style={{ accentColor: C.indigo, width: 16, height: 16 }}
-              />
-              <span style={{ fontSize: 13, color: h.events?.includes(e.value) ? C.indigo : C.ink, fontWeight: h.events?.includes(e.value) ? 600 : 400 }}>{e.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Buttons */}
-      <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
-        <button style={btnGhost} onClick={onCancel}>Cancel</button>
-        <button style={btnPrimary} disabled={saving} onClick={save}>
-          {saving ? 'Saving…' : h._id ? 'Save Settings' : 'Create Webhook'}
-        </button>
+        ))}
       </div>
     </div>
-  );
+    ):(
+      /* Workflow tab — shows flowchart canvas */
+      <div style={{...card,padding:30,minHeight:400,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{display:'inline-block',borderRadius:10,overflow:'hidden',boxShadow:'0 2px 8px rgba(0,0,0,.08)'}}>
+            <div style={{background:C.indigo,color:'#fff',padding:'6px 12px',fontSize:11,fontWeight:700,textTransform:'uppercase'}}>EVENT</div>
+            <div style={{padding:'14px 24px',background:'#fff'}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.ink}}>On Webhook Trigger</div>
+              <div style={{fontSize:12,color:C.sub,marginTop:4}}>👤 {h.name||'webhook'}</div>
+            </div>
+          </div>
+          <div style={{width:2,height:40,background:C.border,margin:'0 auto'}}/>
+          <div style={{width:8,height:8,borderRadius:'50%',border:`2px solid ${C.indigo}`,background:'#fff',margin:'0 auto'}}/>
+        </div>
+        <div style={{position:'fixed',bottom:16,left:16,display:'flex',gap:4,background:'#fff',borderRadius:8,padding:'4px 8px',border:`1px solid ${C.border}`,fontSize:13,color:C.sub}}>
+          + 100% − ⊡
+        </div>
+      </div>
+    )}
+  </div>);
 }

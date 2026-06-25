@@ -171,6 +171,10 @@ export const salesformsAPI = {
   getSubmissions: (id) => api.get(`/salesforms/${id}/submissions`),
   create: (data) => api.post('/salesforms', data),
   update: (id, data) => api.put(`/salesforms/${id}`, data),
+  updateFlowchart: (id, data) => api.patch(`/salesforms/${id}/flowchart`, data), // { flowNodes, flowEdges }
+  updateWorkflow: (id, data) => api.patch(`/salesforms/${id}/workflow`, data),   // { workflowNodes, workflowEdges, n8nWorkflowId }
+  updateConfiguration: (id, data) => api.patch(`/salesforms/${id}/configuration`, data), // { mandatory, permissions }
+  duplicate: (id) => api.post(`/salesforms/${id}/duplicate`),
   setStatus: (id, status) => api.patch(`/salesforms/${id}/status`, { status }),
   submit: (id, data) => api.post(`/salesforms/${id}/submit`, data),
   delete: (id) => api.delete(`/salesforms/${id}`),
@@ -181,7 +185,10 @@ export const apiTemplatesAPI = {
   getOne: (id) => api.get(`/api-templates/${id}`),
   create: (data) => api.post('/api-templates', data),
   update: (id, data) => api.put(`/api-templates/${id}`, data),
-  test: (id, data) => api.post(`/api-templates/${id}/test`, data),
+  test: (id, data) => api.post(`/api-templates/${id}/test`, data), // data: { draft, leadId }
+  updateResponseMapping: (id, responseMapping) => api.patch(`/api-templates/${id}/response-mapping`, { responseMapping }),
+  attachWorkflow: (id, data) => api.post(`/api-templates/${id}/attach-workflow`, data), // { triggerEvent, triggerConfig, name }
+  getLeads: (id, params) => api.get(`/api-templates/${id}/leads`, { params }),
   delete: (id) => api.delete(`/api-templates/${id}`),
 };
 

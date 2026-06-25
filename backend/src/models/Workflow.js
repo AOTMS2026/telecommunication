@@ -35,6 +35,13 @@ const workflowSchema = new mongoose.Schema({
       'lead.facebook_lead', 'lead.justdial_lead', 'lead.excel_upload',
       'lead.woocommerce', 'lead.call_log', 'lead.location_checkin',
       'lead.template_message_sent', 'lead.note_added',
+      'lead.whatsapp_lead', 'lead.whatsapp_received', 'lead.template_replied',
+      'lead.waca_list_replied', 'lead.user_note', 'lead.system_note',
+      // field-specific triggers (lead.field_changed.name, etc.)
+      'lead.field_changed.name', 'lead.field_changed.phone', 'lead.field_changed.email',
+      'lead.field_changed.alternatePhone', 'lead.field_changed.courseInterest',
+      'lead.field_changed.location', 'lead.field_changed.budget',
+      'lead.field_changed.nextFollowUpDate', 'lead.field_changed.demoScheduledDate',
     ],
     required: true,
   },
