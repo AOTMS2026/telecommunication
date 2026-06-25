@@ -119,14 +119,19 @@ export default function PermissionTemplates() {
   const [templates, setTemplates] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await permissionTemplatesAPI.getAll(tab === 'defaults' ? 'defaults' : undefined);
       setTemplates(res.data.templates);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load permission templates');
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -177,6 +182,11 @@ export default function PermissionTemplates() {
         </div>
         {loading ? (
           <div style={{ padding: 30, textAlign: 'center', color: '#888' }}>Loading...</div>
+        ) : error ? (
+          <div style={{ padding: 40, textAlign: 'center' }}>
+            <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error}</p>
+            <button onClick={load} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>No templates found.</div>
         ) : (

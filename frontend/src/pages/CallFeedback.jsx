@@ -4,6 +4,7 @@ import { callFeedbackAPI } from '../services/api';
 export default function CallFeedback() {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [menuFor, setMenuFor] = useState(null);
@@ -13,9 +14,13 @@ export default function CallFeedback() {
   const menuRef = useRef(null);
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
       const res = await callFeedbackAPI.get();
       setConfig(res.data.config);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load call feedback settings');
     } finally {
       setLoading(false);
     }
@@ -29,7 +34,14 @@ export default function CallFeedback() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  if (loading || !config) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+
+  if (error || !config) return (
+    <div style={{ padding: 40, textAlign: 'center' }}>
+      <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error || 'Something went wrong while loading.'}</p>
+      <button onClick={load} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+    </div>
+  );
 
   const statuses = [...config.statuses].filter(s => !s.archived).sort((a, b) => a.order - b.order);
 

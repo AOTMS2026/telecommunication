@@ -38,11 +38,16 @@ const syncIcon = (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" st
 export default function WorkspacePreferences() {
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const load = async () => {
+    setLoading(true);
+    setError('');
     try {
       const res = await workspacePreferencesAPI.get();
       setPrefs(res.data.preferences);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to load preferences');
     } finally {
       setLoading(false);
     }
@@ -62,7 +67,14 @@ export default function WorkspacePreferences() {
     await workspacePreferencesAPI.update({ [group]: { [key]: value } });
   };
 
-  if (loading || !prefs) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>Loading...</div>;
+
+  if (error || !prefs) return (
+    <div style={{ padding: 40, textAlign: 'center' }}>
+      <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error || 'Something went wrong while loading.'}</p>
+      <button onClick={load} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+    </div>
+  );
 
   return (
     <div style={{ padding: 24, maxWidth: 760 }}>

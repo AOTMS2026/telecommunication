@@ -136,7 +136,6 @@ export const bulkImportAPI = {
   downloadTemplate: () => api.get('/bulk-import/template', { responseType: 'blob' }),
 };
 
-export default api;
 export const integrationsAPI = {
   getAll: () => api.get('/integrations'),
   getOne: (id) => api.get(`/integrations/${id}`),
@@ -221,6 +220,15 @@ export const callIqAPI = {
 };
 
 // ── Workspace Settings ────────────────────────────────────────────────────────
+export const leadFieldsAPI = {
+  getAll: (params) => api.get('/lead-fields', { params }),
+  create: (data) => api.post('/lead-fields', data),
+  update: (id, data) => api.put(`/lead-fields/${id}`, data),
+  toggleHide: (id, hidden) => api.patch(`/lead-fields/${id}/hide`, { hidden }),
+  delete: (id) => api.delete(`/lead-fields/${id}`),
+  reorder: (orderedIds) => api.put('/lead-fields/reorder', { orderedIds }),
+};
+
 export const leadStagesAPI = {
   get: () => api.get('/lead-stages'),
   addStatus: (data) => api.post('/lead-stages/statuses', data),
@@ -278,3 +286,4 @@ export const n8nAPI = {
   getExecutions: (id, limit) => api.get(`/n8n/workflows/${id}/executions`, { params: { limit } }),
 };
 
+export default api;

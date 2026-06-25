@@ -4,7 +4,7 @@ const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 // GET /api/users
-router.get('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/', protect, authorize('admin', 'super admin', 'caller'), async (req, res) => {
   try {
     const users = await User.find({}).select('-password').sort({ name: 1 });
     res.json({ users });

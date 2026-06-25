@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { followupsAPI, leadsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { formatISTDateTime } from '../utils/dateFormat';
 
 const PURPLE = '#5b3fc7';
 const PURPLE_LIGHT = '#f0ecff';
@@ -224,10 +225,8 @@ function UploadModal({ onClose, onImported }) {
 function AddTaskModal({ type, onClose, onCreated }) {
   const { user: currentUser } = useAuth();
   const isCallFollowup = type === 'call_followup';
-  // Only Admins / Super Admins are allowed to list all users (GET /api/users is
-  // restricted on the backend), so only they get the Assigned To / Assigned By
-  // pickers. Callers always create tasks for themselves, as before.
-  const canAssign = currentUser?.role === 'admin' || currentUser?.role === 'super admin';
+  // Allow Admins, Super Admins, and Callers to assign tasks
+  const canAssign = !!currentUser;
 
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
@@ -249,7 +248,10 @@ function AddTaskModal({ type, onClose, onCreated }) {
     if (!canAssign) return;
     usersAPI.getAll()
       .then(res => setUsers(res.data.users || []))
-      .catch(() => setUsers([]));
+      .catch((err) => {
+        console.error('Failed to load users for assignment dropdown:', err);
+        setUsers([]);
+      });
   }, [canAssign]);
 
   // Debounced lead search — optional for Call Followups, just helps link a lead if you want
@@ -459,7 +461,7 @@ function downloadCSV(tasks, tab) {
     t.note || t.description || '',
     t.assignedTo?.name || '',
     t.status || '',
-    t.scheduledAt ? new Date(t.scheduledAt).toLocaleDateString('en-IN') : '',
+    t.scheduledAt ? formatISTDateTime(t.scheduledAt) : '',
     t.priority || '',
   ]);
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -1053,9 +1055,7 @@ export default function Tasks() {
                   </td>
                   {/* Due date */}
                   <td style={{ padding: '12px 16px', background: '#faf9ff', fontSize: 12, color: TEXT_MAIN }}>
-                    {task.scheduledAt
-                      ? new Date(task.scheduledAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                      : '—'}
+                    {task.scheduledAt ? formatISTDateTime(task.scheduledAt) : '—'}
                   </td>
                   {/* Priority */}
                   <td style={{ padding: '12px 16px' }}>
