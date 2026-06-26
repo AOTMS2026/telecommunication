@@ -31,7 +31,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await ApiTemplate.create({
       ...req.body,
@@ -44,7 +44,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await ApiTemplate.findByIdAndUpdate(
       req.params.id,
@@ -61,7 +61,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 // Live test, step 1 of the wizard. Fires the request using whatever config is currently
 // in the editor (req.body), even before the template is saved — exactly what "Test
 // Template" needs to do. Never logs to a lead's Activity History (pure preview).
-router.post('/:id/test', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/test', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const draft = req.body?.draft;
     let res_;
@@ -103,7 +103,7 @@ router.post('/:id/test', protect, authorize('admin', 'super admin'), async (req,
 });
 
 // Save the Response Mapper (step 2)
-router.patch('/:id/response-mapping', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/response-mapping', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { responseMapping } = req.body;
     const template = await ApiTemplate.findByIdAndUpdate(
@@ -121,7 +121,7 @@ router.patch('/:id/response-mapping', protect, authorize('admin', 'super admin')
 // Attach Workflow — creates a real, published Workflow document with a two-node graph
 // (the chosen trigger event → "Call an API" running this template), matching exactly
 // what the Workflows module itself would produce, then links it back onto this template.
-router.post('/:id/attach-workflow', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/attach-workflow', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { triggerEvent, triggerConfig, name } = req.body;
     const template = await ApiTemplate.findById(req.params.id);
@@ -186,7 +186,7 @@ router.get('/:id/leads', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await ApiTemplate.findByIdAndDelete(req.params.id);
     if (!template) return res.status(404).json({ message: 'API template not found' });

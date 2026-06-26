@@ -13,8 +13,8 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// GET /api/courses/all - Get all courses (including inactive ones, admin/super admin only)
-router.get('/all', protect, authorize('admin', 'super admin'), async (req, res) => {
+// GET /api/courses/all - Get all courses (including inactive ones, admin/admin only)
+router.get('/all', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const courses = await Course.find({}).sort({ name: 1 });
     res.json({ courses });
@@ -34,8 +34,8 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// POST /api/courses - Create a course (admin/super admin only)
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+// POST /api/courses - Create a course (admin/admin only)
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name, cost, duration, description } = req.body;
     if (!name || cost === undefined) {
@@ -51,8 +51,8 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-// PUT /api/courses/:id - Update a course (admin/super admin only)
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+// PUT /api/courses/:id - Update a course (admin/admin only)
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const course = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!course) return res.status(404).json({ message: 'Course not found' });
@@ -62,8 +62,8 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
   }
 });
 
-// DELETE /api/courses/:id - Delete a course (super admin only)
-router.delete('/:id', protect, authorize('super admin'), async (req, res) => {
+// DELETE /api/courses/:id - Delete a course (admin only)
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ message: 'Course not found' });

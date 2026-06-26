@@ -201,7 +201,12 @@ export default function Topbar() {
   };
 
   const roleLabel = user?.role
-    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    ? (() => {
+        const r = user.role;
+        if (r === 'admin') return 'Manager';
+        if (r === 'super admin') return 'Super Manager';
+        return r.charAt(0).toUpperCase() + r.slice(1);
+      })()
     : 'Caller';
 
   const workspaceSettingsGroups = [
@@ -266,26 +271,37 @@ export default function Topbar() {
     <>
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 48,
-        background: '#ffffff', borderBottom: '1px solid #e5e2f5',
+        background: 'linear-gradient(90deg, #0284c7 0%, #0ea5e9 60%, #f97316 100%)',
+        borderBottom: '1px solid #0369a1',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px 0 10px', zIndex: 100
       }}>
         {/* Left: logo + org name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 34, height: 34, background: '#5b3fc7', borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            width: 34, height: 34, background: '#fff', borderRadius: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.12)'
           }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
+            <img
+              src="/atm-logo.jpeg"
+              alt="ATM"
+              style={{ width: 30, height: 30, objectFit: 'contain' }}
+              onError={e => {
+                const t = e.currentTarget;
+                if (t.src.endsWith('.jpeg')) { t.src = '/atm-logo.jpg'; }
+                else if (t.src.endsWith('.jpg')) { t.src = '/atm-logo.png'; }
+                else if (t.src.endsWith('.png')) { t.src = '/atm-logo.webp'; }
+                else { t.style.display = 'none'; }
+              }}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2" strokeLinecap="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round">
               <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#2d2d6b' }}>Academy Of Tech Masters</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5">
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>Academy Of Tech Masters</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
@@ -299,12 +315,12 @@ export default function Topbar() {
                   width: 28, height: 28, borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.15s',
-                  background: showWorkspaceSettings ? '#f0ecff' : 'transparent'
+                  background: showWorkspaceSettings ? 'rgba(255,255,255,0.25)' : 'transparent'
                 }}
-                onMouseEnter={e => { if (!showWorkspaceSettings) e.currentTarget.style.background = '#f5f3ff'; }}
+                onMouseEnter={e => { if (!showWorkspaceSettings) e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
                 onMouseLeave={e => { if (!showWorkspaceSettings) e.currentTarget.style.background = 'transparent'; }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showWorkspaceSettings ? '#5b3fc7' : '#888'} strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showWorkspaceSettings ? '#fff' : 'rgba(255,255,255,0.8)'} strokeWidth="2">
                   <circle cx="12" cy="12" r="3"/>
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
@@ -357,8 +373,8 @@ export default function Topbar() {
         {/* Right: time + clock + bell + avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ textAlign: 'right', marginRight: 4 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#2d2d6b' }}>{timeStr}</div>
-            <div style={{ fontSize: 10, color: '#888' }}>{dateStr}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>{timeStr}</div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)' }}>{dateStr}</div>
           </div>
 
           {/* Clock icon — navigates to Follow-up Calls */}
@@ -366,15 +382,15 @@ export default function Topbar() {
             onClick={() => navigate('/tasks?tab=Call+Followups')}
             title="View Follow-up Calls"
             style={{
-              width: 30, height: 30, border: '1px solid #e5e2f5', borderRadius: '50%',
+              width: 30, height: 30, border: '1px solid rgba(255,255,255,0.35)', borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'all 0.15s',
               background: 'transparent'
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f0ecff'; e.currentTarget.style.borderColor = '#5b3fc7'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#e5e2f5'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = '#fff'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
           </div>
@@ -384,15 +400,15 @@ export default function Topbar() {
             <div
               onClick={() => { setShowNotifications(prev => !prev); setShowProfile(false); }}
               style={{
-                width: 30, height: 30, border: `1px solid ${showNotifications ? '#5b3fc7' : '#e5e2f5'}`,
+                width: 30, height: 30, border: `1px solid ${showNotifications ? '#fff' : 'rgba(255,255,255,0.35)'}`,
                 borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', position: 'relative',
-                background: showNotifications ? '#f0ecff' : 'transparent',
+                background: showNotifications ? 'rgba(255,255,255,0.25)' : 'transparent',
                 transition: 'all 0.15s'
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showNotifications ? '#5b3fc7' : '#888'} strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showNotifications ? '#fff' : 'rgba(255,255,255,0.9)'} strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
               </svg>
@@ -509,7 +525,7 @@ export default function Topbar() {
               onClick={() => { setShowProfile(prev => !prev); setShowNotifications(false); }}
               style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: showProfile ? '#4a2fb5' : '#5b3fc7',
+                background: showProfile ? '#ea6d0e' : '#f97316',
                 color: '#fff', fontSize: 11, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',

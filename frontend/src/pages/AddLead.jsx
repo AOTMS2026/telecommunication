@@ -54,7 +54,7 @@ export default function AddLead() {
     leadFieldsAPI.getAll({ view: 'Active Fields' }).then(res => {
       setCustomFieldDefs(res.data.fields || []);
     }).catch(() => {});
-    if (user?.role === 'admin' || user?.role === 'super admin') {
+    if (user?.role === 'manager' || user?.role === 'admin') {
       usersAPI.getAll().then(u => setUsers(u.data.users || [])).catch(() => {});
     }
     if (isEdit) {

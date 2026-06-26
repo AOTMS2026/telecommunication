@@ -22,7 +22,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // PUT /api/workspace-preferences — deep-merge partial update
-router.put('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     const body = req.body || {};

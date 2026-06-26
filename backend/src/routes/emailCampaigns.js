@@ -71,7 +71,7 @@ router.post('/preview-recipients', protect, async (req, res) => {
 
 // POST /api/email-campaigns/send
 // body: { campaignIds, subject, body, bodyFormat?, name?, fromEmail?, fromName? }
-router.post('/send', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/send', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { subject, body, name } = req.body;
     const bodyFormat = req.body.bodyFormat === 'html' ? 'html' : 'text';
@@ -187,7 +187,7 @@ router.get('/:id', protect, async (req, res) => {
 
 // DELETE /api/email-campaigns/:id — removes only this history record.
 // Does NOT touch the underlying Campaign(s) or any Lead/student data.
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const item = await EmailCampaign.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ message: 'Email campaign not found' });

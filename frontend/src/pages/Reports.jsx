@@ -369,7 +369,7 @@ function LeadViewCharts({ summary }) {
 
 export default function Reports() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+  const isAdmin = user?.role === 'manager' || user?.role === 'admin';
 
   const [activeTab, setActiveTab] = useState('All');
   const [summary, setSummary] = useState(null);

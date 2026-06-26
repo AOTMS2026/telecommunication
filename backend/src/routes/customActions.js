@@ -30,7 +30,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST /api/custom-actions
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { icon, name, score, direction, description, allowPredefinedActions, fields } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
@@ -51,7 +51,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
 });
 
 // PUT /api/custom-actions/:id
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const action = await CustomAction.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!action) return res.status(404).json({ message: 'Custom action not found' });
@@ -71,7 +71,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // PATCH /api/custom-actions/:id/archive
-router.patch('/:id/archive', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/archive', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const action = await CustomAction.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!action) return res.status(404).json({ message: 'Custom action not found' });
@@ -84,7 +84,7 @@ router.patch('/:id/archive', protect, authorize('admin', 'super admin'), async (
 });
 
 // DELETE /api/custom-actions/:id
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const action = await CustomAction.findOneAndDelete({ _id: req.params.id, workspace: WORKSPACE });
     if (!action) return res.status(404).json({ message: 'Custom action not found' });

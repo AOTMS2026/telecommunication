@@ -495,7 +495,7 @@ export default function Tasks() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
   const { user: currentUser } = useAuth();
-  const canDelete = currentUser?.role === 'admin' || currentUser?.role === 'super admin';
+  const canDelete = currentUser?.role === 'manager' || currentUser?.role === 'admin';
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -1083,7 +1083,7 @@ export default function Tasks() {
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
                       </button>
-                      {/* Delete — only for admin / super admin */}
+                      {/* Delete — only for admin / admin */}
                       {canDelete && (
                         <button
                           title="Delete"

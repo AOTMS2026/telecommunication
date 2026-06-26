@@ -107,7 +107,7 @@ async function notifyCallInitiated({ lead, callerId, performedByUser }) {
  */
 async function notifyAdminsTaskCreated({ followup, performedByUser }) {
   try {
-    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    const admins = await User.find({ role: { $in: ['manager', 'admin'] } }).select('_id');
     const adminRecipients = admins
       .map(a => a._id)
       .filter(id => id.toString() !== performedByUser?._id?.toString());
@@ -119,7 +119,7 @@ async function notifyAdminsTaskCreated({ followup, performedByUser }) {
 
     const notifications = [];
 
-    // Notify admins/super admins
+    // Notify admins/admins
     if (adminRecipients.length > 0) {
       const adminNotifs = adminRecipients.map(recipient => createNotification({
         recipient,
@@ -169,7 +169,7 @@ async function notifyAdminsTaskEdited({ followup, performedByUser }) {
     // Only send this notification when the editor is a caller
     if (!performedByUser || !['caller'].includes(performedByUser.role)) return [];
 
-    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    const admins = await User.find({ role: { $in: ['manager', 'admin'] } }).select('_id');
     const recipients = admins.map(a => a._id);
 
     if (recipients.length === 0) return [];
@@ -224,7 +224,7 @@ async function notifyTaskOverdue({ followup }) {
     const recipients = new Set();
     if (followup.assignedTo) recipients.add(followup.assignedTo._id?.toString() || followup.assignedTo.toString());
 
-    const admins = await User.find({ role: { $in: ['admin', 'super admin'] } }).select('_id');
+    const admins = await User.find({ role: { $in: ['manager', 'admin'] } }).select('_id');
     admins.forEach(a => recipients.add(a._id.toString()));
 
     return Promise.all([...recipients].map(recipient => createNotification({

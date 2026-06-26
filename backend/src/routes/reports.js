@@ -149,7 +149,7 @@ router.get('/calls-list', protect, async (req, res) => {
 });
 
 // GET /api/reports/admin-analysis
-router.get('/admin-analysis', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/admin-analysis', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
     const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
@@ -317,7 +317,7 @@ router.get('/admin-analysis', protect, authorize('admin', 'super admin'), async 
 });
 
 // GET /api/reports/user-analysis/:userId
-router.get('/user-analysis/:userId', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/user-analysis/:userId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select('name email role phone avatar').lean();

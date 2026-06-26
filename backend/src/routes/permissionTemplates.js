@@ -15,7 +15,7 @@ async function seedIfEmpty() {
 }
 
 // GET /api/permission-templates?filter=all|defaults
-router.get('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     await seedIfEmpty();
     const query = { workspace: WORKSPACE };
@@ -32,7 +32,7 @@ router.get('/', protect, authorize('admin', 'super admin'), async (req, res) => 
 });
 
 // GET /api/permission-templates/:id
-router.get('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await PermissionTemplate.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!template) return res.status(404).json({ message: 'Template not found' });
@@ -43,7 +43,7 @@ router.get('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // POST /api/permission-templates
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name, baseRole, permissions } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
@@ -60,7 +60,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
 });
 
 // PUT /api/permission-templates/:id
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await PermissionTemplate.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!template) return res.status(404).json({ message: 'Template not found' });
@@ -76,7 +76,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // DELETE /api/permission-templates/:id
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const template = await PermissionTemplate.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!template) return res.status(404).json({ message: 'Template not found' });

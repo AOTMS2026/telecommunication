@@ -39,7 +39,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // ── POST /api/lead-stages/statuses ───────────────────────────────────────────
-router.post('/statuses', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/statuses', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name, color, stage } = req.body;
     if (!name || !stage) return res.status(400).json({ message: 'name and stage are required' });
@@ -59,7 +59,7 @@ router.post('/statuses', protect, authorize('admin', 'super admin'), async (req,
 });
 
 // ── PUT /api/lead-stages/statuses/:id ────────────────────────────────────────
-router.put('/statuses/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/statuses/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getConfig();
     const status = config.statuses.id(req.params.id);
@@ -83,7 +83,7 @@ router.put('/statuses/:id', protect, authorize('admin', 'super admin'), async (r
 });
 
 // ── DELETE /api/lead-stages/statuses/:id  (archive) ──────────────────────────
-router.delete('/statuses/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/statuses/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getConfig();
     const status = config.statuses.id(req.params.id);
@@ -101,7 +101,7 @@ router.delete('/statuses/:id', protect, authorize('admin', 'super admin'), async
 
 // ── PUT /api/lead-stages/statuses/:id/archive ────────────────────────────────
 // Used to restore archived statuses (archived: false)
-router.put('/statuses/:id/archive', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/statuses/:id/archive', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getConfig();
     const status = config.statuses.id(req.params.id);
@@ -117,7 +117,7 @@ router.put('/statuses/:id/archive', protect, authorize('admin', 'super admin'), 
 });
 
 // ── POST /api/lead-stages/statuses/reorder ───────────────────────────────────
-router.post('/statuses/reorder', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/statuses/reorder', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { stage, orderedIds } = req.body;
     if (!stage || !Array.isArray(orderedIds)) {
@@ -139,7 +139,7 @@ router.post('/statuses/reorder', protect, authorize('admin', 'super admin'), asy
 });
 
 // ── POST /api/lead-stages/lost-reasons ───────────────────────────────────────
-router.post('/lost-reasons', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/lost-reasons', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name) return res.status(400).json({ message: 'name is required' });
@@ -159,7 +159,7 @@ router.post('/lost-reasons', protect, authorize('admin', 'super admin'), async (
 });
 
 // ── DELETE /api/lead-stages/lost-reasons/:id ─────────────────────────────────
-router.delete('/lost-reasons/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/lost-reasons/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getConfig();
     const reason = config.lostReasons.id(req.params.id);

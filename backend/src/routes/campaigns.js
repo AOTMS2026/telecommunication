@@ -84,7 +84,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST /api/campaigns
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const campaign = await Campaign.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ campaign });
@@ -94,7 +94,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
 });
 
 // PUT /api/campaigns/:id
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndUpdate(req.params.id, req.body, { new: true });
     res.json({ campaign });
@@ -104,7 +104,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // DELETE /api/campaigns/:id
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const campaign = await Campaign.findById(req.params.id);
     if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
@@ -119,7 +119,7 @@ router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, re
 });
 
 // POST /api/campaigns/:id/add-leads  — bulk assign existing leads to this campaign
-router.post('/:id/add-leads', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/add-leads', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { leadIds } = req.body; // array of lead _ids
     if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
@@ -139,7 +139,7 @@ router.post('/:id/add-leads', protect, authorize('admin', 'super admin'), async 
 });
 
 // DELETE /api/campaigns/:id/remove-lead/:leadId
-router.delete('/:id/remove-lead/:leadId', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id/remove-lead/:leadId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     await Lead.findByIdAndUpdate(req.params.leadId, { $unset: { campaign: '' } });
     res.json({ message: 'Lead removed from campaign' });
@@ -151,7 +151,7 @@ router.delete('/:id/remove-lead/:leadId', protect, authorize('admin', 'super adm
 // ====================== NEW ROUTES (AI Telecaller upgrade) ======================
 
 // POST /api/campaigns/:id/ai-start  — enable autonomous AI dialing for this campaign
-router.post('/:id/ai-start', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/ai-start', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { aiConcurrencyLimit, aiCallWindow, aiAgentConfig, aiIncludesAssignedLeads } = req.body;
     const update = { aiCallingEnabled: true };
@@ -172,7 +172,7 @@ router.post('/:id/ai-start', protect, authorize('admin', 'super admin'), async (
 // POST /api/campaigns/:id/ai-pause  — stop the AI engine from picking up new leads
 // (in-flight calls already placed are allowed to finish naturally; their lock
 // auto-releases via outcomeService when the call ends)
-router.post('/:id/ai-pause', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/ai-pause', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndUpdate(
       req.params.id,

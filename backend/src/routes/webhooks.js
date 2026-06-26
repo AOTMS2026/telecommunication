@@ -24,7 +24,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const webhook = await Webhook.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ webhook });
@@ -33,7 +33,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const webhook = await Webhook.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!webhook) return res.status(404).json({ message: 'Webhook not found' });
@@ -44,7 +44,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // Fire a test payload at the webhook URL
-router.post('/:id/test', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/test', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const result = await triggerWebhook(req.params.id, 'webhook.test', {
       test: true,
@@ -56,7 +56,7 @@ router.post('/:id/test', protect, authorize('admin', 'super admin'), async (req,
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const webhook = await Webhook.findByIdAndDelete(req.params.id);
     if (!webhook) return res.status(404).json({ message: 'Webhook not found' });

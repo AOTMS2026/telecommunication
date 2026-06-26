@@ -652,10 +652,10 @@ function ActionConfig({node,updateNode,users,templates,n8nWfs}){
 /* ═══════════════════════════════════════════════════════════════════════════
    TAB 3 — CONFIGURATION (Mandatory + Permission Templates)
 ═══════════════════════════════════════════════════════════════════════════ */
-const ROLE_LABELS={caller:'Caller Permissions',admin:'Admin Permissions','super admin':'Super Admin Permissions'};
+const ROLE_LABELS={caller:'Caller Permissions',manager:'Manager Permissions',admin:'Admin Permissions'};
 function ConfigurationTab({sf,set}){
   const [search,setSearch]=useState('');
-  const perms=sf.permissions?.length?sf.permissions:[{role:'caller',view:false,submit:true},{role:'admin',view:true,submit:true},{role:'super admin',view:true,submit:true}];
+  const perms=sf.permissions?.length?sf.permissions:[{role:'caller',view:false,submit:true},{role:'manager',view:true,submit:true},{role:'admin',view:true,submit:true}];
   const update=(role,patch)=>set({permissions:perms.map(p=>p.role===role?{...p,...patch}:p)});
   const filtered=perms.filter(p=>(ROLE_LABELS[p.role]||p.role).toLowerCase().includes(search.toLowerCase()));
 

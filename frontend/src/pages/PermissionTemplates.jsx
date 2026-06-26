@@ -63,8 +63,8 @@ function TemplateModal({ template, onClose, onSaved }) {
             <label style={{ fontSize: 12.5, fontWeight: 600, color: '#444' }}>Base role</label>
             <select value={form.baseRole} onChange={e => setForm(f => ({ ...f, baseRole: e.target.value }))} style={{ width: '100%', marginTop: 6, padding: '9px 8px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13 }}>
               <option value="caller">Caller</option>
+              <option value="manager">Manager</option>
               <option value="admin">Admin</option>
-              <option value="super admin">Super Admin</option>
             </select>
           </div>
         </div>

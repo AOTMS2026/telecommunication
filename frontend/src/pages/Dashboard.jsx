@@ -276,8 +276,8 @@ export default function Dashboard() {
   const [demoDate, setDemoDate] = useState('');
   const [savingCall, setSavingCall] = useState(false);
 
-  const isAdmin = user?.role === 'admin';
-  const isSuperAdmin = user?.role === 'super admin';
+  const isAdmin = user?.role === 'manager';
+  const isSuperAdmin = user?.role === 'admin';
   const isCaller = user?.role === 'caller' || (!isAdmin && !isSuperAdmin);
 
   const openAnalysisModal = async (userId) => {
@@ -1509,7 +1509,7 @@ export default function Dashboard() {
               {(() => {
                 const filteredCallers = adminStats?.callers?.filter(c => {
                   if (leaderboardTab === 'admins') {
-                    return c.user?.role === 'admin' || c.user?.role === 'super admin';
+                    return c.user?.role === 'manager' || c.user?.role === 'admin';
                   }
                   return c.user?.role === 'caller';
                 }) || [];

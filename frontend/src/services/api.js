@@ -293,4 +293,18 @@ export const n8nAPI = {
   getExecutions: (id, limit) => api.get(`/n8n/workflows/${id}/executions`, { params: { limit } }),
 };
 
+export const recordingsAPI = {
+  getMy: () => api.get('/recordings/my'),
+  getAll: (userId) => api.get('/recordings', { params: userId ? { userId } : {} }),
+  upload: (formData) => api.post('/recordings', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+};
+
+export const billingAPI = {
+  getInfo: () => api.get('/billing/info'),
+  addInfo: (data) => api.post('/billing/info', data),
+  getTransactions: (params) => api.get('/billing/transactions', { params }),
+  getLicenses: () => api.get('/billing/licenses'),
+  buyLicense: (data) => api.post('/billing/buy', data),
+};
+
 export default api;

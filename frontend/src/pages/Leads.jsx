@@ -46,7 +46,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 export default function Leads() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+  const isAdmin = user?.role === 'manager' || user?.role === 'admin';
   const isCaller = user?.role === 'caller';
 
   // Determine available filter tabs based on role

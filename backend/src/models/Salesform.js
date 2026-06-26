@@ -65,7 +65,7 @@ const actionNodeSchema = new mongoose.Schema({
 const actionEdgeSchema = new mongoose.Schema({ from: String, to: String }, { _id: false });
 
 const permissionSchema = new mongoose.Schema({
-  role: { type: String, enum: ['caller', 'admin', 'super admin'], required: true },
+  role: { type: String, enum: ['caller', 'manager', 'admin'], required: true },
   view: { type: Boolean, default: false },
   submit: { type: Boolean, default: true },
 }, { _id: false });
@@ -93,8 +93,8 @@ const salesformSchema = new mongoose.Schema({
     type: [permissionSchema],
     default: () => ([
       { role: 'caller', view: false, submit: true },
+      { role: 'manager', view: true, submit: true },
       { role: 'admin', view: true, submit: true },
-      { role: 'super admin', view: true, submit: true },
     ]),
   },
 

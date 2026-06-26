@@ -447,8 +447,8 @@ export default function LeadDetailsPage({
   const id = leadId;
   const navigate = useNavigate();
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super admin';
-  const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+  const isSuperAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'manager' || user?.role === 'admin';
   const isCaller = user?.role === 'caller';
 
   const [lead, setLead] = useState(null);
@@ -514,7 +514,7 @@ export default function LeadDetailsPage({
     campaignsAPI.getAll().then(res => setCampaigns(res.data.campaigns || [])).catch(console.error);
     coursesAPI.getAll().then(res => setCourses(res.data.courses || [])).catch(console.error);
     usersAPI.getAll().then(res => {
-      setCallers((res.data.users || []).filter(u => u.role === 'caller' || u.role === 'admin' || u.role === 'super admin'));
+      setCallers((res.data.users || []).filter(u => u.role === 'caller' || u.role === 'manager' || u.role === 'admin'));
     }).catch(console.error);
     leadStagesAPI.get().then(res => {
       const active = (res.data.config?.statuses || [])
