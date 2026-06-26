@@ -583,7 +583,7 @@ router.put('/:id/status', protect, async (req, res) => {
 });
 
 // DELETE /api/leads/:id
-router.delete('/:id', protect, authorize('caller', 'admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('caller', 'manager', 'admin'), async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
@@ -650,7 +650,7 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
 
 // POST /api/leads/transfer — transfer leads from one caller to another
 // Body: { fromCallerId, toCallerId, leadIds? (optional array; if omitted, transfers ALL leads of fromCaller) }
-router.post('/transfer', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/transfer', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { fromCallerId, toCallerId, leadIds } = req.body;
 
@@ -687,8 +687,8 @@ router.post('/transfer', protect, authorize('admin', 'super admin'), async (req,
   }
 });
 
-// GET /api/leads/by-caller/:callerId — get leads assigned to a specific caller (admin/super admin only)
-router.get('/by-caller/:callerId', protect, authorize('admin', 'super admin'), async (req, res) => {
+// GET /api/leads/by-caller/:callerId — get leads assigned to a specific caller (admin/admin only)
+router.get('/by-caller/:callerId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const leads = await Lead.find({ assignedTo: req.params.callerId })
       .select('name phone status campaign')

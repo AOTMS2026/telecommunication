@@ -104,6 +104,8 @@ export default function BulkImport() {
   // Step 2 — field mapping + "Other" custom labels
   const [fieldMapping, setFieldMapping] = useState({});
   const [customLabels, setCustomLabels] = useState({}); // { excelCol: 'myCustomLabel' }
+  const [confirmedCustom, setConfirmedCustom] = useState({}); // { excelCol: true } after Enter
+  const [savedCustomFields, setSavedCustomFields] = useState([]); // loaded from DB
   const [dupCheckField, setDupCheckField] = useState('phone');
 
   // Step 3
@@ -146,6 +148,7 @@ export default function BulkImport() {
     campaignsAPI.getAll().then(r => setCampaigns(r.data.campaigns || [])).catch(console.error);
     usersAPI.getAll().then(r => { const all = r.data.users||[]; setCallers(all.filter(u=>u.role==='caller'||u.role==='admin')); }).catch(console.error);
     loadHistory(1);
+    api.get('/lead-fields').then(r => setSavedCustomFields((r.data.fields || []).map(f => f.name))).catch(console.error);
   }, []);
 
   const loadHistory = async (page=1) => {
@@ -203,6 +206,8 @@ export default function BulkImport() {
         const label = (customLabels[col]||'').trim();
         if (label) final[col] = `custom__${label}`;
         else final[col] = '__ignore__';
+      } else if (val && val.startsWith('__custom__')) {
+        final[col] = `custom__${val.slice(10)}`;
       } else {
         final[col] = val;
       }
@@ -676,18 +681,39 @@ export default function BulkImport() {
                       <option value="">[ Select Field To Map ]</option>
                       <option value="__ignore__">— Ignore this column —</option>
                       {SYSTEM_FIELDS.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+                      {savedCustomFields.map(name=><option key={name} value={`__custom__${name}`}>✏️ {name}</option>)}
                       <option value="__other__">✏️ Other (Custom field…)</option>
                     </select>
                     <span style={{ fontSize:16, textAlign:'center' }}>{isMapped?'✅':'ℹ️'}</span>
                   </div>
                   {isOther&&(
                     <div style={{ marginLeft:24, marginTop:6, display:'flex', alignItems:'center', gap:8 }}>
-                      <input
-                        placeholder="Enter custom field name (e.g. branch_code)"
-                        value={customLabels[col]||''}
-                        onChange={e=>setCustomLabels(prev=>({...prev,[col]:e.target.value}))}
-                        style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${ORANGE}`, borderRadius:8, fontSize:13, color:TEXT_MAIN }}
-                      />
+                      {confirmedCustom[col] ? (
+                        <div style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${GREEN}`, borderRadius:8, fontSize:13, color:TEXT_MAIN, background:'#f0fdf4', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span>✅ {customLabels[col]}</span>
+                          <span onClick={()=>{ setConfirmedCustom(prev=>({...prev,[col]:false})); }} style={{ cursor:'pointer', fontSize:11, color:TEXT_MUTED, marginLeft:8 }}>✎ edit</span>
+                        </div>
+                      ) : (
+                        <input
+                          placeholder="Enter custom field name, press Enter to save"
+                          value={customLabels[col]||''}
+                          onChange={e=>setCustomLabels(prev=>({...prev,[col]:e.target.value}))}
+                          onKeyDown={async e=>{
+                            if(e.key==='Enter'){
+                              const name=(customLabels[col]||'').trim();
+                              if(!name) return;
+                              setConfirmedCustom(prev=>({...prev,[col]:true}));
+                              if(!savedCustomFields.includes(name)){
+                                try{
+                                  await api.post('/lead-fields',{name,type:'text'});
+                                  setSavedCustomFields(prev=>[...prev,name]);
+                                }catch(err){ console.warn('Could not save custom field:',err.message); }
+                              }
+                            }
+                          }}
+                          style={{ flex:1, padding:'8px 12px', border:`1.5px solid ${ORANGE}`, borderRadius:8, fontSize:13, color:TEXT_MAIN }}
+                        />
+                      )}
                       <span style={{ fontSize:12, color:TEXT_MUTED }}>→ stored as custom field</span>
                     </div>
                   )}

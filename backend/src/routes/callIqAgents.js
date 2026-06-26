@@ -44,7 +44,7 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const agent = await AiAgent.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ agent: agent.toSafeJSON() });
@@ -53,7 +53,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const body = { ...req.body };
     // don't overwrite the stored key with the masked placeholder coming back from the UI
@@ -66,7 +66,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const agent = await AiAgent.findByIdAndDelete(req.params.id);
     if (!agent) return res.status(404).json({ message: 'Agent not found' });

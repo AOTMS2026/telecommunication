@@ -14,8 +14,8 @@ const RED = '#e53e3e';
 
 export default function Users() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super admin';
-  const isAdmin = user?.role === 'admin' || isSuperAdmin;
+  const isSuperAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'manager' || isSuperAdmin;
 
   // Route protection
   if (!isAdmin) {
@@ -164,8 +164,8 @@ export default function Users() {
 
   const getRoleBadgeStyle = (role) => {
     let bg = '#eff6ff', color = '#1e40af';
-    if (role === 'super admin') { bg = '#fef2f2'; color = '#991b1b'; }
-    if (role === 'admin') { bg = '#f5f3ff'; color = '#5b3fc7'; }
+    if (role === 'admin') { bg = '#fef2f2'; color = '#991b1b'; }
+    if (role === 'manager') { bg = '#f5f3ff'; color = '#5b3fc7'; }
     return {
       display: 'inline-block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
       padding: '2px 8px', borderRadius: 20, background: bg, color
@@ -240,16 +240,16 @@ export default function Users() {
                     </td>
                     <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                        {/* Edit Button (Allowed for Admin on Callers, Super Admin on all except Super Admin self-role modification restriction) */}
-                        {(!isAdmin || (user.role === 'admin' && u.role === 'caller') || isSuperAdmin) && (
+                        {/* Edit Button (Allowed for Manager on Callers, Admin on all) */}
+                        {(!isAdmin || (user.role === 'manager' && u.role === 'caller') || isSuperAdmin) && (
                           <button onClick={() => handleOpenEdit(u)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex', padding: 4, borderRadius: 4 }}
                             onMouseEnter={e => e.currentTarget.style.color = PURPLE}
                             onMouseLeave={e => e.currentTarget.style.color = '#888'}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>
                           </button>
                         )}
-                        {/* Delete Button (Only Super Admin can delete, cannot delete super admins) */}
-                        {isSuperAdmin && u.role !== 'super admin' && (
+                        {/* Delete Button (Only Admin can delete, cannot delete admins) */}
+                        {isSuperAdmin && u.role !== 'admin' && (
                           <button onClick={() => handleDelete(u._id, u.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex', padding: 4, borderRadius: 4 }}
                             onMouseEnter={e => e.currentTarget.style.color = RED}
                             onMouseLeave={e => e.currentTarget.style.color = '#888'}>
@@ -294,7 +294,7 @@ export default function Users() {
                 <label style={labelStyle}>Role</label>
                 <select style={inputStyle} disabled={!isSuperAdmin} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   <option value="caller">Caller</option>
-                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
@@ -332,10 +332,10 @@ export default function Users() {
               </div>
               <div>
                 <label style={labelStyle}>Role</label>
-                <select style={inputStyle} disabled={!isSuperAdmin || currentUser?.role === 'super admin'} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                <select style={inputStyle} disabled={!isSuperAdmin || currentUser?.role === 'admin'} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   <option value="caller">Caller</option>
-                  <option value="admin">Admin</option>
-                  {currentUser?.role === 'super admin' && <option value="super admin">Super Admin</option>}
+                  <option value="manager">Manager</option>
+                  {currentUser?.role === 'admin' && <option value="admin">Admin</option>}
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>

@@ -69,7 +69,7 @@ router.get('/:id/submissions', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const salesform = await Salesform.create({ ...req.body, createdBy: req.user._id });
     res.status(201).json({ salesform });
@@ -78,7 +78,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const salesform = await Salesform.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!salesform) return res.status(404).json({ message: 'Salesform not found' });
@@ -89,7 +89,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // PATCH /api/salesforms/:id/flowchart — save the "Salesform" tab canvas (nodes/edges)
-router.patch('/:id/flowchart', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/flowchart', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { flowNodes, flowEdges } = req.body;
     const salesform = await Salesform.findByIdAndUpdate(
@@ -105,7 +105,7 @@ router.patch('/:id/flowchart', protect, authorize('admin', 'super admin'), async
 });
 
 // PATCH /api/salesforms/:id/workflow — save the "Workflow" tab canvas (nodes/edges + n8n link)
-router.patch('/:id/workflow', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/workflow', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { workflowNodes, workflowEdges, n8nWorkflowId } = req.body;
     const salesform = await Salesform.findByIdAndUpdate(
@@ -121,7 +121,7 @@ router.patch('/:id/workflow', protect, authorize('admin', 'super admin'), async 
 });
 
 // PATCH /api/salesforms/:id/configuration — Mandatory toggle + Permission Templates
-router.patch('/:id/configuration', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/configuration', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { mandatory, permissions } = req.body;
     const update = {};
@@ -135,7 +135,7 @@ router.patch('/:id/configuration', protect, authorize('admin', 'super admin'), a
   }
 });
 
-router.patch('/:id/status', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/status', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { status } = req.body;
     if (!['published', 'draft'].includes(status)) return res.status(400).json({ message: 'Invalid status' });
@@ -152,7 +152,7 @@ router.patch('/:id/status', protect, authorize('admin', 'super admin'), async (r
 });
 
 // POST /api/salesforms/:id/duplicate
-router.post('/:id/duplicate', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/duplicate', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const original = await Salesform.findById(req.params.id);
     if (!original) return res.status(404).json({ message: 'Salesform not found' });
@@ -220,7 +220,7 @@ router.post('/:id/submit', protect, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const salesform = await Salesform.findByIdAndDelete(req.params.id);
     if (!salesform) return res.status(404).json({ message: 'Salesform not found' });

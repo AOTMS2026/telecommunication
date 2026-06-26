@@ -8,7 +8,7 @@ const router = express.Router();
 // ── Config (singleton) ───────────────────────────────────────────────────────
 
 // GET /api/n8n/config — current n8n connection settings (API key masked)
-router.get('/config', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.get('/config', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const cfg = await N8nConfig.findOne().sort({ updatedAt: -1 });
     if (!cfg) return res.json({ config: null });
@@ -19,7 +19,7 @@ router.get('/config', protect, authorize('admin', 'super admin'), async (req, re
 });
 
 // POST /api/n8n/config — save or update connection settings
-router.post('/config', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/config', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { baseUrl, apiKey } = req.body;
     if (!baseUrl || !apiKey) return res.status(400).json({ message: 'Base URL and API key are required' });
@@ -45,7 +45,7 @@ router.post('/config', protect, authorize('admin', 'super admin'), async (req, r
 });
 
 // POST /api/n8n/test — test the saved connection
-router.post('/test', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/test', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const cfg = await n8nService.getConfig();
     const result = await n8nService.testConnection(cfg);

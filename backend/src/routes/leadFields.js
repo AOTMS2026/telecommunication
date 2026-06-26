@@ -32,7 +32,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // POST /api/lead-fields
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name, type, options } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Field name is required' });
@@ -51,7 +51,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
 });
 
 // PUT /api/lead-fields/:id
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const field = await LeadField.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!field) return res.status(404).json({ message: 'Field not found' });
@@ -68,7 +68,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // PATCH /api/lead-fields/:id/hide — toggle hidden state
-router.patch('/:id/hide', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/hide', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const field = await LeadField.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!field) return res.status(404).json({ message: 'Field not found' });
@@ -81,7 +81,7 @@ router.patch('/:id/hide', protect, authorize('admin', 'super admin'), async (req
 });
 
 // DELETE /api/lead-fields/:id
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const field = await LeadField.findOne({ _id: req.params.id, workspace: WORKSPACE });
     if (!field) return res.status(404).json({ message: 'Field not found' });
@@ -94,7 +94,7 @@ router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, re
 });
 
 // PUT /api/lead-fields/reorder
-router.put('/reorder', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/reorder', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { orderedIds } = req.body;
     await Promise.all(orderedIds.map((id, idx) => LeadField.findOneAndUpdate({ _id: id, workspace: WORKSPACE }, { order: idx })));

@@ -612,7 +612,7 @@ export default function Campaigns() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          {(user?.role === 'admin' || user?.role === 'super admin') && (
+          {(user?.role === 'manager' || user?.role === 'admin') && (
             <button
               className="action-btn"
               onClick={() => setShowTransfer(true)}

@@ -24,7 +24,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // Create a token. The raw token value is returned ONCE here and never stored.
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const count = await AccessToken.countDocuments({ status: 'active' });
     if (count >= MAX_TOKENS) {
@@ -52,7 +52,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.patch('/:id/revoke', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/revoke', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const token = await AccessToken.findByIdAndUpdate(req.params.id, { status: 'revoked' }, { new: true }).select('-tokenHash');
     if (!token) return res.status(404).json({ message: 'Token not found' });
@@ -62,7 +62,7 @@ router.patch('/:id/revoke', protect, authorize('admin', 'super admin'), async (r
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const token = await AccessToken.findByIdAndDelete(req.params.id);
     if (!token) return res.status(404).json({ message: 'Token not found' });

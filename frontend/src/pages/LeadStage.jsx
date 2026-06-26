@@ -125,7 +125,7 @@ function StatusRow({ status, onEdit, onDelete, onSetDefault, dragHandlers, canEd
 
 export default function LeadStage() {
   const { user } = useAuth();
-  const canEdit = user?.role === 'admin' || user?.role === 'super admin';
+  const canEdit = user?.role === 'manager' || user?.role === 'admin';
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

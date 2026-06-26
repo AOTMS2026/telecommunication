@@ -78,7 +78,7 @@ router.get('/:id/executions', protect, async (req, res) => {
   }
 });
 
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const workflow = await Workflow.create({
       ...req.body,
@@ -92,7 +92,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
   }
 });
 
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const workflow = await Workflow.findByIdAndUpdate(
       req.params.id,
@@ -107,7 +107,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // Publish / unpublish toggle
-router.patch('/:id/status', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/status', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { status } = req.body; // 'published' | 'draft'
     if (!['published', 'draft'].includes(status)) {
@@ -129,7 +129,7 @@ router.patch('/:id/status', protect, authorize('admin', 'super admin'), async (r
   }
 });
 
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const workflow = await Workflow.findByIdAndDelete(req.params.id);
     if (!workflow) return res.status(404).json({ message: 'Workflow not found' });

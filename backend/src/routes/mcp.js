@@ -43,7 +43,7 @@ router.post('/request-access', protect, async (req, res) => {
 });
 
 // Admin-only: approve a pending request and issue a read-only scoped token
-router.patch('/:id/approve', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/approve', protect, authorize('manager', 'admin'), async (req, res) => {
   if (!BETA_ENABLED) return res.status(403).json({ message: 'MCP is in closed beta for this workspace' });
   try {
     const rawToken = `mcp_${crypto.randomBytes(24).toString('hex')}`;
@@ -59,7 +59,7 @@ router.patch('/:id/approve', protect, authorize('admin', 'super admin'), async (
   }
 });
 
-router.patch('/:id/revoke', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/:id/revoke', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const conn = await McpConnection.findByIdAndUpdate(req.params.id, { status: 'revoked' }, { new: true }).select('-tokenHash');
     if (!conn) return res.status(404).json({ message: 'Connection not found' });

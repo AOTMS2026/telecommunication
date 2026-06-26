@@ -37,6 +37,8 @@ import CallFeedback from './pages/CallFeedback';
 import CustomActions from './pages/CustomActions';
 import WorkspacePreferences from './pages/WorkspacePreferences';
 import PermissionTemplates from './pages/PermissionTemplates';
+import CallRecordings from './pages/CallRecordings';
+import Billing from './pages/Billing';
 import N8nSettings from './pages/N8nSettings';
 
 const ProtectedRoute = ({ children }) => {
@@ -68,6 +70,8 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="my-calls" element={<MyCalls />} />
+            <Route path="call-recordings" element={<CallRecordings />} />
+            <Route path="billing" element={<Billing />} />
             <Route path="leads" element={<Leads />} />
             <Route path="leads/new" element={<AddLead />} />
             <Route path="leads/:id" element={<LeadProfile />} />

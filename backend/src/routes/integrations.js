@@ -65,7 +65,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST /api/integrations - activate/create integration (admin only)
-router.post('/', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { type, config, fieldMapping, defaultCampaign, defaultAssignedTo } = req.body;
 
@@ -100,7 +100,7 @@ router.post('/', protect, authorize('admin', 'super admin'), async (req, res) =>
 });
 
 // PUT /api/integrations/:id - update integration
-router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const integration = await Integration.findByIdAndUpdate(
       req.params.id,
@@ -115,7 +115,7 @@ router.put('/:id', protect, authorize('admin', 'super admin'), async (req, res) 
 });
 
 // DELETE /api/integrations/:id - deactivate/remove integration
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     await Integration.findByIdAndDelete(req.params.id);
     res.json({ message: 'Integration removed' });
@@ -211,7 +211,7 @@ router.post('/webhook/:webhookKey', async (req, res) => {
 });
 
 // POST /api/integrations/:id/test-webhook - send test lead
-router.post('/:id/test-webhook', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/:id/test-webhook', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const integration = await Integration.findById(req.params.id);
     if (!integration) return res.status(404).json({ message: 'Integration not found' });

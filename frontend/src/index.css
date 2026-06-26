@@ -6,29 +6,30 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-  background: #f3f1fb;
-  color: #2d2d6b;
+  background: #f0f7ff;
+  color: #1e293b;
+  font-size: 13px;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: #c4b5fd; border-radius: 4px; }
+::-webkit-scrollbar-track { background: #e0f2fe; }
+::-webkit-scrollbar-thumb { background: #7dd3fc; border-radius: 4px; }
 
 @layer components {
   .btn-primary {
-    @apply bg-purple-700 hover:bg-purple-800 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
+    @apply bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
   }
   .btn-secondary {
-    @apply bg-white hover:bg-gray-50 text-purple-700 font-medium px-4 py-2 rounded-lg border border-purple-200 transition-all duration-150 flex items-center gap-2 text-sm;
+    @apply bg-white hover:bg-sky-50 text-sky-700 font-medium px-4 py-2 rounded-lg border border-sky-200 transition-all duration-150 flex items-center gap-2 text-sm;
   }
   .btn-ghost {
-    @apply hover:bg-purple-50 text-gray-600 font-medium px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
+    @apply hover:bg-sky-50 text-gray-600 font-medium px-3 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
   }
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white transition-all;
+    @apply w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent bg-white transition-all;
   }
   .card {
-    @apply bg-white rounded-xl border border-purple-100 shadow-sm;
+    @apply bg-white rounded-xl border border-sky-100 shadow-sm;
   }
   .status-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
@@ -43,24 +44,22 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #888;
+  color: #64748b;
   font-size: 18px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 .sidebar-nav-item:hover {
-  background: #f0ecff;
-  color: #5b3fc7;
+  background: #e0f2fe;
+  color: #0284c7;
   transform: scale(1.08);
 }
 .sidebar-nav-item.active {
-  background: #f0ecff;
-  color: #5b3fc7;
+  background: #e0f2fe;
+  color: #0284c7;
   transform: scale(1.04);
 }
-.sidebar-nav-item.whatsapp-nav-item {
-  color: #25D366;
-}
+.sidebar-nav-item.whatsapp-nav-item { color: #25D366; }
 .sidebar-nav-item.whatsapp-nav-item:hover {
   background: #e8f8f0;
   color: #128C7E;
@@ -70,10 +69,7 @@ body {
   background: #e8f8f0;
   color: #128C7E;
 }
-
-.sidebar-nav-item.logout-nav-item {
-  color: #ef4444;
-}
+.sidebar-nav-item.logout-nav-item { color: #ef4444; }
 .sidebar-nav-item.logout-nav-item:hover {
   background: #fee2e2;
   color: #b91c1c;
@@ -86,8 +82,8 @@ body {
 }
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px -3px rgba(91, 63, 199, 0.08), 0 4px 6px -2px rgba(91, 63, 199, 0.04);
-  border-color: #d8d4f2 !important;
+  box-shadow: 0 10px 20px -3px rgba(2, 132, 199, 0.10), 0 4px 6px -2px rgba(2, 132, 199, 0.05);
+  border-color: #bae6fd !important;
 }
 
 .animate-fade-in { animation: fadeIn 0.2s ease-in-out; }
@@ -95,7 +91,6 @@ body {
 
 .animate-spin-slow { animation: spin 2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateX(-4px); }
-  to { opacity: 1; transform: translateX(0); }
-}
+
+.pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }

@@ -38,7 +38,7 @@ router.get('/', protect, async (req, res) => {
     if (forMe) {
       query.assignedTo = req.user._id;
     } else if (forTeam) {
-      // Team view: callers only see their own; admins/super admins see all
+      // Team view: callers only see their own; admins/admins see all
       if (req.user.role === 'caller') {
         query.assignedTo = req.user._id;
       }
@@ -154,8 +154,8 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-// DELETE /api/followups/:id — only admin & super admin allowed
-router.delete('/:id', protect, authorize('admin', 'super admin'), async (req, res) => {
+// DELETE /api/followups/:id — only admin & admin allowed
+router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const deleted = await FollowUp.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Task not found' });

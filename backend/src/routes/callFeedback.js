@@ -25,7 +25,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // PUT /api/call-feedback/min-duration
-router.put('/min-duration', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/min-duration', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     config.minConnectedDuration = Number(req.body.minConnectedDuration) || 0;
@@ -37,7 +37,7 @@ router.put('/min-duration', protect, authorize('admin', 'super admin'), async (r
 });
 
 // POST /api/call-feedback/statuses
-router.post('/statuses', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.post('/statuses', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { name } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Name is required' });
@@ -51,7 +51,7 @@ router.post('/statuses', protect, authorize('admin', 'super admin'), async (req,
 });
 
 // PUT /api/call-feedback/statuses/:statusId
-router.put('/statuses/:statusId', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/statuses/:statusId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     const status = config.statuses.id(req.params.statusId);
@@ -66,7 +66,7 @@ router.put('/statuses/:statusId', protect, authorize('admin', 'super admin'), as
 });
 
 // PATCH /api/call-feedback/statuses/:statusId/default
-router.patch('/statuses/:statusId/default', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/statuses/:statusId/default', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     const status = config.statuses.id(req.params.statusId);
@@ -81,7 +81,7 @@ router.patch('/statuses/:statusId/default', protect, authorize('admin', 'super a
 });
 
 // PATCH /api/call-feedback/statuses/:statusId/archive
-router.patch('/statuses/:statusId/archive', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.patch('/statuses/:statusId/archive', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     const status = config.statuses.id(req.params.statusId);
@@ -95,7 +95,7 @@ router.patch('/statuses/:statusId/archive', protect, authorize('admin', 'super a
 });
 
 // DELETE /api/call-feedback/statuses/:statusId
-router.delete('/statuses/:statusId', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.delete('/statuses/:statusId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const config = await getOrCreateConfig();
     const status = config.statuses.id(req.params.statusId);
@@ -110,7 +110,7 @@ router.delete('/statuses/:statusId', protect, authorize('admin', 'super admin'),
 });
 
 // PUT /api/call-feedback/reorder
-router.put('/reorder', protect, authorize('admin', 'super admin'), async (req, res) => {
+router.put('/reorder', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { orderedIds } = req.body;
     const config = await getOrCreateConfig();

@@ -169,7 +169,7 @@ export default function MyCalls() {
 
       // ── KEY FIX ──────────────────────────────────────────────────────────
       // Only show leads where the logged-in user has performed at least one call.
-      // This ensures admin/super admin only see their OWN calls, not all callers'.
+      // This ensures admin/admin only see their OWN calls, not all callers'.
       const myLeads = allLeads.filter(lead =>
         lead.activities?.some(a =>
           a.type === 'call' && a.performedBy &&
@@ -180,7 +180,7 @@ export default function MyCalls() {
       );
 
       // If user is a caller (not admin), show all assigned leads (original behaviour)
-      const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+      const isAdmin = user?.role === 'manager' || user?.role === 'admin';
       const finalLeads = isAdmin ? myLeads : allLeads;
 
       setLeads(finalLeads);
@@ -327,7 +327,7 @@ export default function MyCalls() {
     return <MessageSquare className="w-3.5 h-3.5" />;
   };
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'super admin';
+  const isAdmin = user?.role === 'manager' || user?.role === 'admin';
 
   return (
     <div className="flex gap-0" style={{ height: 'calc(100vh - 48px)' }}>
