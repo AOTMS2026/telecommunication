@@ -1,0 +1,24 @@
+# runpod/orchestrator/requirements-dev.txt
+#
+# Use this on a Windows/Mac dev laptop to test server.py's WebSocket plumbing,
+# AOTMS callback wiring, and GPT-4.1-mini calls WITHOUT installing the
+# Telugu Whisper/CTranslate2 conversion toolchain or the multi-GB
+# Indic Parler-TTS model (both are GPU-oriented and meant for the RunPod pod).
+#
+# Install with:  pip install -r requirements-dev.txt
+# Then run with: set LOCAL_DEV=1   (Windows)   or   export LOCAL_DEV=1   (Mac/Linux)
+#                python server.py
+#
+# With LOCAL_DEV=1, stt.py and tts.py skip loading any model at all and use
+# stub implementations, so you can exercise the full Twilio-message handling,
+# GPT-4.1-mini turn/outcome calls, and the fetch_call_context/post_call_outcome
+# round-trips to your AOTMS backend — everything except real Telugu
+# speech-to-text and real Telugu voice synthesis, which only need to work on
+# the actual RunPod pod (built via the Dockerfile, which includes the free
+# AI4Bharat models for real).
+
+websockets==12.0
+openai==1.35.0
+aiohttp==3.9.5
+numpy==1.26.4
+python-dotenv==1.0.1
