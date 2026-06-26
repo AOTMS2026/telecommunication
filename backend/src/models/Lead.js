@@ -1,17 +1,10 @@
 const mongoose = require('mongoose');
 
 const activitySchema = new mongoose.Schema({
-  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup', 'api_call'], required: true },
+  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup'], required: true },
   description: { type: String, default: '' },
   callDuration: { type: Number, default: 0 },
   callStatus: { type: String, enum: ['connected', 'no_answer', 'busy', 'failed', ''], default: '' },
-  // for type: 'api_call' — name of the API Template that ran, and its structured result
-  templateName: { type: String, default: '' },
-  fields: [{
-    label: { type: String },
-    type: { type: String, enum: ['Text', 'Number', 'Date', 'Website', 'Dropdown', 'Money', 'Tags'], default: 'Text' },
-    value: { type: mongoose.Schema.Types.Mixed },
-  }],
   performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });
@@ -60,8 +53,6 @@ const leadSchema = new mongoose.Schema({
   customFields: { type: mongoose.Schema.Types.Mixed, default: {} },
   importId: { type: mongoose.Schema.Types.ObjectId, ref: 'ImportHistory' },
   collegeName: { type: String, default: '' },
-  // Named lists a lead can be added to/removed from (used by Salesform "Add in List" / "Remove from List" actions)
-  lists: { type: [String], default: [] },
 
   // ====================== NEW FIELDS (AI Telecaller upgrade) ======================
   // Lead-locking — see backend/src/services/aiCaller/leadLock.js
@@ -78,9 +69,10 @@ const leadSchema = new mongoose.Schema({
   // conversationMemory.js to build "last time we spoke..." context for the next call.
   lastAiOutcome: { type: mongoose.Schema.Types.Mixed, default: null },
 
-  // Detected/preferred spoken language for this lead (Telugu / English / Hinglish),
-  // learned from the first AI call and reused so subsequent calls open in the right language.
-  language: { type: String, enum: ['Telugu', 'English', 'Hinglish', ''], default: '' },
+  // Detected/preferred spoken language for this lead (Telugu / English / Hinglish).
+  // Defaults to 'Telugu' since the current customer base is Telugu-only;
+  // override per-lead if you ever onboard non-Telugu-speaking students.
+  language: { type: String, enum: ['Telugu', 'English', 'Hinglish', ''], default: 'Telugu' },
   // =================================================================================
 }, { timestamps: true });
 

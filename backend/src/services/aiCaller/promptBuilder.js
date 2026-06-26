@@ -11,14 +11,18 @@
 
 function languageInstruction(lead) {
   switch (lead.language) {
-    case 'Telugu':
-      return 'Speak primarily in Telugu, switching to English for technical course/program names.';
-    case 'Hinglish':
-      return 'Speak in natural Hinglish (mixed Hindi-English), the way a real Indian counselor would on a phone call.';
     case 'English':
       return 'Speak in English.';
+    case 'Hinglish':
+      return 'Speak in natural Hinglish (mixed Hindi-English), the way a real Indian counselor would on a phone call.';
+    case 'Telugu':
     default:
-      return 'Mirror whichever language the student speaks first — Telugu, English, Hinglish, or mixed Telugu-English are all fine. Default to a friendly mixed Telugu-English style if the student does not give a clear signal.';
+      // Default to Telugu — per the current customer base (Telugu-only),
+      // rather than guessing/mirroring. Natural code-mixing with English
+      // course/program names is expected and fine (matches how the
+      // Telugu-finetuned STT/TTS models on RunPod are set up — see
+      // runpod/orchestrator/stt.py and tts.py).
+      return 'Speak in Telugu, switching to English naturally for technical course/program names, the way a real Telugu speaker does on a phone call.';
   }
 }
 
@@ -58,11 +62,13 @@ Rules:
 }
 
 function buildWelcomeGreeting(lead) {
-  const studentName = lead.name ? lead.name.split(' ')[0] : 'there';
-  if (lead.language === 'Telugu') {
-    return `Namaskaram ${studentName}, idi Priya, AOTMS nundi. Mీరు inquire chesina course gurinchi maatladalanukunta, ఇప్పుడు maatladagalama?`;
+  const studentName = lead.name ? lead.name.split(' ')[0] : 'మిత్రమా';
+  if (lead.language === 'English') {
+    return `Hi ${studentName}, this is Priya calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
   }
-  return `Hi ${studentName}, this is Priya calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
+  // Default: Telugu — matches the Telugu-only customer base and the
+  // Telugu-finetuned STT/TTS models in runpod/orchestrator/.
+  return `Namaskaram ${studentName}, idi Priya, AOTMS nundi. Meeru inquire chesina course gurinchi maatladalanukunta, ippudu maatladagalama?`;
 }
 
 /**
