@@ -10,8 +10,8 @@ one place (the main repo) instead of duplicated on the RunPod pod.
 import os
 import aiohttp
 
-AOTMS_BASE_URL = os.environ["AOTMS_BASE_URL"].rstrip("/")
-SERVICE_TOKEN = os.environ["AI_CALLER_SERVICE_TOKEN"]
+AOTMS_BASE_URL = os.environ.get("AOTMS_BASE_URL", "").rstrip("/")
+SERVICE_TOKEN = os.environ.get("AI_CALLER_SERVICE_TOKEN", "")
 
 
 async def fetch_call_context(lead_id: str) -> dict:

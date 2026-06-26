@@ -38,6 +38,7 @@ SILENCE_RMS_CUTOFF = 400
 class CallSession:
     def __init__(self, call_sid: str):
         self.call_sid = call_sid
+        self.stream_sid = ""          # FIX: Twilio streamSid is separate from callSid
         self.lead_id = None
         self.campaign_id = None
         self.conversation: list[dict] = []
@@ -70,12 +71,13 @@ async def handle_connection(ws):
 async def handle_start(ws, session: CallSession, message: dict):
     start = message.get("start", {})
     session.call_sid = start.get("callSid", "")
+    session.stream_sid = start.get("streamSid", "")   # FIX: capture streamSid from start event
 
     custom_params = start.get("customParameters", {})
     session.lead_id = custom_params.get("leadId")
     session.campaign_id = custom_params.get("campaignId")
 
-    print(f"[server] call started: {session.call_sid} lead={session.lead_id}")
+    print(f"[server] call started: {session.call_sid} stream={session.stream_sid} lead={session.lead_id}")
 
     if session.lead_id:
         try:
@@ -104,16 +106,19 @@ async def handle_media(ws, session: CallSession, message: dict):
     chunk = base64.b64decode(payload)
     session.audio_buffer.extend(chunk)
 
-    # Cheap silence heuristic on the raw mu-law bytes (close to 0x7F/0xFF for
-    # silence) — good enough to gate when to run STT without a separate VAD model.
-    is_silent = all(abs(b - 0xFF) < 4 or abs(b - 0x7F) < 4 for b in chunk[:20])
+    # FIX: Twilio mu-law encodes silence as 0xFF only — removed incorrect 0x7F check
+    is_silent = all(abs(b - 0xFF) < 4 for b in chunk[:20])
     session.silence_run = session.silence_run + 1 if is_silent else 0
 
     if session.silence_run >= SILENCE_FRAME_THRESHOLD and len(session.audio_buffer) > 0:
         segment = bytes(session.audio_buffer)
         session.audio_buffer.clear()
         session.silence_run = 0
-        await process_speech_segment(ws, session, segment)
+        # FIX: timeout guard so a hung STT/GPT call doesn't stall the WebSocket forever
+        try:
+            await asyncio.wait_for(process_speech_segment(ws, session, segment), timeout=10.0)
+        except asyncio.TimeoutError:
+            print(f"[server] process_speech_segment timed out for call {session.call_sid}")
 
 
 async def process_speech_segment(ws, session: CallSession, mulaw_bytes: bytes):
@@ -133,7 +138,7 @@ async def send_tts(ws, session: CallSession, text: str):
     payload = base64.b64encode(mulaw_audio).decode("ascii")
     await ws.send(json.dumps({
         "event": "media",
-        "streamSid": session.call_sid,
+        "streamSid": session.stream_sid,   # FIX: use streamSid, not callSid
         "media": {"payload": payload},
     }))
 

@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Convert the free Telugu-finetuned Whisper checkpoint to CTranslate2 ---
 # This is a ONE-TIME, free conversion of free, open weights — no API cost,
 # no license fee. Runs once at image build time, not per-call.
-RUN pip install --no-cache-dir "transformers[sentencepiece]" ctranslate2 && \
+RUN pip install --no-cache-dir "transformers[sentencepiece]==4.46.1" ctranslate2==4.4.0 && \
     ct2-transformers-converter \
       --model vasista22/whisper-telugu-medium \
       --output_dir /app/models/whisper-telugu-medium \

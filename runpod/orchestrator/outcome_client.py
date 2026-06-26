@@ -10,9 +10,8 @@ schedule any callback FollowUp, and write the AiCallOutcome audit record.
 import os
 import aiohttp
 
-AOTMS_BASE_URL = os.environ["AOTMS_BASE_URL"].rstrip("/")
-SERVICE_TOKEN = os.environ["AI_CALLER_SERVICE_TOKEN"]
-
+AOTMS_BASE_URL = os.environ.get("AOTMS_BASE_URL", "").rstrip("/")
+SERVICE_TOKEN = os.environ.get("AI_CALLER_SERVICE_TOKEN", "")
 
 async def post_call_outcome(
     lead_id: str,
