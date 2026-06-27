@@ -45,26 +45,24 @@ const seed = async () => {
   ]);
 
   // ── USERS ─────────────────────────────────────────────────────────────────
-  const superAdmin1 = await User.create({
+  const admin1 = await User.create({
     name: 'Ameen', email: 'ameenaotms@gmail.com',
     password: 'Ameen@aotms', role: 'admin', phone: '919000000010', isActive: true,
   });
-  const superAdmin2 = await User.create({
+  const admin2 = await User.create({
     name: 'Rabbani', email: 'ctoaotms@gmail.com',
     password: 'Rabbani@aotms', role: 'admin', phone: '919000000011', isActive: true,
   });
-  const adminDemo = await User.create({
+  const manager1 = await User.create({
     name: 'Deenaz', email: 'hraotms@gmail.com',
     password: 'Deenaz@aotms', role: 'manager', phone: '919000000012', isActive: true,
   });
-  const admin2 = await User.create({
+  const manager2 = await User.create({
     name: 'Bhavani', email: 'hiringaotms@gmail.com',
     password: 'Bhavani@aotms', role: 'manager', phone: '919000000013', isActive: true,
   });
   console.log('✅  4 Users created');
 
-  // Use superAdmin1 as the primary superAdmin reference
-  const superAdmin = superAdmin1;
   // Original callers kept as-is
   const c1 = await User.create({
     name: 'Mahesh Choudare', email: 'maheshchoudare21@gmail.com',
@@ -82,20 +80,20 @@ const seed = async () => {
     name: 'Poojitha Reddy', email: 'poojitha@aotms.com',
     password: 'caller123', role: 'caller', phone: '919000000004', isActive: true,
   });
-  console.log('✅  4 Callers created');
+  console.log('✅  4 Callers created (matches update_users.js credential list)');
 
   // ── CAMPAIGNS ─────────────────────────────────────────────────────────────
   const camp1 = await Campaign.create({
     name: 'engg-clgs', description: 'Engineering College Leads', status: 'active',
-    assignedCallers: [c1._id, c2._id, c3._id, c4._id], totalLeads: 15, createdBy: superAdmin._id,
+    assignedCallers: [c1._id, c2._id, c3._id, c4._id], totalLeads: 15, createdBy: admin1._id,
   });
   const camp2 = await Campaign.create({
     name: 'mba-batch-2025', description: 'MBA Admissions 2025', status: 'active',
-    assignedCallers: [c1._id, c3._id, c4._id], totalLeads: 7, createdBy: superAdmin._id,
+    assignedCallers: [c1._id, c3._id, c4._id], totalLeads: 7, createdBy: admin1._id,
   });
   const camp3 = await Campaign.create({
     name: 'bba-outreach', description: 'BBA Program Outreach', status: 'paused',
-    assignedCallers: [c2._id, c4._id], totalLeads: 5, createdBy: adminDemo._id,
+    assignedCallers: [c2._id, c4._id], totalLeads: 5, createdBy: manager1._id,
   });
   console.log('✅  3 Campaigns created');
 
@@ -215,25 +213,25 @@ const seed = async () => {
 
   // ── MESSAGE TEMPLATES ─────────────────────────────────────────────────────
   await MessageTemplate.insertMany([
-    { type: 'whatsapp', shortcut: '/intro',      isShared: true,  createdBy: superAdmin._id,
+    { type: 'whatsapp', shortcut: '/intro',      isShared: true,  createdBy: admin1._id,
       message: 'Hi {name} 👋, this is {caller} from AOTMS Edu. We saw your interest in *{course}*. Can we connect for a quick 5-min call today?' },
-    { type: 'whatsapp', shortcut: '/brochure',   isShared: true,  createdBy: superAdmin._id,
+    { type: 'whatsapp', shortcut: '/brochure',   isShared: true,  createdBy: admin1._id,
       message: 'Hi {name}, as requested, here is the detailed brochure for {course}. Fee: ₹{fee}, Duration: {duration}. Let me know if you have any questions 😊' },
-    { type: 'whatsapp', shortcut: '/demo',       isShared: true,  createdBy: adminDemo._id,
+    { type: 'whatsapp', shortcut: '/demo',       isShared: true,  createdBy: manager1._id,
       message: 'Dear {name}, your *DEMO SESSION* is confirmed for {date} at {time}. Join link: {link}. Please be on time 🙏' },
-    { type: 'whatsapp', shortcut: '/followup',   isShared: true,  createdBy: adminDemo._id,
+    { type: 'whatsapp', shortcut: '/followup',   isShared: true,  createdBy: manager1._id,
       message: 'Hi {name}, just following up from our last call. Have you had a chance to discuss our offer with your family? We are here to help 😊' },
     { type: 'whatsapp', shortcut: '/notint',     isShared: false, createdBy: c1._id,
       message: 'Thank you for your time, {name}. We understand your decision. Feel free to reach us if you change your mind. Best wishes 🙏' },
 
-    { type: 'sms', shortcut: '/sms-intro',       isShared: true,  createdBy: superAdmin._id,
+    { type: 'sms', shortcut: '/sms-intro',       isShared: true,  createdBy: admin1._id,
       message: 'Hi {name}, AOTMS Edu here. We have an exciting offer on {course}. Reply YES to know more. -AOTMS' },
-    { type: 'sms', shortcut: '/sms-demo',        isShared: true,  createdBy: superAdmin._id,
+    { type: 'sms', shortcut: '/sms-demo',        isShared: true,  createdBy: admin1._id,
       message: 'AOTMS DEMO confirmed for {name} on {date} {time}. Login: {link}. -AOTMS Edu' },
-    { type: 'sms', shortcut: '/sms-remind',      isShared: true,  createdBy: adminDemo._id,
+    { type: 'sms', shortcut: '/sms-remind',      isShared: true,  createdBy: manager1._id,
       message: 'Hi {name}, reminder: Your follow-up call is at {time} today. -AOTMS Team' },
 
-    { type: 'email', shortcut: '/email-welcome', isShared: true,  createdBy: superAdmin._id,
+    { type: 'email', shortcut: '/email-welcome', isShared: true,  createdBy: admin1._id,
       message: 'Subject: Welcome to AOTMS Edu!\n\nDear {name},\n\nThank you for showing interest in {course}.\n\nBest regards,\nAOTMS Team' },
     { type: 'email', shortcut: '/email-proposal',isShared: false, createdBy: c1._id,
       message: 'Subject: Course Proposal – {course}\n\nDear {name},\n\nCourse: {course}\nDuration: {duration}\nFee: ₹{fee}\n\nRegards,\n{caller}' },
@@ -242,10 +240,10 @@ const seed = async () => {
 
   // ── BLOCKLIST ─────────────────────────────────────────────────────────────
   await Blocklist.insertMany([
-    { phone: '919000111222', name: 'Spam Lead 1',  reason: 'Repeated abusive calls',      blockedBy: superAdmin._id },
-    { phone: '919000222333', name: 'DNC Request',  reason: 'Requested Do Not Call',        blockedBy: superAdmin._id },
+    { phone: '919000111222', name: 'Spam Lead 1',  reason: 'Repeated abusive calls',      blockedBy: admin1._id },
+    { phone: '919000222333', name: 'DNC Request',  reason: 'Requested Do Not Call',        blockedBy: admin1._id },
     { phone: '919000333444', name: 'Wrong Number', reason: 'Wrong number – unrelated biz', blockedBy: c1._id         },
-    { phone: '919000444555', name: 'Competitor',   reason: 'Competitor posing as lead',    blockedBy: superAdmin._id },
+    { phone: '919000444555', name: 'Competitor',   reason: 'Competitor posing as lead',    blockedBy: admin1._id },
   ]);
   console.log('✅  4 Blocklist entries created');
 

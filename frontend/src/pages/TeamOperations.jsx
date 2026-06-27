@@ -23,8 +23,8 @@ export default function TeamOperations() {
   const [updatingId, setUpdatingId] = useState(null);
   const [assigningId, setAssigningId] = useState(null);
 
-  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
-  const isAdmin = isSuperAdmin;
+  const isAdmin = user?.role === 'manager';
+  const isSuperAdmin = user?.role === 'admin';
 
   const fetchData = async () => {
     try {

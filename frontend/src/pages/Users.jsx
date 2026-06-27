@@ -14,8 +14,8 @@ const RED = '#e53e3e';
 
 export default function Users() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
-  const isAdmin = isSuperAdmin;
+  const isSuperAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'manager' || isSuperAdmin;
 
   // Route protection
   if (!isAdmin) {

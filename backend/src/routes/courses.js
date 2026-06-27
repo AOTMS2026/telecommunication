@@ -63,7 +63,7 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
 });
 
 // DELETE /api/courses/:id - Delete a course (admin only)
-router.delete('/:id', protect, authorize('admin', 'manager'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ message: 'Course not found' });

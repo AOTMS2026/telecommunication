@@ -181,7 +181,7 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
 });
 
 // DELETE /api/users/:id
-router.delete('/:id', protect, authorize('admin', 'manager'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin'), async (req, res) => {
   try {
     const targetUser = await User.findById(req.params.id);
     if (!targetUser) return res.status(404).json({ message: 'User not found' });

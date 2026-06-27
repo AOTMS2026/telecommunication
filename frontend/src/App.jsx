@@ -40,7 +40,6 @@ import PermissionTemplates from './pages/PermissionTemplates';
 import N8nSettings from './pages/N8nSettings';
 import CallRecordings from './pages/CallRecordings';
 import Billing from './pages/Billing';
-import N8nSettings from './pages/N8nSettings';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();

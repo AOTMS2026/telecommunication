@@ -276,8 +276,8 @@ export default function Dashboard() {
   const [demoDate, setDemoDate] = useState('');
   const [savingCall, setSavingCall] = useState(false);
 
-  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
-  const isAdmin = isSuperAdmin;
+  const isSuperAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'manager';
   const isCaller = user?.role === 'caller';
 
   const openAnalysisModal = async (userId) => {
@@ -1788,7 +1788,7 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isSuperAdmin ? 'Super Admin Control Center' : isAdmin ? 'Admin Analytics Desk' : 'Caller Performance Desk'}
+            {isSuperAdmin ? 'Admin Analytics Desk' : isAdmin ? 'Manager Analytics Desk' : 'Caller Performance Desk'}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2.5" style={{ cursor: 'pointer' }} onClick={refresh}>
               <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/>
             </svg>
