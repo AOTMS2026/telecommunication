@@ -22,24 +22,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # --- Convert the free Telugu-finetuned Whisper checkpoint to CTranslate2 ---
 # This is a ONE-TIME, free conversion of free, open weights — no API cost,
 # no license fee. Runs once at image build time, not per-call.
-RUN pip install --no-cache-dir "transformers[sentencepiece]==4.46.1" ctranslate2==4.4.0 && \
-    ct2-transformers-converter \
+RUN ct2-transformers-converter \
       --model vasista22/whisper-telugu-medium \
       --output_dir /app/models/whisper-telugu-medium \
       --quantization float16 \
       --force
-
 # --- Pre-download the free AI4Bharat Indic Parler-TTS weights into the image ---
 # (Bakes the ~GB-scale model into the image layer so cold-starts don't pay a
 # multi-minute download penalty; comment out if you'd rather download at
 # first run and keep the image smaller.)
-RUN python3 -c "\
-from transformers import AutoTokenizer; \
-from parler_tts import ParlerTTSForConditionalGeneration; \
-m = ParlerTTSForConditionalGeneration.from_pretrained('ai4bharat/indic-parler-tts'); \
-AutoTokenizer.from_pretrained('ai4bharat/indic-parler-tts'); \
-AutoTokenizer.from_pretrained(m.config.text_encoder._name_or_path) \
-"
+
 
 COPY . .
 
