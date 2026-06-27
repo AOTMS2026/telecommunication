@@ -1,13 +1,4 @@
 // backend/src/services/aiCaller/campaignEngine.js
-//
-// Autonomous AI Campaign Execution Engine. Polls campaigns with aiCallingEnabled,
-// fetches eligible leads, acquires locks, and dials — all within each
-// campaign's configured concurrency limit and calling-hours window.
-//
-// Mirrors the setInterval poller pattern already used in
-// backend/src/services/workflowEngine.js (startSchedulePoller) so it fits the
-// codebase's existing conventions rather than introducing a new job queue
-// dependency (no Redis/Bull needed at current scale).
 
 const Campaign = require('../../models/Campaign');
 const Lead = require('../../models/Lead');
@@ -36,6 +27,10 @@ async function tick() {
     return;
   }
 
+  if (activeCampaigns.length > 0) {
+    console.log(`[campaignEngine] tick — ${activeCampaigns.length} active campaign(s)`);
+  }
+
   for (const campaign of activeCampaigns) {
     try {
       await processCampaign(campaign);
@@ -46,14 +41,20 @@ async function tick() {
 }
 
 async function processCampaign(campaign) {
-  if (!withinCallWindow(campaign.aiCallWindow)) return;
+  if (!withinCallWindow(campaign.aiCallWindow)) {
+    console.log(`[campaignEngine] campaign ${campaign._id} outside call window — skipping`);
+    return;
+  }
 
   const inFlight = await Lead.countDocuments({
     campaign: campaign._id,
     aiCallState: 'in_progress',
   });
   const capacity = (campaign.aiConcurrencyLimit || 5) - inFlight;
-  if (capacity <= 0) return;
+  if (capacity <= 0) {
+    console.log(`[campaignEngine] campaign ${campaign._id} at capacity (${inFlight} in flight)`);
+    return;
+  }
 
   const baseQuery = {
     campaign: campaign._id,
@@ -66,22 +67,22 @@ async function processCampaign(campaign) {
     ],
   };
 
-  // Respect human ownership unless the campaign explicitly opts in to calling
-  // leads a human already owns (Campaign.aiIncludesAssignedLeads).
-  if (!campaign.aiIncludesAssignedLeads) {
-    baseQuery.assignedTo = { $exists: false };
-  }
+  // FIX: Assignee restriction REMOVED — AI calls all leads in campaign
+  // regardless of whether they are assigned to a human caller or not.
 
   const eligibleLeads = await Lead.find(baseQuery).limit(capacity);
+  console.log(`[campaignEngine] campaign ${campaign._id} — ${eligibleLeads.length} eligible lead(s), capacity ${capacity}`);
 
   for (const lead of eligibleLeads) {
     const locked = await acquireLock(lead._id, 'ai-engine');
-    if (!locked) continue; // another tick / a human grabbed it first — atomic, no race
+    if (!locked) {
+      console.log(`[campaignEngine] could not lock lead ${lead._id} — skipping`);
+      continue;
+    }
 
     await Lead.updateOne({ _id: lead._id }, { aiCallState: 'in_progress' });
+    console.log(`[campaignEngine] dialing lead ${lead._id} (${lead.phone})`);
 
-    // Fire-and-forget — outcomeService releases the lock when the call finishes
-    // (success or failure), so we never block the poll loop on call duration.
     triggerAiCall(lead, campaign).catch((err) => {
       console.error('[campaignEngine] dial error for lead', lead._id.toString(), err.message);
     });
@@ -91,7 +92,8 @@ async function processCampaign(campaign) {
 let pollHandle = null;
 
 function startPoller() {
-  if (pollHandle) return pollHandle; // idempotent — avoid double-starting on hot reload
+  if (pollHandle) return pollHandle;
+  console.log('[campaignEngine] poller started');
   tick();
   pollHandle = setInterval(tick, POLL_INTERVAL_MS);
   return pollHandle;

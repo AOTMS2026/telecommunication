@@ -1,4 +1,4 @@
-// Nodemon restart trigger v5
+// Nodemon restart trigger v6
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -9,20 +9,19 @@ const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./config/db');
 const { initFCM } = require('./services/fcm');
 const http = require('node:http');
-require('./models/ImportHistory'); // add this line
+require('./models/ImportHistory');
 const { WebSocketServer } = require('ws');
 const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
 const { startSchedulePoller } = require('./services/workflowEngine');
 const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
-const campaignEngine = require('./services/aiCaller/campaignEngine'); // NEW
-const callbackEngine = require('./services/aiCaller/callbackEngine'); // NEW
+const campaignEngine = require('./services/aiCaller/campaignEngine');
+const callbackEngine = require('./services/aiCaller/callbackEngine');
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const app = express();
 connectDB();
 
-// Initialize Firebase Cloud Messaging for push notifications
 initFCM();
 
 // ── Security ─────────────────────────────────────────────────────────────────
@@ -68,11 +67,8 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/recordings', apiLimiter, require('./routes/recordings'));
 
-// Serve uploaded call recordings so the URLs returned by /api/recordings work
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ── Automation & API suite (Workflows, Schedules, Salesforms, API Templates,
-//    Webhooks, Access Tokens, Call-IQ Agents) ──────────────────────────────────
 app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
 app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
 app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
@@ -81,8 +77,6 @@ app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
 app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
 app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
 
-// ── Workspace Settings (Lead Stage, Call Feedback, Custom Actions, Preferences,
-//    Permission Templates) ────────────────────────────────────────────────────
 app.use('/api/lead-stages', apiLimiter, require('./routes/leadStages'));
 app.use('/api/lead-fields', apiLimiter, require('./routes/leadFields'));
 app.use('/api/call-feedback', apiLimiter, require('./routes/callFeedback'));
@@ -101,31 +95,39 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// ── WebSocket server for Twilio ConversationRelay ─────────────────────────────
-// DEPRECATED, NOT REMOVED: audio is now routed to the RunPod pod via raw Media
-// Streams (see routes/aiCaller.js's /twiml handler), so this mount receives no
-// traffic under the new flow. Left registered (harmless — Twilio simply never
-// opens a connection here anymore) for one full release cycle as a same-process
-// rollback path: reverting routes/aiCaller.js's TwiML back to
-// connect.conversationRelay(...) brings this path back online instantly with
-// zero further code changes. Remove only after the RunPod flow is confirmed
-// stable in production (see migration plan §9, Rollback Plan).
+// ── WebSocket server for Twilio ConversationRelay (deprecated, kept for rollback)
 const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
 wss.on('connection', (ws) => handleConversationRelay(ws));
 
-// ── NEW: AI Telecaller background engines ─────────────────────────────────────
-// Autonomous campaign dialer + intelligent callback re-dialer. Both follow the
-// same setInterval poller pattern as workflowEngine.startSchedulePoller(), so no
-// new job-queue dependency (Redis/Bull) is introduced.
-campaignEngine.startPoller();
-callbackEngine.startPoller();
+// ── AI Telecaller background engines ─────────────────────────────────────────
+// FIX: startPoller() moved INSIDE server.listen so it runs on Render production.
+// Previously it was outside the if-block which caused it to start before the
+// server was ready on Render, and the VERCEL check wrongly blocked it.
 
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  server.listen(PORT, () => console.log(`🚀 AOTMS Server running on port ${PORT}`));
-  // Poll for due SCHEDULE-kind workflow executions every minute.
+server.listen(PORT, () => {
+  console.log(`🚀 AOTMS Server running on port ${PORT}`);
   startSchedulePoller(60 * 1000);
-  // Sweep for overdue tasks/follow-ups every 5 minutes and notify once each.
   startOverdueTaskChecker(5 * 60 * 1000);
+
+  // Start AI campaign engine AFTER server is listening
+  campaignEngine.startPoller();
+  callbackEngine.startPoller();
+  console.log('[server] AI campaign engine and callback engine started');
+});
+
+// FIX: Keep-alive self-ping every 10 minutes to prevent Render free tier sleep.
+// This keeps the campaignEngine poller running continuously.
+const SELF_URL = process.env.PUBLIC_BASE_URL;
+if (SELF_URL) {
+  setInterval(() => {
+    http.get(`${SELF_URL.replace('https', 'http')}/api/health`, (res) => {
+      console.log('[keep-alive] ping:', res.statusCode);
+    }).on('error', () => {
+      // Use https for Render
+      const https = require('https');
+      https.get(`${SELF_URL}/api/health`, () => {}).on('error', () => {});
+    });
+  }, 10 * 60 * 1000); // every 10 minutes
 }
 
 module.exports = app;
