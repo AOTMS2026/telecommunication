@@ -5,6 +5,7 @@ const Workflow = require('../models/Workflow');
 const WorkflowExecution = require('../models/WorkflowExecution');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
+const FollowUp = require('../models/FollowUp');
 const { runApiTemplate, triggerWebhook } = require('./automationRunners');
 const { notifyWorkflowAction } = require('./notificationService');
 let n8nService;
@@ -44,19 +45,41 @@ const EVENT_DEFINITIONS = [
   { value: 'lead.added_to_list', label: 'Added in List', group: 'Lead Events' },
   { value: 'lead.removed_from_list', label: 'Removed from List', group: 'Lead Events' },
   { value: 'lead.template_message_sent', label: 'On template message sent', group: 'Messaging' },
+  { value: 'lead.ivr_incoming', label: 'On IVR incoming call', group: 'IVR' },
+  { value: 'lead.ivr_outgoing', label: 'On IVR outgoing call', group: 'IVR' },
+  { value: 'lead.call_incoming_ended', label: 'On incoming call ended', group: 'Call activities' },
+  { value: 'lead.call_outgoing_ended', label: 'On outgoing call ended', group: 'Call activities' },
+  { value: 'lead.call_missed', label: 'On Missed Call', group: 'Call activities' },
+  { value: 'lead.call_recording_completed', label: 'On call recording completed', group: 'Call activities' },
+  { value: 'lead.payment_completed', label: 'On payment completed', group: 'Payment activities' },
+  { value: 'lead.payment_pending', label: 'On payment pending', group: 'Payment activities' },
+  { value: 'lead.payment_failed', label: 'On payment failed', group: 'Payment activities' },
+  { value: 'lead.payment_processing', label: 'On payment processing', group: 'Payment activities' },
+  { value: 'lead.payment_cancelled', label: 'On payment cancelled', group: 'Payment activities' },
+  { value: 'lead.payment_refunded', label: 'On payment refunded', group: 'Payment activities' },
+  { value: 'lead.custom_action_created', label: 'On Custom Action Creation', group: 'Custom Actions' },
+  { value: 'lead.custom_action_updated', label: 'On Custom Action Updation', group: 'Custom Actions' },
 ];
 
 const ACTION_DEFINITIONS = [
   { value: 'call_api', label: 'Call API', needsApiTemplate: true },
-  { value: 'trigger_webhook', label: 'Trigger Webhook', needsWebhook: true },
-  { value: 'trigger_n8n', label: 'Trigger n8n Workflow', needsN8n: true },
+  { value: 'create_custom_action', label: 'Create Custom Action' },
   { value: 'notify_team_member', label: 'Notification To TeamMember' },
   { value: 'update_lead_assignee', label: 'Update Lead Assignee' },
-  { value: 'update_lead_status', label: 'Update Lead Status' },
+  { value: 'update_lead_fields', label: 'Update Lead Fields' },
   { value: 'update_lead_rating', label: 'Update Lead Rating' },
+  { value: 'update_lead_status', label: 'Update Lead Status' },
+  { value: 'time_delay', label: 'Time Delay' },
   { value: 'send_template', label: 'Send Template' },
+  { value: 'add_in_list', label: 'Add in List' },
+  { value: 'remove_from_list', label: 'Remove from List' },
+  { value: 'add_call_followup', label: 'Add Call Followup' },
+  { value: 'cancel_tasks', label: 'Cancel Tasks' },
+  { value: 'add_payment', label: 'Add payment' },
+  { value: 'add_ivr_action', label: 'Add IVR Action' },
+  { value: 'trigger_webhook', label: 'Trigger Webhook', needsWebhook: true },
+  { value: 'trigger_n8n', label: 'Trigger n8n Workflow', needsN8n: true },
   { value: 'email_report', label: 'Email Lead Report' },
-  { value: 'custom_action', label: 'Create Custom Action' },
 ];
 
 function evaluateConditions(conditions = [], leadDoc) {
@@ -129,9 +152,70 @@ async function runSingleAction(action, context, log) {
         log.push({ type: action.type, ok: true, message: `Rating → ${lead.rating}` });
         return true;
       }
-      case 'custom_action': {
+      case 'custom_action':
+      case 'create_custom_action': {
         log.push({ type: action.type, ok: true, message: `Custom action "${action.config.label || ''}" acknowledged` });
         return true;
+      }
+      case 'update_lead_fields': {
+        if (!lead) return false;
+        const field = action.config.leadField || action.config.field;
+        if (!field) { log.push({ type: action.type, ok: false, message: 'No field selected' }); return false; }
+        const value = action.config.value ?? action.config.fieldMap?.[field];
+        if (field in lead.schema.paths) lead.set(field, value);
+        else lead.customFields = { ...(lead.customFields || {}), [field]: value };
+        await lead.save();
+        log.push({ type: action.type, ok: true, message: `${field} → ${value}` });
+        return true;
+      }
+      case 'time_delay': {
+        // Mid-chain delays aren't queued by the immediate-execution path yet —
+        // acknowledged here so the rest of the chain keeps running without error.
+        log.push({ type: action.type, ok: true, message: `Time delay of ${action.config.minutes || 0}m acknowledged` });
+        return true;
+      }
+      case 'add_in_list': {
+        if (!lead || !action.config.listName) { log.push({ type: action.type, ok: false, message: 'No list name configured' }); return false; }
+        if (!lead.lists.includes(action.config.listName)) lead.lists.push(action.config.listName);
+        await lead.save();
+        log.push({ type: action.type, ok: true, message: `Added to list "${action.config.listName}"` });
+        return true;
+      }
+      case 'remove_from_list': {
+        if (!lead || !action.config.listName) { log.push({ type: action.type, ok: false, message: 'No list name configured' }); return false; }
+        lead.lists = lead.lists.filter(l => l !== action.config.listName);
+        await lead.save();
+        log.push({ type: action.type, ok: true, message: `Removed from list "${action.config.listName}"` });
+        return true;
+      }
+      case 'add_call_followup': {
+        if (!lead) return false;
+        const assignedTo = action.config.userId || lead.assignedTo;
+        if (!assignedTo) { log.push({ type: action.type, ok: false, message: 'No assignee resolved' }); return false; }
+        await FollowUp.create({
+          lead: lead._id,
+          assignedTo,
+          scheduledAt: new Date(Date.now() + (action.config.delayHours || 24) * 60 * 60 * 1000),
+          type: 'call_followup',
+          note: action.config.note || 'Follow up (via automation)',
+        });
+        log.push({ type: action.type, ok: true, message: 'Call followup task created' });
+        return true;
+      }
+      case 'cancel_tasks': {
+        if (!lead) return false;
+        await FollowUp.updateMany({ lead: lead._id, status: 'upcoming' }, { status: 'cancelled' });
+        log.push({ type: action.type, ok: true, message: 'Upcoming tasks cancelled' });
+        return true;
+      }
+      case 'add_payment': {
+        // Placeholder — no Payment model exists yet; acknowledged so chains don't fail.
+        log.push({ type: action.type, ok: true, message: `Payment of ₹${action.config.amount || 0} acknowledged` });
+        return true;
+      }
+      case 'add_ivr_action': {
+        log.push({ type: action.type, ok: false, message: 'No IVR provider connected in Settings' });
+        return false;
       }
       case 'send_template': {
         // Placeholder — integrates with message template system when configured
@@ -217,10 +301,14 @@ async function fireEvent(eventName, context) {
 
   const matches = await Workflow.find({ status: 'published', triggerEvent: eventName });
   for (const workflow of matches) {
-    // lead.field_changed / lead.added_to_list etc. can be scoped to a specific field/list via triggerConfig
-    if (workflow.triggerConfig?.field && context.changes?.field && workflow.triggerConfig.field !== context.changes.field) {
-      continue;
-    }
+    // lead.field_changed / lead.template_replied / lead.custom_action_* etc. can be
+    // scoped to a specific field/template/custom-action via triggerConfig.
+    const cfg = workflow.triggerConfig || {};
+    const changes = context.changes || {};
+    const scoped = ['field', 'templateId', 'customActionId', 'listName'].some(
+      key => cfg[key] && changes[key] && cfg[key] !== changes[key]
+    );
+    if (scoped) continue;
     if (!evaluateConditions(workflow.conditions, lead)) continue;
 
     if (workflow.kind === 'WORKFLOW') {

@@ -8,6 +8,10 @@ const actionSchema = new mongoose.Schema({
       'call_api', 'notify_team_member', 'update_lead_assignee',
       'update_lead_status', 'update_lead_rating', 'trigger_webhook',
       'trigger_n8n', 'send_template', 'email_report', 'custom_action',
+      // extended action palette (parity with the real TeleCRM action list)
+      'create_custom_action', 'update_lead_fields', 'time_delay',
+      'add_in_list', 'remove_from_list', 'add_call_followup',
+      'cancel_tasks', 'add_payment', 'add_ivr_action',
     ],
   },
   config: { type: mongoose.Schema.Types.Mixed, default: {} },
@@ -42,6 +46,16 @@ const workflowSchema = new mongoose.Schema({
       'lead.field_changed.alternatePhone', 'lead.field_changed.courseInterest',
       'lead.field_changed.location', 'lead.field_changed.budget',
       'lead.field_changed.nextFollowUpDate', 'lead.field_changed.demoScheduledDate',
+      // IVR
+      'lead.ivr_incoming', 'lead.ivr_outgoing',
+      // Call activities
+      'lead.call_incoming_ended', 'lead.call_outgoing_ended',
+      'lead.call_missed', 'lead.call_recording_completed',
+      // Payment activities
+      'lead.payment_completed', 'lead.payment_pending', 'lead.payment_failed',
+      'lead.payment_processing', 'lead.payment_cancelled', 'lead.payment_refunded',
+      // Custom actions (specific custom action picked via triggerConfig.customActionId)
+      'lead.custom_action_created', 'lead.custom_action_updated',
     ],
     required: true,
   },

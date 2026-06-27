@@ -1,69 +1,150 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { workflowsAPI, usersAPI, apiTemplatesAPI, webhooksAPI, n8nAPI } from '../services/api';
+import {
+  ChevronDown, ChevronRight, MoreVertical, Plus, Minus, Maximize2, Undo2, Redo2,
+  Search, X, Trash2, RefreshCw, Settings, Star, Filter, User, Users, Tag, MapPin,
+  FileText, StickyNote, PlusCircle, MessageCircle, Facebook, Globe,
+  FileSpreadsheet, Phone, PhoneCall, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+  Headphones, CircleDollarSign, IndianRupee, Sparkles, Send, Link2, Webhook, Zap,
+  Bell, Clock, ListPlus, ListMinus, XCircle, Mail, Type, Hash, Calendar,
+  AlertCircle, AlertTriangle, GitBranch, Copy, ChevronUp,
+} from 'lucide-react';
+import {
+  workflowsAPI, usersAPI, apiTemplatesAPI, webhooksAPI, n8nAPI,
+  customActionsAPI, messageTemplatesAPI,
+} from '../services/api';
 
 /* ─── palette ─────────────────────────────────────────────────────────────── */
-const C={indigo:'#6366f1',purple:'#7c3aed',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309'};
+const C={indigo:'#6366f1',purple:'#4338ca',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309',line:'#c4b5fd'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
 const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
 const inp={width:'100%',padding:'9px 12px',border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:'none',boxSizing:'border-box'};
 const lbl={fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5,display:'block'};
 
-/* ─── event catalog (matches TeleCRM exactly) ─────────────────────────────── */
-const EVENT_CATALOG=[
-  // Whatsapp group
-  {value:'lead.whatsapp_lead',label:'On WhatsApp lead',icon:'💬',group:'Whatsapp',wfType:'Lead Creation'},
-  {value:'lead.whatsapp_received',label:'On WhatsApp received',icon:'💬',group:'Whatsapp',wfType:'Messaging'},
-  {value:'lead.template_replied',label:'On template replied',icon:'💬',group:'Whatsapp',wfType:'Messaging',hasTemplates:true},
-  {value:'lead.waca_list_replied',label:'On WACA List Replied',icon:'💬',group:'Whatsapp',wfType:'Messaging'},
-  // On Lead Field Change group (expandable with specific fields)
-  {value:'lead.field_changed',label:'On Lead Field Change',icon:'⚙️',group:'Lead Field Change',wfType:'Lead Updation',hasFields:true},
-  {value:'lead.field_changed.name',label:'Name',icon:'T',group:'Lead Field Change',wfType:'Lead Updation',parentField:'name'},
-  {value:'lead.field_changed.phone',label:'Phone',icon:'📞',group:'Lead Field Change',wfType:'Lead Updation',parentField:'phone'},
-  {value:'lead.field_changed.email',label:'Email',icon:'✉️',group:'Lead Field Change',wfType:'Lead Updation',parentField:'email'},
-  {value:'lead.field_changed.alternatePhone',label:'Alternate Phone',icon:'📞',group:'Lead Field Change',wfType:'Lead Updation',parentField:'alternatePhone'},
-  {value:'lead.field_changed.courseInterest',label:'Preferred Courses',icon:'📚',group:'Lead Field Change',wfType:'Lead Updation',parentField:'courseInterest'},
-  {value:'lead.field_changed.location',label:'Location',icon:'T',group:'Lead Field Change',wfType:'Lead Updation',parentField:'location'},
-  {value:'lead.field_changed.budget',label:'Budget',icon:'₹',group:'Lead Field Change',wfType:'Lead Updation',parentField:'budget'},
-  {value:'lead.field_changed.nextFollowUpDate',label:'Next Followup Date',icon:'📅',group:'Lead Field Change',wfType:'Lead Updation',parentField:'nextFollowUpDate'},
-  {value:'lead.field_changed.demoScheduledDate',label:'Demo Scheduled Date',icon:'📅',group:'Lead Field Change',wfType:'Lead Updation',parentField:'demoScheduledDate'},
-  // Lead Creation events
-  {value:'lead.facebook_lead',label:'On Facebook lead',icon:'📘',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.web_created',label:'On Website lead',icon:'🌐',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.justdial_lead',label:'On Justdial lead',icon:'📞',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.woocommerce',label:'On WooCommerce payment',icon:'🛒',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.call_log',label:'On call log lead',icon:'📱',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.excel_upload',label:'On Excel upload lead',icon:'📊',group:'Lead Sources',wfType:'Lead Creation'},
-  {value:'lead.manual_created',label:'On manual lead',icon:'⚙️',group:'Lead Sources',wfType:'Lead Creation'},
-  // Lead Events
-  {value:'lead.status_changed',label:'On Lead Status Change',icon:'🏷️',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.rating_changed',label:'On Lead Rating Change',icon:'⭐',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.assignee_changed',label:'On Lead Assignment Change',icon:'👤',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.user_note',label:'On User Note',icon:'📝',group:'Lead Events',wfType:'Lead Activity'},
-  {value:'lead.system_note',label:'On System Note',icon:'📄',group:'Lead Events',wfType:'Lead Activity'},
-  {value:'lead.note_added',label:'On Note Added',icon:'📝',group:'Lead Events',wfType:'Lead Activity'},
-  {value:'lead.location_checkin',label:'On Location Check-in',icon:'📍',group:'Lead Events',wfType:'Lead Activity'},
-  {value:'lead.created',label:'On any lead created',icon:'➕',group:'Lead Events',wfType:'Lead Creation'},
-  {value:'lead.added_to_list',label:'Added in List',icon:'📋',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.removed_from_list',label:'Removed from List',icon:'🗑️',group:'Lead Events',wfType:'Lead Updation'},
-  {value:'lead.template_message_sent',label:'On template message sent',icon:'💬',group:'Messaging',wfType:'Lead Activity'},
+/* ─── tiny brand badge for sources lucide doesn't ship a logo for ──────────── */
+function BrandBadge({letters,bg}){
+  return <span style={{width:18,height:18,borderRadius:5,background:bg,color:'#fff',fontSize:9,fontWeight:800,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{letters}</span>;
+}
+const KIND_ICON={text:Type,phone:Phone,email:Mail,date:Calendar,number:Hash,select:ChevronDown,tag:Tag};
+
+/* ─── Lead Field Change → field catalog (mirrors this workspace's actual lead fields) ─ */
+const FIELD_CATALOG=[
+  {key:'name',label:'Name',kind:'text'},
+  {key:'phone',label:'Phone',kind:'phone'},
+  {key:'email',label:'Email',kind:'email'},
+  {key:'alternatePhone',label:'Alternate Phone',kind:'phone'},
+  {key:'preferredCourses',label:'Preferred Courses',kind:'tag'},
+  {key:'location',label:'Location',kind:'text'},
+  {key:'lastQualification',label:'Last Qualification',kind:'text'},
+  {key:'budget',label:'Budget',kind:'number'},
+  {key:'nextFollowupDate',label:'Next Followup Date',kind:'date'},
+  {key:'demoScheduledDate',label:'Demo Scheduled Date',kind:'date'},
+  {key:'demoDoneDate',label:'Demo Done Date',kind:'date'},
+  {key:'feeReceivedTillNow',label:'Fee Received Till Now',kind:'number'},
+  {key:'gender',label:'Gender',kind:'select'},
+  {key:'reasonToLearn',label:'Reason to Learn',kind:'select'},
+  {key:'facebookAdName',label:'Facebook Ad Name',kind:'select'},
+  {key:'facebookCampaignName',label:'Facebook Campaign Name',kind:'select'},
+  {key:'education',label:'Education',kind:'select'},
+  {key:'rollNumber',label:'Roll Number',kind:'text'},
+  {key:'rollNumbers',label:'Roll Numbers',kind:'select'},
+  {key:'collegeName',label:'College Name',kind:'select'},
+  {key:'yearOfPassedOut',label:'Year Of Passed Out',kind:'select'},
+  {key:'dob',label:'dob',kind:'number'},
+  {key:'instcode',label:'instcode',kind:'text'},
+  {key:'branchcode',label:'branchcode',kind:'number'},
+  {key:'affliatedcollege',label:'affliatedcollege',kind:'text'},
+  {key:'job',label:'Job',kind:'text'},
+  {key:'code',label:'code',kind:'text'},
 ];
 
-/* ─── action palette (matches TeleCRM sidebar) ────────────────────────────── */
+/* ─── event catalog — matches the real CRM's "Select event" tree exactly ──── */
+// Plain top-level leaves (no children, directly selectable)
+const EVENT_TREE=[
+  {type:'group',label:'Whatsapp',Icon:MessageCircle,color:'#22c55e',children:[
+    {value:'lead.whatsapp_lead',label:'On WhatsApp lead',Icon:MessageCircle,wfType:'Lead Creation'},
+    {value:'lead.whatsapp_received',label:'On WhatsApp received',Icon:MessageCircle,wfType:'Messaging'},
+    {value:'lead.template_replied',label:'On template replied',Icon:MessageCircle,wfType:'Messaging',expandable:'templates'},
+    {value:'lead.waca_list_replied',label:'On WACA List Replied',Icon:MessageCircle,wfType:'Messaging',expandable:'templates'},
+  ]},
+  {value:'lead.field_changed',label:'On Lead Field Change',Icon:Settings,wfType:'Lead Updation',expandable:'fields'},
+  {value:'lead.facebook_lead',label:'On Facebook lead',Icon:Facebook,wfType:'Lead Creation',iconColor:'#1877f2',draft:true},
+  {value:'lead.web_created',label:'On Website lead',Icon:Globe,wfType:'Lead Creation',draft:true},
+  {value:'lead.justdial_lead',label:'On Justdial lead',badge:{letters:'Jd',bg:'#f97316'},wfType:'Lead Creation'},
+  {value:'lead.woocommerce',label:'On WooCommerce payment',badge:{letters:'W',bg:'#7c3aed'},wfType:'Lead Creation'},
+  {value:'lead.call_log',label:'On call log lead',Icon:Phone,wfType:'Lead Creation'},
+  {value:'lead.excel_upload',label:'On Excel upload lead',Icon:FileSpreadsheet,iconColor:'#15803d',wfType:'Lead Creation',draft:true},
+  {value:'lead.manual_created',label:'On manual lead',Icon:Settings,wfType:'Lead Creation',draft:true},
+  {value:'lead.created',label:'On any lead created',Icon:PlusCircle,wfType:'Lead Creation'},
+  {value:'lead.status_changed',label:'On Lead Status Change',Icon:Filter,wfType:'Lead Updation'},
+  {value:'lead.rating_changed',label:'On Lead Rating Change',Icon:Star,wfType:'Lead Updation'},
+  {value:'lead.assignee_changed',label:'On Lead Assignment Change',Icon:User,wfType:'Lead Updation'},
+  {value:'lead.added_to_list',label:'Added in List',Icon:ListPlus,wfType:'Lead Updation'},
+  {value:'lead.removed_from_list',label:'Removed from List',Icon:ListMinus,wfType:'Lead Updation'},
+  {value:'lead.user_note',label:'On User Note',Icon:FileText,wfType:'Lead Activity'},
+  {value:'lead.system_note',label:'On System Note',Icon:StickyNote,wfType:'Lead Activity'},
+  {value:'lead.note_added',label:'On Note Added',Icon:FileText,wfType:'Lead Activity'},
+  {value:'lead.location_checkin',label:'On Location Check-in',Icon:MapPin,wfType:'Lead Activity',draft:true},
+  {type:'group',label:'IVR',Icon:Headphones,children:[
+    {value:'lead.ivr_incoming',label:'On IVR incoming call',Icon:Headphones,wfType:'Lead Activity'},
+    {value:'lead.ivr_outgoing',label:'On IVR outgoing call',Icon:Headphones,wfType:'Lead Activity'},
+  ]},
+  {type:'group',label:'Call activities',Icon:PhoneCall,children:[
+    {value:'lead.call_incoming_ended',label:'On incoming call ended',Icon:PhoneIncoming,wfType:'Lead Activity'},
+    {value:'lead.call_outgoing_ended',label:'On outgoing call ended',Icon:PhoneOutgoing,wfType:'Lead Activity'},
+    {value:'lead.call_missed',label:'On Missed Call',Icon:PhoneMissed,wfType:'Lead Activity'},
+    {value:'lead.call_recording_completed',label:'On call recording completed',Icon:PhoneCall,wfType:'Lead Activity'},
+  ]},
+  {type:'group',label:'Payment activities',Icon:CircleDollarSign,children:[
+    {value:'lead.payment_completed',label:'On payment completed',Icon:CircleDollarSign,wfType:'Lead Activity'},
+    {value:'lead.payment_pending',label:'On payment pending',Icon:CircleDollarSign,wfType:'Lead Activity'},
+    {value:'lead.payment_failed',label:'On payment failed',Icon:CircleDollarSign,wfType:'Lead Activity'},
+    {value:'lead.payment_processing',label:'On payment processing',Icon:CircleDollarSign,wfType:'Lead Activity'},
+    {value:'lead.payment_cancelled',label:'On payment cancelled',Icon:CircleDollarSign,wfType:'Lead Activity'},
+    {value:'lead.payment_refunded',label:'On payment refunded',Icon:CircleDollarSign,wfType:'Lead Activity'},
+  ]},
+  {value:'lead.custom_action_created',label:'On Custom Action Creation',Icon:Sparkles,wfType:'Lead Activity',expandable:'customActions'},
+  {value:'lead.custom_action_updated',label:'On Custom Action Updation',Icon:Sparkles,wfType:'Lead Activity',expandable:'customActions'},
+  {value:'lead.template_message_sent',label:'On template message sent',Icon:Send,wfType:'Messaging'},
+];
+// flatten once for lookups (badge colors, search, sidebar quick-switch)
+const EVENT_FLAT=[];
+EVENT_TREE.forEach(item=>{
+  if(item.type==='group') item.children.forEach(c=>EVENT_FLAT.push(c));
+  else EVENT_FLAT.push(item);
+});
+const wfTypeColor={'Lead Creation':['#ede9fe','#7c3aed'],'Lead Updation':['#dbeafe','#2563eb'],'Lead Activity':['#d1fae5','#059669'],'Messaging':['#fef3c7','#b45309']};
+
+/* ─── action catalog — full real-CRM action palette ───────────────────────── */
 const ACTION_CATALOG=[
-  {type:'call_api',label:'Call API',icon:'🔗',desc:'Call external API template'},
-  {type:'trigger_n8n',label:'Trigger n8n',icon:'⚡',desc:'Trigger n8n workflow'},
-  {type:'notify_team_member',label:'Notify Team',icon:'🔔',desc:'Send notification to team member'},
-  {type:'update_lead_assignee',label:'Update Assignee',icon:'👤',desc:'Change lead assignee'},
-  {type:'update_lead_status',label:'Update Status',icon:'🏷️',desc:'Change lead status'},
-  {type:'update_lead_rating',label:'Update Rating',icon:'⭐',desc:'Change lead rating'},
-  {type:'trigger_webhook',label:'Trigger Webhook',icon:'🪝',desc:'Fire outbound webhook'},
-  {type:'custom_action',label:'Custom Action',icon:'✨',desc:'Create custom action'},
-  {type:'send_template',label:'Send Template',icon:'💬',desc:'Send message template'},
-  {type:'email_report',label:'Email Report',icon:'📧',desc:'Email lead report'},
+  {type:'call_api',label:'Call API',Icon:Link2,desc:'Call external API template'},
+  {type:'create_custom_action',label:'Create Custom Action',Icon:Sparkles,desc:'Run a configured custom action'},
+  {type:'notify_team_member',label:'Notification To TeamMember',Icon:Bell,desc:'Notify a team member'},
+  {type:'update_lead_assignee',label:'Update Lead Assignee',Icon:Users,desc:'Change lead assignee'},
+  {type:'update_lead_fields',label:'Update Lead Fields',Icon:Settings,desc:'Set a lead field value'},
+  {type:'update_lead_rating',label:'Update Lead Rating',Icon:Star,desc:'Change lead rating'},
+  {type:'update_lead_status',label:'Update Lead Status',Icon:Filter,desc:'Change lead status'},
+  {type:'time_delay',label:'Time Delay',Icon:Clock,desc:'Wait before continuing'},
+  {type:'send_template',label:'Send Template',Icon:MessageCircle,desc:'Send a message template'},
+  {type:'add_in_list',label:'Add in List',Icon:ListPlus,desc:'Add lead to a named list'},
+  {type:'remove_from_list',label:'Remove from List',Icon:ListMinus,desc:'Remove lead from a list'},
+  {type:'add_call_followup',label:'Add Call Followup',Icon:PhoneCall,desc:'Schedule a call followup task'},
+  {type:'cancel_tasks',label:'Cancel Tasks',Icon:XCircle,desc:'Cancel upcoming tasks'},
+  {type:'add_payment',label:'Add payment',Icon:IndianRupee,desc:'Record a payment'},
+  {type:'add_ivr_action',label:'Add IVR Action',Icon:Headphones,desc:'Trigger an IVR flow'},
+  {type:'trigger_webhook',label:'Trigger Webhook',Icon:Webhook,desc:'Fire outbound webhook'},
+  {type:'trigger_n8n',label:'Trigger n8n',Icon:Zap,desc:'Trigger n8n workflow'},
+  {type:'email_report',label:'Email Report',Icon:Mail,desc:'Email lead report'},
 ];
 
 const STATUSES=['Fresh','Connected','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost'];
+
+/* ─── layout constants used by the canvas to avoid node/connector overlap ──── */
+const NODE_W=220, ROW_H=46, GAP=86;
+function nodeHeight(node){
+  const hasDetail = node.type==='event' ? !!node.detailLabel : (node.type==='condition' ? true : !!node.detailLabel);
+  return hasDetail ? ROW_H+44 : ROW_H;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /*  MAIN COMPONENT                                                           */
@@ -78,12 +159,14 @@ export default function Workflows({kind='WORKFLOW'}){
   const [search,setSearch]=useState('');
   const [eventFilter,setEventFilter]=useState('');
   const [timePeriod,setTimePeriod]=useState('24h');
+  const [page,setPage]=useState(1);
   const [editing,setEditing]=useState(null);
   const [showEventModal,setShowEventModal]=useState(false);
   const [users,setUsers]=useState([]);
   const [templates,setTemplates]=useState([]);
   const [hooks,setHooks]=useState([]);
   const [n8nWfs,setN8nWfs]=useState([]);
+  const PAGE_SIZE=8;
 
   const load=useCallback(async()=>{
     setLoading(true);
@@ -96,6 +179,7 @@ export default function Workflows({kind='WORKFLOW'}){
   },[kind,tab,search]);
 
   useEffect(()=>{load()},[load]);
+  useEffect(()=>{setPage(1)},[tab,search,eventFilter]);
   useEffect(()=>{
     usersAPI.getAll().then(r=>setUsers(r.data.users||r.data||[])).catch(()=>{});
     apiTemplatesAPI.getAll().then(r=>setTemplates(r.data.templates||[])).catch(()=>{});
@@ -103,14 +187,15 @@ export default function Workflows({kind='WORKFLOW'}){
     n8nAPI.cachedWorkflows().then(r=>setN8nWfs(r.data.workflows||[])).catch(()=>{});
   },[]);
 
-  const handleCreateNew=(ev)=>{
+  const handleCreateNew=(sel)=>{
     setShowEventModal(false);
-    const cat=EVENT_CATALOG.find(e=>e.value===ev)||EVENT_CATALOG[0];
+    const ev=sel.event, wfType=sel.wfType||'Lead Updation';
+    const name=sel.subLabel?`${sel.label} ${sel.subLabel}`:sel.label;
     setEditing({
-      name:cat.label, kind, status:'draft',
-      triggerEvent:ev, workflowType:cat.wfType||'Lead Updation',
-      triggerConfig:{}, conditions:[], actions:[], n8nWorkflowId:'',
-      nodes:[{id:'evt_0',type:'event',event:ev,label:cat.label,x:400,y:80}],
+      name, kind, status:'draft',
+      triggerEvent:ev, workflowType:wfType,
+      triggerConfig:sel.triggerConfig||{}, conditions:[], actions:[], n8nWorkflowId:'',
+      nodes:[{id:'evt_0',type:'event',event:ev,label:sel.parentLabel||sel.label,detailLabel:sel.subLabel||'',x:380,y:60}],
       edges:[],
       scheduleConfig:{delayMinutes:isSchedule?60:0,cancelIfStatusChanged:true},
     });
@@ -122,6 +207,8 @@ export default function Workflows({kind='WORKFLOW'}){
     if(eventFilter && w.triggerEvent!==eventFilter) return false;
     return true;
   });
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  const pageRows=filtered.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
 
   const statCards=[
     {k:'totalRuns',label:'Total Runs',color:C.ink},
@@ -132,11 +219,11 @@ export default function Workflows({kind='WORKFLOW'}){
   ];
 
   return(
-  <div style={{padding:'24px 28px',maxWidth:1140,margin:'0 auto'}}>
+  <div style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
     <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
       <div>
-        <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>{title}</h2>
-        <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>{isSchedule?'Automatically keep in touch with your leads':'Execute complex automations with ease'}</p>
+        <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink,display:'flex',alignItems:'center',gap:8}}>{title}<RefreshCw size={16} style={{color:C.sub,cursor:'pointer'}} onClick={load}/></h2>
+        <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>{isSchedule?'Automatically keep in touch with your leads':'To execute complex automations with ease'} <span style={{color:C.indigo,fontWeight:600,textDecoration:'underline',cursor:'pointer'}}>Learn More</span></p>
       </div>
       <button style={btnP} onClick={()=>setShowEventModal(true)}>{isSchedule?'Create New Schedule':'Create Workflow'} +</button>
     </div>
@@ -145,13 +232,13 @@ export default function Workflows({kind='WORKFLOW'}){
     <div style={{...card,padding:'18px 20px',marginBottom:20}}>
       <div style={{display:'flex',justifyContent:'flex-end',gap:4,marginBottom:12}}>
         {['All','24h','7d','30d'].map(p=>(
-          <button key={p} onClick={()=>setTimePeriod(p)} style={{padding:'4px 12px',borderRadius:6,border:`1px solid ${timePeriod===p?C.indigo:C.border}`,background:timePeriod===p?'#ede9fe':'#fff',color:timePeriod===p?C.indigo:C.sub,fontSize:12,fontWeight:600,cursor:'pointer'}}>{p}</button>
+          <button key={p} onClick={()=>setTimePeriod(p)} style={{padding:'4px 12px',borderRadius:6,border:`1px solid ${timePeriod===p?C.indigo:C.border}`,background:timePeriod===p?'#fff':'transparent',color:timePeriod===p?C.indigo:C.sub,fontSize:12,fontWeight:600,cursor:'pointer',boxShadow:timePeriod===p?'0 1px 3px rgba(0,0,0,.08)':'none'}}>{p}</button>
         ))}
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:16}}>
-        {statCards.map(s=>(
-          <div key={s.k}>
-            <div style={{fontSize:11,color:C.sub,fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}}>{s.label} <span style={{cursor:'help',opacity:.5}}>ⓘ</span></div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)'}}>
+        {statCards.map((s,i)=>(
+          <div key={s.k} style={{padding:'0 18px',borderLeft:i?`1px solid ${C.border}`:'none'}}>
+            <div style={{fontSize:11,color:C.sub,fontWeight:600,marginBottom:4,display:'flex',alignItems:'center',gap:4}}>{s.label} <AlertCircle size={12} style={{opacity:.5}}/></div>
             <div style={{fontSize:28,fontWeight:700,color:s.color}}>
               {s.pct?`${summary.totalRuns?Math.round((summary.success/summary.totalRuns)*100):0}%`:(summary[s.k]||0)}
             </div>
@@ -168,36 +255,48 @@ export default function Workflows({kind='WORKFLOW'}){
       ))}
     </div>
     <div style={{display:'flex',gap:12,marginBottom:14}}>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search flowchart by Name" style={{...inp,maxWidth:420}} />
-      <select value={eventFilter} onChange={e=>setEventFilter(e.target.value)} style={{...inp,maxWidth:240}}>
-        <option value="">All Events</option>
-        {EVENT_CATALOG.map(e=><option key={e.value} value={e.value}>{e.label}</option>)}
+      <div style={{position:'relative',flex:1,maxWidth:420}}>
+        <Search size={15} style={{position:'absolute',left:11,top:11,color:C.sub}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search flowchart by Name" style={{...inp,paddingLeft:32}} />
+      </div>
+      <select value={eventFilter} onChange={e=>setEventFilter(e.target.value)} style={{...inp,maxWidth:220}}>
+        <option value="">Select Event Types</option>
+        {EVENT_FLAT.map(e=><option key={e.value} value={e.value}>{e.label}</option>)}
       </select>
     </div>
 
-    {/* count */}
-    <div style={{fontSize:13,color:C.sub,marginBottom:8}}>{filtered.length} matching flowcharts found</div>
+    {/* count + pagination */}
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+      <span style={{fontSize:13,color:C.sub}}>{filtered.length} matching flowcharts found</span>
+      {filtered.length>PAGE_SIZE&&(
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:13,color:C.sub}}>{(page-1)*PAGE_SIZE+1} - {Math.min(page*PAGE_SIZE,filtered.length)} of {filtered.length}</span>
+          <button disabled={page<=1} onClick={()=>setPage(p=>p-1)} style={{...btnG,padding:'4px 8px',opacity:page<=1?.4:1}}>‹</button>
+          <button disabled={page>=totalPages} onClick={()=>setPage(p=>p+1)} style={{...btnG,padding:'4px 8px',opacity:page>=totalPages?.4:1}}>›</button>
+        </div>
+      )}
+    </div>
 
     {/* table */}
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
       <div style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'11px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
-        <span>Name</span><span>Events</span><span>Status</span><span>Total runs</span><span>Last 24h runs/failures</span><span style={{textAlign:'right'}}>Actions</span>
+        <span>Name</span><span>Events</span><span>Status</span><span>Updated by</span><span>Total runs</span><span style={{textAlign:'right'}}>Actions</span>
       </div>
-      {filtered.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Flowcharts Found</div>
-      :filtered.map((w,i)=>{
-        const ev=EVENT_CATALOG.find(e=>e.value===w.triggerEvent);
+      {pageRows.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Flowcharts Found</div>
+      :pageRows.map((w,i)=>{
+        const ev=EVENT_FLAT.find(e=>e.value===w.triggerEvent);
+        const initials=(w.updatedBy?.name||w.createdBy?.name||'—').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
         return(
-        <div key={w._id} style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid #f0eef8':'none'}}>
+        <div key={w._id} style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<pageRows.length-1?'1px solid #f0eef8':'none'}}>
           <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(w)}>{w.name}</span>
           <span><EventBadge ev={ev} triggerEvent={w.triggerEvent}/></span>
           <span><StatusToggle status={w.status} onToggle={async()=>{await workflowsAPI.setStatus(w._id,w.status==='published'?'draft':'published').catch(e=>alert(e.response?.data?.message||'Failed'));load();}}/></span>
-          <span style={{fontSize:13,color:C.sub}}>{w.stats?.totalRuns||0}</span>
-          <span style={{fontSize:13,color:C.sub}}>{w.stats?.success||0} / <span style={{color:C.red}}>{w.stats?.failed||0}</span></span>
+          <span><span style={{width:26,height:26,borderRadius:'50%',background:C.indigoBg,color:C.indigo,fontSize:11,fontWeight:700,display:'inline-flex',alignItems:'center',justifyContent:'center'}}>{initials}</span></span>
+          <span style={{fontSize:13,color:C.sub}}>{w.stats?.totalRuns||0} <span style={{color:C.red}}>({w.stats?.failed||0} failed)</span></span>
           <span style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-            <button style={{...btnG,padding:'4px 8px',fontSize:12}} onClick={()=>setEditing(w)} title="Edit">✎</button>
-            <button style={{...btnG,padding:'4px 8px',fontSize:12}} title="Duplicate">⧉</button>
-            <button style={{...btnG,padding:'4px 8px',fontSize:12,color:C.red,borderColor:'#fecaca'}} title="Delete" onClick={async()=>{if(confirm('Delete?')){await workflowsAPI.delete(w._id);load();}}}>🗑</button>
+            <button style={{...btnG,padding:'4px 8px',fontSize:12,display:'flex'}} title="Duplicate"><Copy size={13}/></button>
+            <button style={{...btnG,padding:'4px 8px',fontSize:12,color:C.red,borderColor:'#fecaca',display:'flex'}} title="Delete" onClick={async()=>{if(confirm('Delete?')){await workflowsAPI.delete(w._id);load();}}}><Trash2 size={13}/></button>
           </span>
         </div>);
       })}
@@ -210,14 +309,11 @@ export default function Workflows({kind='WORKFLOW'}){
 
 /* ─── EVENT BADGE ─────────────────────────────────────────────────────────── */
 function EventBadge({ev,triggerEvent}){
-  const colors={
-    'Lead Creation':['#ede9fe','#7c3aed'],
-    'Lead Updation':['#dbeafe','#2563eb'],
-    'Lead Activity':['#d1fae5','#059669'],
-    'Messaging':['#fef3c7','#b45309'],
-  };
-  const [bg,fg]=colors[ev?.wfType]||colors['Lead Updation'];
-  return <span style={{background:bg,color:fg,padding:'3px 10px',borderRadius:16,fontSize:12,fontWeight:600,whiteSpace:'nowrap'}}>{ev?.icon} {ev?.wfType||triggerEvent}</span>;
+  const [bg,fg]=wfTypeColor[ev?.wfType]||wfTypeColor['Lead Updation'];
+  const Icon=ev?.Icon;
+  return <span style={{background:bg,color:fg,padding:'3px 10px',borderRadius:16,fontSize:12,fontWeight:600,whiteSpace:'nowrap',display:'inline-flex',alignItems:'center',gap:5}}>
+    {Icon?<Icon size={12}/>:ev?.badge?<BrandBadge {...ev.badge}/>:null} {ev?.wfType||triggerEvent}
+  </span>;
 }
 
 /* ─── STATUS TOGGLE ───────────────────────────────────────────────────────── */
@@ -229,32 +325,97 @@ function StatusToggle({status,onToggle}){
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/*  EVENT SELECTION MODAL (exact TeleCRM style)                              */
+/*  EVENT SELECTION MODAL — tree-based, matches the real "Select event" drawer */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 function EventSelectionModal({onSelect,onClose}){
   const [search,setSearch]=useState('');
-  const groups={};
-  EVENT_CATALOG.forEach(e=>{(groups[e.group]=groups[e.group]||[]).push(e)});
-  const filtered=search?EVENT_CATALOG.filter(e=>e.label.toLowerCase().includes(search.toLowerCase())):null;
+  const [expanded,setExpanded]=useState(()=>new Set());
+  const [templates,setTemplates]=useState(null);
+  const [customActions,setCustomActions]=useState(null);
+
+  const toggle=(key)=>setExpanded(prev=>{const n=new Set(prev); n.has(key)?n.delete(key):n.add(key); return n;});
+
+  const ensureTemplates=()=>{ if(templates===null){ setTemplates([]); messageTemplatesAPI.getAll({type:'whatsapp'}).then(r=>setTemplates(r.data.templates||[])).catch(()=>setTemplates([])); } };
+  const ensureCustomActions=()=>{ if(customActions===null){ setCustomActions([]); customActionsAPI.getAll().then(r=>setCustomActions(r.data.customActions||r.data||[])).catch(()=>setCustomActions([])); } };
+
+  const searchHit=search?EVENT_FLAT.filter(e=>e.label.toLowerCase().includes(search.toLowerCase())):null;
+
+  const selectPlain=(item)=>onSelect({event:item.value,wfType:item.wfType,label:item.label});
+  const selectField=(parent,field)=>onSelect({event:parent.value,wfType:parent.wfType,label:parent.label,parentLabel:parent.label,triggerConfig:{field:field.key},subLabel:field.label});
+  const selectTemplate=(parent,tpl)=>onSelect({event:parent.value,wfType:parent.wfType,label:parent.label,parentLabel:parent.label,triggerConfig:{templateId:tpl._id},subLabel:tpl.shortcut||'Template'});
+  const selectCustomAction=(parent,ca)=>onSelect({event:parent.value,wfType:parent.wfType,label:parent.label,parentLabel:parent.label,triggerConfig:{customActionId:ca._id},subLabel:ca.name||'Custom Action'});
+
+  const renderExpandable=(item)=>{
+    const key=item.value;
+    const open=expanded.has(key);
+    const onRowClick=()=>{
+      if(item.expandable==='templates') ensureTemplates();
+      if(item.expandable==='customActions') ensureCustomActions();
+      toggle(key);
+    };
+    return(
+    <div key={key}>
+      <EventRow ev={item} onClick={onRowClick} chevron={open?'down':'right'}/>
+      {open&&(
+      <div style={{paddingLeft:30}}>
+        {item.expandable==='fields'&&FIELD_CATALOG.map(f=>{
+          const FIcon=KIND_ICON[f.kind]||Type;
+          return <div key={f.key} onClick={()=>selectField(item,f)} style={rowStyle}>
+            <FIcon size={14} style={{color:C.sub}}/><span style={{flex:1,fontSize:13.5,color:C.ink}}>{f.label}</span>
+          </div>;
+        })}
+        {item.expandable==='templates'&&(templates===null||templates.length===0?
+          <div style={{padding:'8px 22px',fontSize:12,color:C.sub}}>{templates===null?'Loading…':'No templates found'}</div>
+          :templates.map(t=>(
+            <div key={t._id} onClick={()=>selectTemplate(item,t)} style={{...rowStyle,alignItems:'flex-start',flexDirection:'column',gap:2}}>
+              <span style={{fontSize:13.5,fontWeight:600,color:C.ink}}>{t.shortcut||'Untitled'}</span>
+              <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:300}}>{t.message}</span>
+            </div>
+          ))
+        )}
+        {item.expandable==='customActions'&&(customActions===null||customActions.length===0?
+          <div style={{padding:'8px 22px',fontSize:12,color:C.sub}}>{customActions===null?'Loading…':'No custom actions found'}</div>
+          :customActions.map(ca=>(
+            <div key={ca._id} onClick={()=>selectCustomAction(item,ca)} style={rowStyle}>
+              <Sparkles size={14} style={{color:C.sub}}/><span style={{flex:1,fontSize:13.5,color:C.ink}}>{ca.name}</span>
+            </div>
+          ))
+        )}
+      </div>)}
+    </div>);
+  };
 
   return(
   <div style={{position:'fixed',inset:0,background:'rgba(30,27,75,.45)',display:'flex',justifyContent:'flex-end',zIndex:1000}}>
-    <div style={{width:440,maxWidth:'100vw',background:'#fff',height:'100vh',display:'flex',flexDirection:'column',boxShadow:'-4px 0 20px rgba(0,0,0,.15)'}}>
+    <div style={{width:460,maxWidth:'100vw',background:'#fff',height:'100vh',display:'flex',flexDirection:'column',boxShadow:'-4px 0 20px rgba(0,0,0,.15)'}}>
       <div style={{padding:'20px 22px 14px',borderBottom:`1px solid ${C.border}`}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <div><div style={{fontSize:17,fontWeight:700,color:C.ink}}>Select event</div><div style={{fontSize:13,color:C.sub}}>Select the event that will trigger the workflow</div></div>
-          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:C.sub}}>✕</button>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:C.sub}}><X size={20}/></button>
         </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search for event e.g. facebook, payment, manual…" style={{...inp,background:'#f9fafb'}}/>
+        <div style={{position:'relative'}}>
+          <Search size={15} style={{position:'absolute',left:11,top:11,color:C.sub}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search for event e.g. facebook, payment, manual…" style={{...inp,background:'#f9fafb',paddingLeft:32}}/>
+        </div>
       </div>
       <div style={{flex:1,overflowY:'auto',padding:'8px 0'}}>
-        {filtered?filtered.map(e=><EventRow key={e.value} ev={e} onClick={()=>onSelect(e.value)}/>)
-        :Object.entries(groups).map(([group,evts])=>(
-          <div key={group}>
-            <div style={{padding:'10px 22px 4px',fontSize:12,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>{group}</div>
-            {evts.map(e=><EventRow key={e.value} ev={e} onClick={()=>onSelect(e.value)}/>)}
-          </div>
-        ))}
+        {searchHit?searchHit.map(e=><EventRow key={e.value} ev={e} onClick={()=>selectPlain(e)}/>)
+        :EVENT_TREE.map((item,i)=>{
+          if(item.type==='group'){
+            const open=expanded.has(item.label);
+            return(
+            <div key={item.label}>
+              <div onClick={()=>toggle(item.label)} style={{...rowStyle,fontWeight:700}}>
+                {open?<ChevronDown size={14} style={{color:C.sub}}/>:<ChevronRight size={14} style={{color:C.sub}}/>}
+                <item.Icon size={16} style={{color:item.color||C.sub}}/>
+                <span style={{flex:1,fontSize:14,color:C.ink}}>{item.label}</span>
+              </div>
+              {open&&<div style={{paddingLeft:22}}>{item.children.map(c=>c.expandable?renderExpandable(c):<EventRow key={c.value} ev={c} onClick={()=>selectPlain(c)}/>)}</div>}
+            </div>);
+          }
+          if(item.expandable) return renderExpandable(item);
+          return <EventRow key={item.value} ev={item} onClick={()=>selectPlain(item)}/>;
+        })}
       </div>
       <div style={{padding:14,borderTop:`1px solid ${C.border}`,display:'flex',justifyContent:'flex-end'}}>
         <button style={btnP} disabled>Next</button>
@@ -262,12 +423,14 @@ function EventSelectionModal({onSelect,onClose}){
     </div>
   </div>);
 }
-function EventRow({ev,onClick}){
-  return <div onClick={onClick} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 22px',cursor:'pointer',transition:'background .1s'}}
+const rowStyle={display:'flex',alignItems:'center',gap:10,padding:'9px 22px',cursor:'pointer',transition:'background .1s'};
+function EventRow({ev,onClick,chevron}){
+  return <div onClick={onClick} style={rowStyle}
     onMouseEnter={e=>e.currentTarget.style.background='#f5f3ff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-    <span style={{fontSize:18,width:24,textAlign:'center'}}>{ev.icon}</span>
+    {chevron&&(chevron==='down'?<ChevronDown size={14} style={{color:C.sub}}/>:<ChevronRight size={14} style={{color:C.sub}}/>)}
+    {ev.Icon?<ev.Icon size={16} style={{color:ev.iconColor||C.sub,flexShrink:0}}/>:ev.badge?<BrandBadge {...ev.badge}/>:<span style={{width:16}}/>}
     <span style={{flex:1,fontSize:14,color:C.ink,fontWeight:500}}>{ev.label}</span>
-    {ev.wfType==='Lead Creation'&&<span style={{fontSize:11,color:C.sub}}>Draft</span>}
+    {ev.draft&&<span style={{fontSize:11,color:C.sub,background:'#f3f1fa',padding:'2px 8px',borderRadius:10}}>Draft</span>}
   </div>;
 }
 
@@ -279,7 +442,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
   const [wf,setWf]=useState(()=>{
     const base={...initial};
     if(!base.nodes||!base.nodes.length){
-      const ev=EVENT_CATALOG.find(e=>e.value===base.triggerEvent)||EVENT_CATALOG[0];
+      const ev=EVENT_FLAT.find(e=>e.value===base.triggerEvent)||EVENT_FLAT[0];
       base.nodes=[{id:'evt_0',type:'event',event:base.triggerEvent,label:ev?.label||base.triggerEvent,x:380,y:60}];
       base.edges=[];
     }
@@ -292,8 +455,15 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
   const [selectedNode,setSelectedNode]=useState(null);
   const [zoom,setZoom]=useState(1);
   const [configNode,setConfigNode]=useState(null);
+  const [showAlerts,setShowAlerts]=useState(false);
+  const [menuNode,setMenuNode]=useState(null);
+  const [msgTemplates,setMsgTemplates]=useState([]);
   const canvasRef=useRef(null);
   const id=wf._id;
+
+  useEffect(()=>{
+    messageTemplatesAPI.getAll({type:'whatsapp'}).then(r=>setMsgTemplates(r.data.templates||[])).catch(()=>{});
+  },[]);
 
   useEffect(()=>{
     if(editorTab==='executions'&&id) workflowsAPI.getExecutions(id,{limit:30}).then(r=>setExecutions(r.data.executions)).catch(()=>{});
@@ -306,30 +476,48 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     const ac=ACTION_CATALOG.find(a=>a.type===actionType);
     const lastNode=wf.nodes[wf.nodes.length-1];
     const newId=`act_${Date.now()}`;
-    const newNode={id:newId,type:'action',actionType,label:ac?.label||actionType,config:{},x:lastNode?lastNode.x:380,y:lastNode?lastNode.y+140:200};
+    const newNode={id:newId,type:'action',actionType,label:ac?.label||actionType,config:{},x:380,y:0};
     const newEdge={from:lastNode?.id||'evt_0',to:newId};
     set({nodes:[...wf.nodes,newNode],edges:[...wf.edges,newEdge]});
+    setSelectedNode(newId); setConfigNode(newId);
   };
 
   const addConditionNode=(condType)=>{
     const lastNode=wf.nodes[wf.nodes.length-1];
     const newId=`cond_${Date.now()}`;
-    const newNode={id:newId,type:'condition',conditionType:condType,label:condType==='lead'?'Lead Condition':'Event Condition',config:{field:'',operator:'equals',value:''},x:lastNode?lastNode.x:380,y:lastNode?lastNode.y+140:200};
+    const newNode={id:newId,type:'condition',conditionType:condType,label:condType==='lead'?'Lead Condition':'Event Condition',config:{field:'',operator:'equals',value:''},x:380,y:0};
     const newEdge={from:lastNode?.id||'evt_0',to:newId};
     set({nodes:[...wf.nodes,newNode],edges:[...wf.edges,newEdge]});
+    setSelectedNode(newId); setConfigNode(newId);
   };
 
   const removeNode=(nodeId)=>{
     set({nodes:wf.nodes.filter(n=>n.id!==nodeId),edges:wf.edges.filter(e=>e.from!==nodeId&&e.to!==nodeId)});
     if(selectedNode===nodeId) setSelectedNode(null);
     if(configNode===nodeId) setConfigNode(null);
+    setMenuNode(null);
   };
+
+  // switch the trigger event without losing already-built action nodes
+  const switchEvent=(item)=>{
+    const evtNode=wf.nodes.find(n=>n.type==='event');
+    set({triggerEvent:item.value,workflowType:item.wfType,triggerConfig:{},name:wf.name===evtNode?.label?item.label:wf.name});
+    updateNode(evtNode.id,{event:item.value,label:item.label,detailLabel:''});
+  };
+
+  const unconnected=(()=>{
+    const connected=new Set(wf.edges.map(e=>e.to));
+    return wf.nodes.filter(n=>n.type!=='event'&&!connected.has(n.id));
+  })();
+  const errors=[];
+  if(wf.nodes.filter(n=>n.type!=='event').length===0) errors.push('Flowchart has unconnected nodes');
+  else if(unconnected.length) errors.push('Flowchart has unconnected nodes');
 
   const save=async(publish=false)=>{
     if(!wf.name.trim()) return alert('Enter a name');
+    if(publish&&errors.length) return alert(errors[0]);
     setSaving(true);
     try{
-      // convert nodes to actions array for backend
       const actions=wf.nodes.filter(n=>n.type==='action').map(n=>({type:n.actionType,config:n.config||{}}));
       const conditions=wf.nodes.filter(n=>n.type==='condition').map(n=>({field:n.config?.field||'',operator:n.config?.operator||'equals',value:n.config?.value||''}));
       const payload={...wf,actions,conditions,kind,nodes:wf.nodes,edges:wf.edges};
@@ -342,21 +530,25 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     setSaving(false);
   };
 
-  const evCat=EVENT_CATALOG.find(e=>e.value===wf.triggerEvent)||{};
+  const siblingEvents=EVENT_FLAT.filter(e=>e.wfType===wf.workflowType);
 
   return(
   <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#f8f7fc'}}>
     {/* top bar */}
-    <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',background:'#fff',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+    <div style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',background:'#fff',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
       <button onClick={onClose} style={{...btnG,padding:'6px 12px'}}>←</button>
-      <input value={wf.name} onChange={e=>set({name:e.target.value})} style={{...inp,fontWeight:700,fontSize:15,maxWidth:280,background:'transparent',border:'none'}}/>
-      <span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20,background:wf.status==='published'?'#d1fae5':'#fef3c7',color:wf.status==='published'?C.green:C.amber}}>{wf.status==='published'?'Published':'Draft'}</span>
-      {wf.workflowType&&<span style={{fontSize:12,color:C.sub}}>Workflow Type: {wf.workflowType}</span>}
+      <div>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <input value={wf.name} onChange={e=>set({name:e.target.value})} style={{fontWeight:700,fontSize:18,color:C.ink,border:'none',outline:'none',background:'transparent',padding:0,width:Math.max(160,wf.name.length*11)}}/>
+          <span style={{fontSize:12,fontWeight:600,padding:'3px 10px',borderRadius:20,background:wf.status==='published'?'#d1fae5':'#f3f1fa',color:wf.status==='published'?C.green:C.sub}}>{wf.status==='published'?'Published':'Draft'}</span>
+          {errors.length>0&&<button onClick={()=>setShowAlerts(true)} style={{display:'flex',alignItems:'center',gap:4,background:'none',border:'none',cursor:'pointer',color:C.red,fontSize:13,fontWeight:600}}><AlertCircle size={14}/> {errors.length} Error{errors.length>1?'s':''}</button>}
+        </div>
+        <div style={{fontSize:12.5,color:C.sub,marginTop:2}}>Workflow Type: {wf.workflowType}</div>
+      </div>
       <div style={{flex:1}}/>
-      <span style={{fontSize:12,color:C.sub}}>Last saved was…</span>
-      <button style={{...btnG,opacity:wf.status==='published'?.5:1}} onClick={()=>save(true)} disabled={saving}>Publish</button>
-      <button style={btnP} onClick={()=>save(false)} disabled={saving}>{saving?'Saving…':'Edit'}</button>
-      <button style={{...btnG,padding:'6px 10px',color:C.red,borderColor:'#fecaca'}} onClick={async()=>{if(id&&confirm('Delete?')){await workflowsAPI.delete(id);onClose();}else onClose();}}>🗑</button>
+      <button style={{...btnG,opacity:errors.length||wf.status==='published'?.5:1}} disabled={errors.length>0} onClick={()=>save(true)}>Publish</button>
+      <button style={btnP} onClick={()=>save(false)} disabled={saving}>{saving?'Saving…':'Save'}</button>
+      <button style={{...btnG,padding:'6px 10px',color:C.red,borderColor:'#fecaca',display:'flex'}} onClick={async()=>{if(id&&confirm('Delete?')){await workflowsAPI.delete(id);onSaved();}else onClose();}}><Trash2 size={14}/></button>
     </div>
 
     {/* editor/executions tabs */}
@@ -367,22 +559,30 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     </div>
 
     {editorTab==='editor'?(
-    <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+    <div style={{display:'flex',flex:1,overflow:'hidden',position:'relative'}}>
       {/* LEFT SIDEBAR PALETTE */}
-      <div style={{width:sidebarOpen?170:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
-        <div style={{width:170,padding:'12px 10px',overflowY:'auto',height:'100%'}}>
+      <div style={{width:sidebarOpen?224:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0,position:'relative'}}>
+        <div style={{width:224,padding:'14px 12px 40px',overflowY:'auto',height:'100%'}}>
           {/* Events */}
           <SidebarSection title="Events" subtitle="When this happens">
-            <div style={{fontSize:12,color:C.sub,padding:'4px 0'}}>Trigger: <strong style={{color:C.ink}}>{evCat.label||wf.triggerEvent}</strong></div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+              {siblingEvents.map(e=>(
+                <div key={e.value} onClick={()=>switchEvent(e)} style={paletteItem(e.value===wf.triggerEvent)}
+                  onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background=e.value===wf.triggerEvent?C.indigoBg:'transparent'}>
+                  {e.Icon?<e.Icon size={18} style={{color:e.value===wf.triggerEvent?C.indigo:C.sub}}/>:e.badge?<BrandBadge {...e.badge}/>:null}
+                  <span>{e.label.replace(/^On /,'')}</span>
+                </div>
+              ))}
+            </div>
           </SidebarSection>
 
           {/* Actions */}
-          <SidebarSection title="Actions" subtitle="Do this…">
+          <SidebarSection title="Actions" subtitle="Do this…" accent>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
               {ACTION_CATALOG.map(a=>(
-                <div key={a.type} onClick={()=>addActionNode(a.type)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:8,cursor:'pointer',fontSize:11,color:C.sub,textAlign:'center',lineHeight:1.2,transition:'background .1s'}}
-                  onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <span style={{fontSize:18}}>{a.icon}</span>
+                <div key={a.type} onClick={()=>addActionNode(a.type)} style={paletteItem(false)}
+                  onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background='transparent'}>
+                  <a.Icon size={18} style={{color:C.sub}}/>
                   <span>{a.label}</span>
                 </div>
               ))}
@@ -392,20 +592,20 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
           {/* Lead Condition */}
           <SidebarSection title="Lead Condition" subtitle="If…">
             <div onClick={()=>addConditionNode('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <span style={{fontSize:16}}>🔀</span> If Else
+              <GitBranch size={16}/> If Else
             </div>
           </SidebarSection>
 
           {/* Event Condition */}
           <SidebarSection title="Event Condition" subtitle="If…">
             <div onClick={()=>addConditionNode('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-              <span style={{fontSize:16}}>🔀</span> If Else
+              <GitBranch size={16}/> If Else
             </div>
           </SidebarSection>
 
           {/* n8n link */}
           {n8nWfs.length>0&&(
-            <SidebarSection title="⚡ n8n" subtitle="Link workflow">
+            <SidebarSection title="n8n" subtitle="Link workflow">
               <select value={wf.n8nWorkflowId||''} onChange={e=>set({n8nWorkflowId:e.target.value})} style={{...inp,fontSize:12}}>
                 <option value="">None</option>
                 {n8nWfs.map(nw=><option key={nw.id} value={nw.id}>{nw.name}</option>)}
@@ -413,50 +613,66 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
             </SidebarSection>
           )}
         </div>
+        <button onClick={()=>setSidebarOpen(false)} style={{position:'absolute',right:10,bottom:10,width:28,height:28,borderRadius:'50%',border:'none',background:C.indigo,color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
       </div>
-
-      {/* SIDEBAR TOGGLE */}
-      <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{position:'absolute',left:sidebarOpen?170:0,top:'50%',zIndex:10,width:24,height:40,borderRadius:'0 8px 8px 0',border:`1px solid ${C.border}`,borderLeft:'none',background:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:C.sub,transition:'left .2s'}}>{sidebarOpen?'◂':'▸'}</button>
+      {!sidebarOpen&&<button onClick={()=>setSidebarOpen(true)} style={{position:'absolute',left:10,bottom:10,zIndex:10,width:28,height:28,borderRadius:'50%',border:'none',background:C.indigo,color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>}
 
       {/* CANVAS */}
-      <div ref={canvasRef} style={{flex:1,position:'relative',overflow:'auto',background:'#faf9fe'}}>
-        <div style={{transform:`scale(${zoom})`,transformOrigin:'top center',minHeight:800,minWidth:800,position:'relative',padding:20}}>
-          {/* SVG connections */}
-          <svg style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}}>
-            {wf.edges.map((edge,i)=>{
-              const from=wf.nodes.find(n=>n.id===edge.from);
-              const to=wf.nodes.find(n=>n.id===edge.to);
-              if(!from||!to) return null;
-              const x1=from.x+90,y1=from.y+70;
-              const x2=to.x+90,y2=to.y;
-              const midY=(y1+y2)/2;
-              return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke="#c4b5fd" strokeWidth={2} fill="none"/>;
-            })}
-          </svg>
+      <div ref={canvasRef} style={{flex:1,position:'relative',overflow:'auto',background:'#faf9fe',backgroundImage:'radial-gradient(circle,#ece9f7 1px,transparent 1px)',backgroundSize:'18px 18px'}}>
+        <div style={{transform:`scale(${zoom})`,transformOrigin:'top center',minHeight:900,minWidth:900,position:'relative',padding:20}}>
+          {(()=>{
+            // Layout is recomputed from current node heights every render, so a node
+            // that grows (e.g. once a field/value gets configured) never overlaps
+            // whatever comes after it — positions are never read from stale x/y.
+            const BASE_X=380;
+            let cursorY=60;
+            const layout={};
+            wf.nodes.forEach(n=>{ layout[n.id]={x:BASE_X,y:cursorY,h:nodeHeight(n)}; cursorY+=nodeHeight(n)+GAP; });
+            const last=wf.nodes[wf.nodes.length-1];
+            const lastPos=layout[last.id];
+            const lineX=lastPos.x+NODE_W/2;
+            const lineTop=lastPos.y+lastPos.h;
+            return(
+            <>
+              {/* SVG connections */}
+              <svg style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}}>
+                {wf.edges.map((edge,i)=>{
+                  const from=layout[edge.from], to=layout[edge.to];
+                  if(!from||!to) return null;
+                  const x1=from.x+NODE_W/2,y1=from.y+from.h;
+                  const x2=to.x+NODE_W/2,y2=to.y;
+                  const midY=(y1+y2)/2;
+                  return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke={C.line} strokeWidth={2} fill="none"/>;
+                })}
+              </svg>
 
-          {/* Nodes */}
-          {wf.nodes.map(node=>(
-            <FlowNode key={node.id} node={node} selected={selectedNode===node.id}
-              onClick={()=>{setSelectedNode(node.id);setConfigNode(node.id)}}
-              onRemove={node.type!=='event'?()=>removeNode(node.id):null}
-            />
-          ))}
+              {/* Nodes */}
+              {wf.nodes.map(node=>(
+                <FlowNode key={node.id} node={node} pos={layout[node.id]} selected={selectedNode===node.id} menuOpen={menuNode===node.id}
+                  onClick={()=>{setSelectedNode(node.id);setConfigNode(node.id)}}
+                  onMenu={()=>setMenuNode(menuNode===node.id?null:node.id)}
+                  onDelete={node.type!=='event'?()=>removeNode(node.id):null}
+                />
+              ))}
 
-          {/* Add node button at bottom */}
-          <div style={{position:'absolute',left:wf.nodes[wf.nodes.length-1]?.x+75||440,top:(wf.nodes[wf.nodes.length-1]?.y||60)+100,zIndex:2}}>
-            <button onClick={()=>addActionNode('custom_action')} style={{width:30,height:30,borderRadius:'50%',border:`2px solid ${C.indigo}`,background:'#fff',color:C.indigo,fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>+</button>
-          </div>
+              {/* trailing connector + add-node button */}
+              <div style={{position:'absolute',left:lineX-1,top:lineTop,width:2,height:GAP,background:C.line,zIndex:0}}/>
+              <div style={{position:'absolute',left:lineX-15,top:lineTop+GAP/2-15,zIndex:2}}>
+                <button onClick={()=>addActionNode('call_api')} title="Add action" style={{width:30,height:30,borderRadius:'50%',border:`2px solid ${C.indigo}`,background:'#fff',color:C.indigo,fontSize:18,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}><Plus size={16}/></button>
+              </div>
+            </>);
+          })()}
         </div>
 
         {/* Zoom controls */}
-        <div style={{position:'absolute',bottom:16,left:16,display:'flex',gap:4,alignItems:'center',background:'#fff',borderRadius:8,padding:'4px 8px',border:`1px solid ${C.border}`,boxShadow:'0 1px 4px rgba(0,0,0,.08)'}}>
-          <button onClick={()=>setZoom(z=>Math.min(z+.1,2))} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>+</button>
+        <div style={{position:'absolute',bottom:16,right:16,display:'flex',gap:4,alignItems:'center',background:'#fff',borderRadius:8,padding:'4px 8px',border:`1px solid ${C.border}`,boxShadow:'0 1px 4px rgba(0,0,0,.08)'}}>
+          <button onClick={()=>setZoom(z=>Math.min(z+.1,2))} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex'}}><Plus size={15}/></button>
           <span style={{fontSize:12,fontWeight:600,color:C.ink,minWidth:40,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
-          <button onClick={()=>setZoom(z=>Math.max(z-.1,.3))} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>−</button>
+          <button onClick={()=>setZoom(z=>Math.max(z-.1,.3))} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex'}}><Minus size={15}/></button>
           <span style={{color:C.border}}>|</span>
-          <button onClick={()=>setZoom(1)} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'2px 6px'}} title="Fit">⊡</button>
-          <button style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'2px 6px'}} title="Undo">↩</button>
-          <button style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'2px 6px'}} title="Redo">↪</button>
+          <button onClick={()=>setZoom(1)} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex'}} title="Fit"><Maximize2 size={14}/></button>
+          <button style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex'}} title="Undo"><Undo2 size={14}/></button>
+          <button style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex'}} title="Redo"><Redo2 size={14}/></button>
         </div>
       </div>
 
@@ -464,19 +680,36 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
       {configNode&&(()=>{
         const node=wf.nodes.find(n=>n.id===configNode);
         if(!node) return null;
+        const upd=(patch)=>updateNode(node.id,patch);
+        const cfg=node.config||{};
+        const updCfg=(patch)=>upd({config:{...cfg,...patch}});
         return(
-        <div style={{width:280,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:16,flexShrink:0}}>
+        <div style={{width:290,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:16,flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
             <div style={{fontSize:14,fontWeight:700,color:C.ink}}>Configure {node.type==='event'?'Event':node.type==='condition'?'Condition':'Action'}</div>
-            <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub}}>✕</button>
+            <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={16}/></button>
           </div>
           {node.type==='event'&&(
             <div>
               <label style={lbl}>Trigger Event</label>
               <div style={{fontSize:13,color:C.ink,fontWeight:600,padding:'8px 0'}}>{node.label}</div>
               {wf.triggerEvent==='lead.field_changed'&&(
-                <div style={{marginTop:8}}><label style={lbl}>Field Name</label>
-                <input value={wf.triggerConfig?.field||''} onChange={e=>set({triggerConfig:{...wf.triggerConfig,field:e.target.value}})} placeholder="e.g. leadSource" style={inp}/></div>
+                <div style={{marginTop:8}}><label style={lbl}>Field</label>
+                <select value={wf.triggerConfig?.field||''} onChange={e=>{const f=FIELD_CATALOG.find(f=>f.key===e.target.value);set({triggerConfig:{field:e.target.value}});upd({detailLabel:f?.label||''});}} style={inp}>
+                  <option value="">Select…</option>
+                  {FIELD_CATALOG.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}
+                </select></div>
+              )}
+              {(wf.triggerEvent==='lead.template_replied'||wf.triggerEvent==='lead.waca_list_replied')&&(
+                <div style={{marginTop:8}}><label style={lbl}>Template</label>
+                <select value={wf.triggerConfig?.templateId||''} onChange={e=>{const t=msgTemplates.find(t=>t._id===e.target.value);set({triggerConfig:{templateId:e.target.value}});upd({detailLabel:t?.shortcut||''});}} style={inp}>
+                  <option value="">Select…</option>
+                  {msgTemplates.map(t=><option key={t._id} value={t._id}>{t.shortcut}</option>)}
+                </select></div>
+              )}
+              {(wf.triggerEvent==='lead.custom_action_created'||wf.triggerEvent==='lead.custom_action_updated')&&(
+                <div style={{marginTop:8}}><label style={lbl}>Custom Action</label>
+                <input value={wf.triggerConfig?.customActionId||''} onChange={e=>set({triggerConfig:{customActionId:e.target.value}})} placeholder="Custom action ID" style={inp}/></div>
               )}
               {isSchedule&&(
                 <div style={{marginTop:12}}>
@@ -489,27 +722,58 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
           {node.type==='action'&&(
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div><label style={lbl}>Action Type</label>
-              <select value={node.actionType} onChange={e=>updateNode(node.id,{actionType:e.target.value,label:ACTION_CATALOG.find(a=>a.type===e.target.value)?.label||e.target.value})} style={inp}>
+              <select value={node.actionType} onChange={e=>upd({actionType:e.target.value,label:ACTION_CATALOG.find(a=>a.type===e.target.value)?.label||e.target.value,config:{}})} style={inp}>
                 {ACTION_CATALOG.map(a=><option key={a.type} value={a.type}>{a.label}</option>)}
               </select></div>
-              {node.actionType==='call_api'&&<div><label style={lbl}>API Template</label><select value={node.config?.apiTemplateId||''} onChange={e=>updateNode(node.id,{config:{...node.config,apiTemplateId:e.target.value}})} style={inp}><option value="">Select…</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select></div>}
-              {node.actionType==='trigger_n8n'&&<div><label style={lbl}>n8n Workflow</label><select value={node.config?.n8nWorkflowId||''} onChange={e=>updateNode(node.id,{config:{...node.config,n8nWorkflowId:e.target.value}})} style={inp}><option value="">Select…</option>{n8nWfs.map(nw=><option key={nw.id} value={nw.id}>{nw.name}</option>)}</select></div>}
-              {node.actionType==='trigger_webhook'&&<div><label style={lbl}>Webhook</label><select value={node.config?.webhookId||''} onChange={e=>updateNode(node.id,{config:{...node.config,webhookId:e.target.value}})} style={inp}><option value="">Select…</option>{hooks.map(h=><option key={h._id} value={h._id}>{h.name}</option>)}</select></div>}
-              {node.actionType==='notify_team_member'&&<><div><label style={lbl}>Team Member</label><select value={node.config?.userId||''} onChange={e=>updateNode(node.id,{config:{...node.config,userId:e.target.value}})} style={inp}><option value="">Assigned caller</option>{users.map(u=><option key={u._id} value={u._id}>{u.name}</option>)}</select></div><div><label style={lbl}>Message</label><input value={node.config?.message||''} onChange={e=>updateNode(node.id,{config:{...node.config,message:e.target.value}})} placeholder="Use {{lead.name}}" style={inp}/></div></>}
-              {node.actionType==='update_lead_status'&&<div><label style={lbl}>New Status</label><select value={node.config?.status||''} onChange={e=>updateNode(node.id,{config:{...node.config,status:e.target.value}})} style={inp}><option value="">Select…</option>{STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>}
-              {node.actionType==='update_lead_assignee'&&<div><label style={lbl}>Assign To</label><select value={node.config?.userId||''} onChange={e=>updateNode(node.id,{config:{...node.config,userId:e.target.value}})} style={inp}><option value="">Select…</option>{users.map(u=><option key={u._id} value={u._id}>{u.name}</option>)}</select></div>}
-              {node.actionType==='update_lead_rating'&&<div><label style={lbl}>Rating</label><select value={node.config?.rating||''} onChange={e=>updateNode(node.id,{config:{...node.config,rating:Number(e.target.value)}})} style={inp}><option value="">Select…</option>{[1,2,3,4,5].map(r=><option key={r} value={r}>{r} ★</option>)}</select></div>}
+
+              {node.actionType==='call_api'&&<div><label style={lbl}>API Template</label><select value={cfg.apiTemplateId||''} onChange={e=>updCfg({apiTemplateId:e.target.value})} style={inp}><option value="">Select…</option>{templates.map(t=><option key={t._id} value={t._id}>{t.name}</option>)}</select></div>}
+              {node.actionType==='trigger_n8n'&&<div><label style={lbl}>n8n Workflow</label><select value={cfg.n8nWorkflowId||''} onChange={e=>updCfg({n8nWorkflowId:e.target.value})} style={inp}><option value="">Select…</option>{n8nWfs.map(nw=><option key={nw.id} value={nw.id}>{nw.name}</option>)}</select></div>}
+              {node.actionType==='trigger_webhook'&&<div><label style={lbl}>Webhook</label><select value={cfg.webhookId||''} onChange={e=>updCfg({webhookId:e.target.value})} style={inp}><option value="">Select…</option>{hooks.map(h=><option key={h._id} value={h._id}>{h.name}</option>)}</select></div>}
+              {node.actionType==='notify_team_member'&&<><div><label style={lbl}>Team Member</label><select value={cfg.userId||''} onChange={e=>updCfg({userId:e.target.value})} style={inp}><option value="">Assigned caller</option>{users.map(u=><option key={u._id} value={u._id}>{u.name}</option>)}</select></div><div><label style={lbl}>Message</label><input value={cfg.message||''} onChange={e=>updCfg({message:e.target.value})} placeholder="Use {{lead.name}}" style={inp}/></div></>}
+              {node.actionType==='update_lead_status'&&<div><label style={lbl}>New Status</label><select value={cfg.status||''} onChange={e=>{updCfg({status:e.target.value});upd({detailLabel:e.target.value})}} style={inp}><option value="">Select…</option>{STATUSES.map(s=><option key={s} value={s}>{s}</option>)}</select></div>}
+              {node.actionType==='update_lead_assignee'&&<div><label style={lbl}>Assign To</label><select value={cfg.userId||''} onChange={e=>{const u=users.find(u=>u._id===e.target.value);updCfg({userId:e.target.value});upd({detailLabel:u?.name||''})}} style={inp}><option value="">Select…</option>{users.map(u=><option key={u._id} value={u._id}>{u.name}</option>)}</select></div>}
+              {node.actionType==='update_lead_rating'&&<div><label style={lbl}>Rating</label><select value={cfg.rating||''} onChange={e=>{updCfg({rating:Number(e.target.value)});upd({detailLabel:`${e.target.value} ★`})}} style={inp}><option value="">Select…</option>{[1,2,3,4,5].map(r=><option key={r} value={r}>{r} ★</option>)}</select></div>}
+              {node.actionType==='update_lead_fields'&&<><div><label style={lbl}>Lead Field</label><select value={cfg.leadField||''} onChange={e=>{updCfg({leadField:e.target.value});upd({detailLabel:FIELD_CATALOG.find(f=>f.key===e.target.value)?.label||''})}} style={inp}><option value="">Select…</option>{FIELD_CATALOG.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}</select></div><div><label style={{...lbl,marginTop:8}}>Value</label><input value={cfg.value||''} onChange={e=>updCfg({value:e.target.value})} placeholder="Static value or {{submission.fieldId}}" style={inp}/></div></>}
+              {node.actionType==='time_delay'&&<div><label style={lbl}>Delay (minutes)</label><input type="number" min="0" value={cfg.minutes||0} onChange={e=>{updCfg({minutes:Number(e.target.value)});upd({detailLabel:`${e.target.value}m`})}} style={inp}/></div>}
+              {node.actionType==='add_in_list'&&<div><label style={lbl}>List Name</label><input value={cfg.listName||''} onChange={e=>{updCfg({listName:e.target.value});upd({detailLabel:e.target.value})}} style={inp}/></div>}
+              {node.actionType==='remove_from_list'&&<div><label style={lbl}>List Name</label><input value={cfg.listName||''} onChange={e=>{updCfg({listName:e.target.value});upd({detailLabel:e.target.value})}} style={inp}/></div>}
+              {node.actionType==='add_call_followup'&&<><div><label style={lbl}>Assign To</label><select value={cfg.userId||''} onChange={e=>updCfg({userId:e.target.value})} style={inp}><option value="">Assigned caller</option>{users.map(u=><option key={u._id} value={u._id}>{u.name}</option>)}</select></div><div><label style={{...lbl,marginTop:8}}>Note</label><input value={cfg.note||''} onChange={e=>updCfg({note:e.target.value})} style={inp}/></div></>}
+              {node.actionType==='add_payment'&&<div><label style={lbl}>Amount (₹)</label><input type="number" value={cfg.amount||0} onChange={e=>{updCfg({amount:Number(e.target.value)});upd({detailLabel:`₹${e.target.value}`})}} style={inp}/></div>}
+              {node.actionType==='send_template'&&<div><label style={lbl}>Template</label><select value={cfg.templateId||''} onChange={e=>{const t=msgTemplates.find(t=>t._id===e.target.value);updCfg({templateId:e.target.value});upd({detailLabel:t?.shortcut||''})}} style={inp}><option value="">Select…</option>{msgTemplates.map(t=><option key={t._id} value={t._id}>{t.shortcut}</option>)}</select></div>}
+              {node.actionType==='create_custom_action'&&<div><label style={lbl}>Label</label><input value={cfg.label||''} onChange={e=>{updCfg({label:e.target.value});upd({detailLabel:e.target.value})}} style={inp}/></div>}
+              {node.actionType==='add_ivr_action'&&<div style={{fontSize:12,color:C.sub}}>Connect an IVR provider in Settings to configure this action.</div>}
+              {node.actionType==='cancel_tasks'&&<div style={{fontSize:12,color:C.sub}}>Cancels all upcoming follow-up tasks for this lead.</div>}
+              {node.actionType==='email_report'&&<div><label style={lbl}>Email</label><input value={cfg.email||''} onChange={e=>updCfg({email:e.target.value})} placeholder="admin@example.com" style={inp}/></div>}
             </div>
           )}
           {node.type==='condition'&&(
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div><label style={lbl}>Field</label><input value={node.config?.field||''} onChange={e=>updateNode(node.id,{config:{...node.config,field:e.target.value}})} placeholder="e.g. status, rating" style={inp}/></div>
-              <div><label style={lbl}>Operator</label><select value={node.config?.operator||'equals'} onChange={e=>updateNode(node.id,{config:{...node.config,operator:e.target.value}})} style={inp}><option value="equals">Equals</option><option value="not_equals">Not Equals</option><option value="contains">Contains</option><option value="exists">Exists</option></select></div>
-              <div><label style={lbl}>Value</label><input value={node.config?.value||''} onChange={e=>updateNode(node.id,{config:{...node.config,value:e.target.value}})} style={inp}/></div>
+              <div><label style={lbl}>Field</label><input value={cfg.field||''} onChange={e=>updCfg({field:e.target.value})} placeholder="e.g. status, rating" style={inp}/></div>
+              <div><label style={lbl}>Operator</label><select value={cfg.operator||'equals'} onChange={e=>updCfg({operator:e.target.value})} style={inp}><option value="equals">Equals</option><option value="not_equals">Not Equals</option><option value="contains">Contains</option><option value="exists">Exists</option></select></div>
+              <div><label style={lbl}>Value</label><input value={cfg.value||''} onChange={e=>updCfg({value:e.target.value})} style={inp}/></div>
             </div>
           )}
         </div>);
       })()}
+
+      {/* Alerts modal */}
+      {showAlerts&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(30,27,75,.45)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}}>
+          <div style={{width:520,background:'#fff',borderRadius:14,padding:24}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+              <div style={{fontSize:18,fontWeight:700,color:C.ink}}>Alerts</div>
+              <button onClick={()=>setShowAlerts(false)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={20}/></button>
+            </div>
+            <div style={{fontSize:12,fontWeight:700,color:C.sub,textTransform:'uppercase',marginBottom:8}}>Errors</div>
+            {errors.map((e,i)=>(
+              <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fee2e2',color:C.red,padding:'10px 14px',borderRadius:8,fontSize:13.5,fontWeight:600}}>
+                <span style={{display:'flex',alignItems:'center',gap:8}}><AlertTriangle size={15}/> {e}</span>
+                <span style={{color:C.red,fontWeight:700,textDecoration:'underline',cursor:'pointer'}} onClick={()=>setShowAlerts(false)}>View Nodes</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
     ):(
     <div style={{flex:1,overflow:'auto',padding:20}}>
@@ -518,39 +782,55 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     )}
   </div>);
 }
+const paletteItem=(active)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:5,padding:'10px 4px',borderRadius:8,cursor:'pointer',fontSize:11,color:active?C.indigo:C.sub,textAlign:'center',lineHeight:1.25,background:active?C.indigoBg:'transparent',transition:'background .1s'});
 
 /* ─── SIDEBAR SECTION ─────────────────────────────────────────────────────── */
-function SidebarSection({title,subtitle,children}){
+function SidebarSection({title,subtitle,children,accent}){
   const [open,setOpen]=useState(true);
   return(
-  <div style={{marginBottom:8}}>
-    <div onClick={()=>setOpen(!open)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 4px',cursor:'pointer'}}>
-      <div><div style={{fontSize:13,fontWeight:700,color:C.ink}}>{title}</div>{subtitle&&<div style={{fontSize:11,color:C.sub}}>{subtitle}</div>}</div>
-      <span style={{color:C.sub,fontSize:10,transform:open?'rotate(180deg)':'none',transition:'transform .15s'}}>▼</span>
+  <div style={{marginBottom:10}}>
+    <div onClick={()=>setOpen(!open)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 4px',cursor:'pointer',borderLeft:accent?`3px solid ${C.indigo}`:'none',paddingLeft:accent?8:4}}>
+      <div><div style={{fontSize:13.5,fontWeight:700,color:C.ink}}>{title}</div>{subtitle&&<div style={{fontSize:11,color:C.sub}}>{subtitle}</div>}</div>
+      {open?<ChevronUp size={14} style={{color:C.sub}}/>:<ChevronDown size={14} style={{color:C.sub}}/>}
     </div>
-    {open&&<div style={{padding:'0 4px'}}>{children}</div>}
+    {open&&<div style={{padding:'2px 4px 8px'}}>{children}</div>}
   </div>);
 }
 
 /* ─── FLOW NODE ───────────────────────────────────────────────────────────── */
-function FlowNode({node,selected,onClick,onRemove}){
-  const colors={event:['#7c3aed','#ede9fe'],action:['#6366f1','#eef2ff'],condition:['#0891b2','#ecfeff']};
-  const [header,bg]=colors[node.type]||colors.action;
+function FlowNode({node,pos,selected,menuOpen,onClick,onMenu,onDelete}){
+  const colors={event:C.purple,action:C.indigo,condition:'#0e7490'};
+  const tagLabels={event:'EVENT',action:'ACTION',condition:'CONDITION'};
+  const header=colors[node.type]||C.indigo;
   const ac=ACTION_CATALOG.find(a=>a.type===node.actionType);
+  const NodeIcon=ac?.Icon;
+  const detail=node.type==='event'?node.detailLabel:(node.type==='condition'?(node.config?.field?`${node.config.field} ${node.config.operator||'equals'} ${node.config.value||''}`:'Any lead'):node.detailLabel);
+
   return(
-  <div onClick={onClick} style={{position:'absolute',left:node.x,top:node.y,width:180,cursor:'pointer',zIndex:1,transition:'box-shadow .15s',boxShadow:selected?`0 0 0 2px ${header}`:'0 2px 8px rgba(0,0,0,.08)',borderRadius:10,overflow:'hidden',background:'#fff'}}>
-    <div style={{background:header,color:'#fff',padding:'6px 12px',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'.05em',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-      <span>{node.type==='event'?'EVENT':node.type==='condition'?'CONDITION':'ACTION'}</span>
-      {onRemove&&<button onClick={e=>{e.stopPropagation();onRemove()}} style={{background:'none',border:'none',color:'rgba(255,255,255,.7)',cursor:'pointer',fontSize:14}}>⋮</button>}
+  <div style={{position:'absolute',left:pos.x,top:pos.y,width:NODE_W,zIndex:1}}>
+    <div onClick={onClick} style={{cursor:'pointer'}}>
+      <div style={{display:'inline-block',background:header,color:'#fff',padding:'4px 14px',fontSize:10.5,fontWeight:700,textTransform:'uppercase',letterSpacing:'.05em',borderRadius:'7px 7px 0 0'}}>{tagLabels[node.type]}</div>
+      <div style={{background:'#fff',borderRadius:'0 10px 10px 10px',border:`1px solid ${C.border}`,boxShadow:selected?`0 0 0 2px ${header}`:'0 2px 10px rgba(30,20,80,.08)',overflow:'hidden'}}>
+        <div style={{padding:'11px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+          <span style={{fontSize:14.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
+          {onDelete&&<button onClick={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',color:C.sub,cursor:'pointer',display:'flex',flexShrink:0}}><MoreVertical size={16}/></button>}
+        </div>
+        {detail&&(
+          <div style={{borderTop:`1px solid #f1eef9`,padding:'9px 14px',display:'flex',alignItems:'center',gap:8}}>
+            {NodeIcon?<NodeIcon size={14} style={{color:C.sub,flexShrink:0}}/>:<Filter size={14} style={{color:C.sub,flexShrink:0}}/>}
+            <span style={{flex:1,fontSize:13,color:C.ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{detail}</span>
+            <span style={{width:15,height:15,borderRadius:'50%',border:`1.5px solid ${C.border}`,flexShrink:0}}/>
+          </div>
+        )}
+      </div>
     </div>
-    <div style={{padding:'10px 12px'}}>
-      <div style={{fontSize:13,fontWeight:600,color:C.ink,marginBottom:2}}>{node.label}</div>
-      {node.type==='event'&&<div style={{fontSize:11,color:C.sub,display:'flex',alignItems:'center',gap:4}}>⚙️ {EVENT_CATALOG.find(e=>e.value===node.event)?.wfType||'Manual'}</div>}
-      {node.type==='action'&&ac&&<div style={{fontSize:11,color:C.sub}}>{ac.icon} {ac.desc?.slice(0,30)}</div>}
-      {node.type==='condition'&&<div style={{fontSize:11,color:C.sub}}>🔀 If Else</div>}
-    </div>
-    {/* connector point */}
-    <div style={{position:'absolute',bottom:-6,left:'50%',transform:'translateX(-50%)',width:12,height:12,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff'}}/>
+    {/* connector handle to next node — sits outside the overflow:hidden card so it never clips */}
+    <div style={{position:'absolute',bottom:-7,left:'50%',transform:'translateX(-50%)',width:14,height:14,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff',zIndex:2}}/>
+    {menuOpen&&onDelete&&(
+      <div style={{position:'absolute',top:30,right:0,background:'#fff',border:`1px solid ${C.border}`,borderRadius:8,boxShadow:'0 4px 14px rgba(0,0,0,.12)',zIndex:5,minWidth:120}}>
+        <div onClick={e=>{e.stopPropagation();onDelete();}} style={{padding:'9px 14px',fontSize:13,color:C.red,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}><Trash2 size={13}/> Delete</div>
+      </div>
+    )}
   </div>);
 }
 
