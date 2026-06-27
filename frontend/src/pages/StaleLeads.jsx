@@ -21,8 +21,8 @@ export default function StaleLeads() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
-  const isAdmin = user?.role === 'manager';
-  const isSuperAdmin = user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
+  const isAdmin = isSuperAdmin;
 
   const fetchData = async () => {
     try {

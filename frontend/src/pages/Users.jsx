@@ -14,8 +14,8 @@ const RED = '#e53e3e';
 
 export default function Users() {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'admin';
-  const isAdmin = user?.role === 'manager' || isSuperAdmin;
+  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
+  const isAdmin = isSuperAdmin;
 
   // Route protection
   if (!isAdmin) {
@@ -295,7 +295,6 @@ export default function Users() {
                 <select style={inputStyle} disabled={!isSuperAdmin} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   <option value="caller">Caller</option>
                   <option value="manager">Manager</option>
-                  {isSuperAdmin && <option value="admin">Admin</option>}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>

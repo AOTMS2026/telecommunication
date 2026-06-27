@@ -20,9 +20,9 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: 'Email already in use' });
     if (req.user.role === 'manager' && role !== 'caller')
-      return res.status(403).json({ message: 'Managers can only create callers' });
-    if (role === 'admin' && req.user.role !== 'admin')
-      return res.status(403).json({ message: 'Only admins can create admin users' });
+      return res.status(403).json({ message: 'Admins can only create callers' });
+    if (role === 'admin')
+      return res.status(403).json({ message: 'Cannot create admin users' });
     const user = await User.create({ name, email, password, role: role || 'caller', phone: phone || '' });
     res.status(201).json({ user: user.toJSON() });
   } catch (err) {
@@ -161,14 +161,14 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
     if (req.body.name) updates.name = req.body.name;
     if (req.body.phone !== undefined) updates.phone = req.body.phone;
     if (req.body.isActive !== undefined) updates.isActive = req.body.isActive;
-    if (req.body.role && req.user.role === 'admin') updates.role = req.body.role;
+    if (req.body.role && (req.user.role === 'admin' || req.user.role === 'manager')) updates.role = req.body.role;
     if (req.body.permissionTemplate !== undefined) updates.permissionTemplate = req.body.permissionTemplate || null;
     if (req.body.password) {
       targetUser.password = req.body.password;
       if (req.body.name) targetUser.name = req.body.name;
       if (req.body.phone !== undefined) targetUser.phone = req.body.phone;
       if (req.body.isActive !== undefined) targetUser.isActive = req.body.isActive;
-      if (req.body.role && req.user.role === 'admin') targetUser.role = req.body.role;
+      if (req.body.role && (req.user.role === 'admin' || req.user.role === 'manager')) targetUser.role = req.body.role;
       if (req.body.permissionTemplate !== undefined) targetUser.permissionTemplate = req.body.permissionTemplate || null;
       await targetUser.save();
       return res.json({ user: targetUser.toJSON() });
@@ -181,7 +181,7 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
 });
 
 // DELETE /api/users/:id
-router.delete('/:id', protect, authorize('admin'), async (req, res) => {
+router.delete('/:id', protect, authorize('admin', 'manager'), async (req, res) => {
   try {
     const targetUser = await User.findById(req.params.id);
     if (!targetUser) return res.status(404).json({ message: 'User not found' });
