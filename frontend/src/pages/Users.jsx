@@ -295,6 +295,7 @@ export default function Users() {
                 <select style={inputStyle} disabled={!isSuperAdmin} value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   <option value="caller">Caller</option>
                   <option value="manager">Manager</option>
+                  {isSuperAdmin && <option value="admin">Admin</option>}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>

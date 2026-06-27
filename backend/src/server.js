@@ -1,6 +1,7 @@
 // Nodemon restart trigger v5
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -65,6 +66,10 @@ app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
+app.use('/api/recordings', apiLimiter, require('./routes/recordings'));
+
+// Serve uploaded call recordings so the URLs returned by /api/recordings work
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Automation & API suite (Workflows, Schedules, Salesforms, API Templates,
 //    Webhooks, Access Tokens, Call-IQ Agents) ──────────────────────────────────

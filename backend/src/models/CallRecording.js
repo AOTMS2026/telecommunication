@@ -20,6 +20,11 @@ const callRecordingSchema = new mongoose.Schema(
       index: true,
     },
 
+    // Phone number extracted from the recording filename (digits only, last
+    // 10 kept) — lets a recording be matched to a lead's call history even
+    // when no leadId was sent or the lead didn't exist yet at upload time.
+    phone: { type: String, default: null, index: true },
+
     // Original filename as saved by the phone's call-recorder app
     originalName: { type: String, required: true },
 

@@ -20,9 +20,9 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: 'Email already in use' });
     if (req.user.role === 'manager' && role !== 'caller')
-      return res.status(403).json({ message: 'Admins can only create callers' });
-    if (role === 'admin')
-      return res.status(403).json({ message: 'Cannot create admin users' });
+      return res.status(403).json({ message: 'Managers can only create callers' });
+    if (role === 'admin' && req.user.role !== 'admin')
+      return res.status(403).json({ message: 'Only admins can create admin users' });
     const user = await User.create({ name, email, password, role: role || 'caller', phone: phone || '' });
     res.status(201).json({ user: user.toJSON() });
   } catch (err) {
