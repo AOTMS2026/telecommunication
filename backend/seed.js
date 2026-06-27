@@ -47,19 +47,19 @@ const seed = async () => {
   // ── USERS ─────────────────────────────────────────────────────────────────
   const superAdmin1 = await User.create({
     name: 'Ameen', email: 'ameenaotms@gmail.com',
-    password: 'Ameen@aotms', role: 'super admin', phone: '919000000010', isActive: true,
+    password: 'Ameen@aotms', role: 'admin', phone: '919000000010', isActive: true,
   });
   const superAdmin2 = await User.create({
     name: 'Rabbani', email: 'ctoaotms@gmail.com',
-    password: 'Rabbani@aotms', role: 'super admin', phone: '919000000011', isActive: true,
+    password: 'Rabbani@aotms', role: 'admin', phone: '919000000011', isActive: true,
   });
   const adminDemo = await User.create({
     name: 'Deenaz', email: 'hraotms@gmail.com',
-    password: 'Deenaz@aotms', role: 'admin', phone: '919000000012', isActive: true,
+    password: 'Deenaz@aotms', role: 'manager', phone: '919000000012', isActive: true,
   });
   const admin2 = await User.create({
     name: 'Bhavani', email: 'hiringaotms@gmail.com',
-    password: 'Bhavani@aotms', role: 'admin', phone: '919000000013', isActive: true,
+    password: 'Bhavani@aotms', role: 'manager', phone: '919000000013', isActive: true,
   });
   console.log('✅  4 Users created');
 
@@ -263,7 +263,7 @@ const seed = async () => {
   console.log('  Caller      : ravi@aotms.com             / caller123');
   console.log('  Caller      : poojitha@aotms.com         / caller123');
   console.log('\n  📦  DATA SEEDED');
-  console.log(`  Users:             8  (2 super admins · 2 admins · 4 callers)`);
+  console.log(`  Users:             8  (2 admins · 2 managers · 4 callers)`);
   console.log(`  Campaigns:         3`);
   console.log(`  Courses:           5`);
   console.log(`  Leads:             ${createdLeads.length}  (with activities & notes)`);

@@ -201,12 +201,7 @@ export default function Topbar() {
   };
 
   const roleLabel = user?.role
-    ? (() => {
-        const r = user.role;
-        if (r === 'admin') return 'Manager';
-        if (r === 'super admin') return 'Super Manager';
-        return r.charAt(0).toUpperCase() + r.slice(1);
-      })()
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : 'Caller';
 
   const workspaceSettingsGroups = [
@@ -236,7 +231,7 @@ export default function Topbar() {
     },
   ];
 
-  const isAdminLike = user?.role === 'admin' || user?.role === 'super admin';
+  const isAdminLike = user?.role === 'admin' || user?.role === 'manager';
 
   const profileMenuItems = [
     {

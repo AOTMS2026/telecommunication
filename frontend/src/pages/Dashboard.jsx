@@ -276,9 +276,9 @@ export default function Dashboard() {
   const [demoDate, setDemoDate] = useState('');
   const [savingCall, setSavingCall] = useState(false);
 
-  const isAdmin = user?.role === 'manager';
-  const isSuperAdmin = user?.role === 'admin';
-  const isCaller = user?.role === 'caller' || (!isAdmin && !isSuperAdmin);
+  const isSuperAdmin = user?.role === 'admin' || user?.role === 'manager';
+  const isAdmin = isSuperAdmin;
+  const isCaller = user?.role === 'caller';
 
   const openAnalysisModal = async (userId) => {
     setSelectedUserId(userId);

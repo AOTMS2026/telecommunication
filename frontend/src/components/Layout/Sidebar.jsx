@@ -56,7 +56,7 @@ export default function Sidebar() {
   const [automationsOpen, setAutomationsOpen] = useState(false);
   const [addLeadsOpen, setAddLeadsOpen] = useState(false);
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'manager';
 
   const isActive = (path) => {
     if (path === '/leads') return location.pathname === '/leads';
