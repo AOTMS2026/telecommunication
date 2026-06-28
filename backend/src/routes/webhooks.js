@@ -139,7 +139,6 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
     const webhook = await Webhook.create({
       ...req.body,
       createdBy: req.user._id,
-      workspace: req.user.workspace,
     });
     // Build the inbound URL and save it as url field
     const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5000}`;

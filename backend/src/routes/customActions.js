@@ -1,6 +1,7 @@
 const express = require('express');
 const CustomAction = require('../models/CustomAction');
 const { protect, authorize } = require('../middleware/auth');
+const { fireEvent } = require('../services/workflowEngine');
 
 const router = express.Router();
 const WORKSPACE = 'default';

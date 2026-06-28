@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const billingInfoSchema = new mongoose.Schema({
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
   country: { type: String, default: 'India' },
   companyName: { type: String, required: true, trim: true },
   address: { type: String, required: true },
@@ -13,7 +12,6 @@ const billingInfoSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const transactionSchema = new mongoose.Schema({
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
   orderId: { type: String, unique: true },
   plan: { type: String },
   licenses: { type: Number, default: 1 },
@@ -27,7 +25,6 @@ const transactionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const licenseSchema = new mongoose.Schema({
-  workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true },
   plan: { type: String, default: 'Starter' },
   totalLicenses: { type: Number, default: 1 },
   usedLicenses: { type: Number, default: 0 },
