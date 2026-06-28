@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { salesformsAPI, usersAPI, apiTemplatesAPI, n8nAPI } from '../services/api';
+import { Link2, Sparkles, Bell, Users, Settings, Star, Filter, Clock, MessageCircle, ListPlus, ListMinus, PhoneCall, XCircle, IndianRupee, Headphones, Webhook, Zap, Mail, GitBranch, X, MoreVertical, Trash2, Plus, Minus, Maximize2, ChevronDown, ChevronRight } from 'lucide-react';
 
 /* ─── palette (matches Workflows.jsx for visual consistency) ──────────────── */
 const C={indigo:'#6366f1',purple:'#7c3aed',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309'};
@@ -28,14 +29,14 @@ const RULE_FIELDS=[
   {value:'createdAt',label:'Created On',options:null},
 ];
 const ACTION_CATALOG=[
-  {type:'call_api',label:'Call API',icon:'🔗'},{type:'create_custom_action',label:'Create Custom Action',icon:'✨'},
-  {type:'notify_team_member',label:'Notification To TeamMember',icon:'🔔'},{type:'update_lead_assignee',label:'Update Lead Assignee',icon:'👤'},
-  {type:'update_lead_fields',label:'Update Lead Fields',icon:'⚙️'},{type:'update_lead_rating',label:'Update Lead Rating',icon:'⭐'},
-  {type:'update_lead_status',label:'Update Lead Status',icon:'🏷️'},{type:'time_delay',label:'Time Delay',icon:'⏱️'},
-  {type:'send_template',label:'Send Template',icon:'💬'},{type:'add_in_list',label:'Add in List',icon:'📋'},
-  {type:'remove_from_list',label:'Remove from List',icon:'🚫'},{type:'add_call_followup',label:'Add Call Followup',icon:'📞'},
-  {type:'cancel_tasks',label:'Cancel Tasks',icon:'🕐'},{type:'add_payment',label:'Add payment',icon:'₹'},
-  {type:'add_ivr_action',label:'Add IVR Action',icon:'🎧'},
+  {type:'call_api',label:'Call API',Icon:Link2},{type:'create_custom_action',label:'Create Custom Action',Icon:Sparkles},
+  {type:'notify_team_member',label:'Notify TeamMember',Icon:Bell},{type:'update_lead_assignee',label:'Update Assignee',Icon:Users},
+  {type:'update_lead_fields',label:'Update Lead Fields',Icon:Settings},{type:'update_lead_rating',label:'Update Rating',Icon:Star},
+  {type:'update_lead_status',label:'Update Status',Icon:Filter},{type:'time_delay',label:'Time Delay',Icon:Clock},
+  {type:'send_template',label:'Send Template',Icon:MessageCircle},{type:'add_in_list',label:'Add in List',Icon:ListPlus},
+  {type:'remove_from_list',label:'Remove from List',Icon:ListMinus},{type:'add_call_followup',label:'Add Call Followup',Icon:PhoneCall},
+  {type:'cancel_tasks',label:'Cancel Tasks',Icon:XCircle},{type:'add_payment',label:'Add Payment',Icon:IndianRupee},
+  {type:'add_ivr_action',label:'Add IVR Action',Icon:Headphones},
 ];
 // nested taxonomy for the "Select event" drawer
 const EVENT_TREE=[
@@ -142,8 +143,8 @@ export default function Salesforms(){
             <span style={{fontSize:13,color:C.sub}}>{f.createdBy?.name||'—'}</span>
           </>)}
           <span style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-            <button style={{...btnG,padding:'4px 8px',fontSize:12}} title="Duplicate" onClick={async()=>{await salesformsAPI.duplicate(f._id).catch(e=>alert(e.response?.data?.message||'Failed'));load();}}>⧉</button>
-            <button style={{...btnG,padding:'4px 8px',fontSize:12,color:C.red,borderColor:'#fecaca'}} title="Delete" onClick={async()=>{if(confirm('Delete this salesform?')){await salesformsAPI.delete(f._id);load();}}}>🗑</button>
+            <button style={{...btnG,padding:'4px 8px',fontSize:12,display:'flex',alignItems:'center',gap:4}} title="Duplicate" onClick={async()=>{await salesformsAPI.duplicate(f._id).catch(e=>alert(e.response?.data?.message||'Failed'));load();}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+            <button style={{...btnG,padding:'4px 8px',fontSize:12,color:C.red,borderColor:'#fecaca',display:'flex',alignItems:'center',gap:4}} title="Delete" onClick={async()=>{if(confirm('Delete this salesform?')){await salesformsAPI.delete(f._id);load();}}}><Trash2 size={13}/></button>
           </span>
         </div>
       ))}
@@ -178,7 +179,7 @@ function EventPickerDrawer({onSelect,onClose}){
       <div style={{padding:'20px 22px 14px',borderBottom:`1px solid ${C.border}`}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <div><div style={{fontSize:17,fontWeight:700,color:C.ink}}>Select event</div><div style={{fontSize:13,color:C.sub}}>Select the event that will trigger the salesform</div></div>
-          <button onClick={onClose} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:C.sub}}>✕</button>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={20}/></button>
         </div>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search for event e.g. button click, lead field update, etc" style={{...inp,background:'#f9fafb'}}/>
       </div>
@@ -189,7 +190,7 @@ function EventPickerDrawer({onSelect,onClose}){
         ):(
           <div key={g.label}>
             <div onClick={()=>setOpenGroups(p=>({...p,[g.label]:!p[g.label]}))} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 22px',cursor:'pointer',fontSize:14,fontWeight:500,color:C.ink}}>
-              <span style={{fontSize:10,color:C.sub,transform:openGroups[g.label]?'rotate(0deg)':'rotate(-90deg)',transition:'transform .15s',display:'inline-block'}}>▾</span>{g.label}
+              <ChevronDown size={12} style={{color:C.sub,transform:openGroups[g.label]?'rotate(0deg)':'rotate(-90deg)',transition:'transform .15s',flexShrink:0}}/>{g.label}
             </div>
             {openGroups[g.label]&&g.children.map((c,i)=><EventRow key={i} ev={c} indent selected={picked===c} onClick={()=>setPicked(c)}/>)}
           </div>
@@ -281,7 +282,7 @@ function SalesformEditor({initial,onClose,onSaved}){
       <span style={{fontSize:12,color:C.sub}}>{saving?'Saving…':`Last saved was ${savedAgo}s ago`}</span>
       <button style={{...btnG,opacity:sf.status==='published'?.5:1}} disabled={sf.status==='published'} onClick={publish}>Publish</button>
       <button style={btnP} onClick={onSaved}>Done</button>
-      <button style={{...btnG,padding:'6px 10px',color:C.red,borderColor:'#fecaca'}} onClick={async()=>{if(confirm('Delete this salesform?')){await salesformsAPI.delete(sf._id);onClose();}}}>🗑</button>
+      <button style={{...btnG,padding:'6px 10px',color:C.red,borderColor:'#fecaca',display:'flex',alignItems:'center',gap:4}} onClick={async()=>{if(confirm('Delete this salesform?')){await salesformsAPI.delete(sf._id);onClose();}}}><Trash2 size={14}/></button>
     </div>
 
     <div style={{display:'flex',justifyContent:'center',background:'#fff',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
@@ -303,7 +304,7 @@ function SidebarSection({title,subtitle,children}){
   <div style={{marginBottom:8}}>
     <div onClick={()=>setOpen(!open)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 4px',cursor:'pointer'}}>
       <div><div style={{fontSize:13,fontWeight:700,color:C.ink}}>{title}</div>{subtitle&&<div style={{fontSize:11,color:C.sub}}>{subtitle}</div>}</div>
-      <span style={{color:C.sub,fontSize:10,transform:open?'rotate(180deg)':'none',transition:'transform .15s'}}>▼</span>
+      <ChevronDown size={13} style={{color:C.sub,transform:open?'rotate(180deg)':'none',transition:'transform .15s'}}/>
     </div>
     {open&&<div style={{padding:'0 4px'}}>{children}</div>}
   </div>);
@@ -312,11 +313,11 @@ function SidebarSection({title,subtitle,children}){
 /* ─── zoom control bar ──────────────────────────────────────────────────────── */
 function ZoomBar({zoom,setZoom,pos='left'}){
   return <div style={{position:'absolute',bottom:16,[pos]:16,display:'flex',gap:4,alignItems:'center',background:'#fff',borderRadius:8,padding:'4px 8px',border:`1px solid ${C.border}`,boxShadow:'0 1px 4px rgba(0,0,0,.08)'}}>
-    <button onClick={()=>setZoom(z=>Math.min(z+.1,2))} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>+</button>
+    <button onClick={()=>setZoom(z=>Math.min(z+.1,2))} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex',alignItems:'center',color:C.sub}}><Plus size={14}/></button>
     <span style={{fontSize:12,fontWeight:600,color:C.ink,minWidth:40,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
-    <button onClick={()=>setZoom(z=>Math.max(z-.1,.3))} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,padding:'2px 6px'}}>−</button>
+    <button onClick={()=>setZoom(z=>Math.max(z-.1,.3))} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex',alignItems:'center',color:C.sub}}><Minus size={14}/></button>
     <span style={{color:C.border}}>|</span>
-    <button onClick={()=>setZoom(1)} style={{background:'none',border:'none',cursor:'pointer',fontSize:13,padding:'2px 6px'}} title="Fit to view">⊡</button>
+    <button onClick={()=>setZoom(1)} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 6px',display:'flex',alignItems:'center',color:C.sub}} title="Fit to view"><Maximize2 size={14}/></button>
   </div>;
 }
 
@@ -376,9 +377,13 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
         </svg>
 
         {evt&&(
-        <div style={{position:'absolute',left:evt.x+30,top:evt.y+30,width:180,borderRadius:10,overflow:'hidden',background:'#fff',boxShadow:'0 2px 8px rgba(0,0,0,.08)',zIndex:1}}>
-          <div style={{background:C.purple,color:'#fff',padding:'6px 12px',fontSize:11,fontWeight:700,textTransform:'uppercase'}}>EVENT</div>
-          <div style={{padding:'10px 12px',fontSize:13,fontWeight:600,color:C.ink}}>{eventLabel(sf)}</div>
+        <div style={{position:'absolute',left:evt.x+30,top:evt.y+30,width:220,zIndex:1}}>
+          <div style={{background:'#fff',borderRadius:12,border:`1.5px solid ${C.border}`,boxShadow:'0 2px 12px rgba(30,20,80,.07)'}}>
+            <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`}}>
+              <span style={{background:'#ede9fe',color:'#4338ca',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em'}}>EVENT</span>
+            </div>
+            <div style={{padding:'8px 14px',fontSize:13,fontWeight:700,color:C.ink}}>{eventLabel(sf)}</div>
+          </div>
         </div>)}
 
         {conditions.map((cond,idx)=>{
@@ -388,25 +393,35 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
           <div key={cond.id}>
             <div style={{position:'absolute',left:cp.x+30,top:cp.y+30-26,fontSize:11,fontWeight:700,color:C.purple,display:'flex',alignItems:'center',gap:6}}>
               Path {idx+1}
-              <button onClick={()=>removePath(cond)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',fontSize:12}} title="Remove path">✕</button>
+              <button onClick={()=>removePath(cond)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',display:'flex'}} title="Remove path"><X size={13}/></button>
             </div>
-            <div onClick={()=>setConfigNode(cond.id)} style={{position:'absolute',left:cp.x+30,top:cp.y+30,width:200,cursor:'pointer',borderRadius:10,overflow:'hidden',background:'#fff',boxShadow:configNode===cond.id?`0 0 0 2px ${C.purple}`:'0 2px 8px rgba(0,0,0,.08)',zIndex:1}}>
-              <div style={{background:C.purple,color:'#fff',padding:'6px 12px',fontSize:12,fontWeight:700}}>Check if lead</div>
-              <div style={{padding:'8px 12px',display:'flex',flexDirection:'column',gap:4}}>
-                {(cond.rules||[]).map((r,ri)=>(
-                  <div key={ri} style={{fontSize:11,color:C.sub}}>
-                    <strong style={{color:C.ink}}>{RULE_FIELDS.find(f=>f.value===r.field)?.label||r.field}</strong> {r.operator==='is_not'?'Is Not':r.operator==='contains'?'Contains':r.operator==='any'?'Any':'Is'} {r.values?.length?r.values.join(' | '):'Any'}
-                  </div>
-                ))}
-                {(!cond.rules||cond.rules.length===0)&&<div style={{fontSize:11,color:C.sub}}>Any lead</div>}
+            <div onClick={()=>setConfigNode(cond.id)} style={{position:'absolute',left:cp.x+30,top:cp.y+30,width:220,cursor:'pointer',zIndex:1}}>
+              <div style={{background:'#fff',borderRadius:12,border:configNode===cond.id?`2px solid ${C.purple}`:`1.5px solid ${C.border}`,boxShadow:configNode===cond.id?`0 0 0 3px ${C.purple}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
+                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`,display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{background:'#ede9fe',color:'#7c3aed',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>CONDITION</span>
+                  <span style={{fontSize:13,fontWeight:700,color:C.ink}}>Check if lead</span>
+                </div>
+                <div style={{padding:'8px 14px',display:'flex',flexDirection:'column',gap:3}}>
+                  {(cond.rules||[]).map((r,ri)=>(
+                    <div key={ri} style={{fontSize:11,color:C.sub}}>
+                      <strong style={{color:C.ink}}>{RULE_FIELDS.find(f=>f.value===r.field)?.label||r.field}</strong> {r.operator==='is_not'?'Is Not':r.operator==='contains'?'Contains':r.operator==='any'?'Any':'Is'} {r.values?.length?r.values.join(' | '):'Any'}
+                    </div>
+                  ))}
+                  {(!cond.rules||cond.rules.length===0)&&<div style={{fontSize:11,color:C.sub}}>Any lead</div>}
+                </div>
               </div>
             </div>
             {sec&&sp&&(
-            <div onClick={()=>setConfigNode(sec.id)} style={{position:'absolute',left:sp.x+30,top:sp.y+30,width:200,cursor:'pointer',borderRadius:10,overflow:'hidden',background:'#fff',boxShadow:configNode===sec.id?`0 0 0 2px ${C.indigo}`:'0 2px 8px rgba(0,0,0,.08)',zIndex:1}}>
-              <div style={{background:C.indigo,color:'#fff',padding:'6px 12px',fontSize:12,fontWeight:700}}>{sec.label}</div>
-              <div style={{padding:'8px 12px',display:'flex',flexDirection:'column',gap:4}}>
-                {sec.fields.length===0?<div style={{fontSize:11,color:C.red}}>No fields configured</div>
-                :sec.fields.map(fl=><div key={fl.id} style={{fontSize:12,color:C.ink}}>📅 {fl.label}{fl.required?' *':''}</div>)}
+            <div onClick={()=>setConfigNode(sec.id)} style={{position:'absolute',left:sp.x+30,top:sp.y+30,width:220,cursor:'pointer',zIndex:1}}>
+              <div style={{background:'#fff',borderRadius:12,border:configNode===sec.id?`2px solid ${C.indigo}`:`1.5px solid ${C.border}`,boxShadow:configNode===sec.id?`0 0 0 3px ${C.indigo}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
+                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`,display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{background:'#eef2ff',color:C.indigo,padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>SECTION</span>
+                  <span style={{fontSize:13,fontWeight:700,color:C.ink}}>{sec.label}</span>
+                </div>
+                <div style={{padding:'8px 14px',display:'flex',flexDirection:'column',gap:3}}>
+                  {sec.fields.length===0?<div style={{fontSize:11,color:C.red}}>No fields configured</div>
+                  :sec.fields.map(fl=><div key={fl.id} style={{fontSize:12,color:C.ink,display:'flex',alignItems:'center',gap:4}}><span style={{width:6,height:6,borderRadius:'50%',background:C.indigo,display:'inline-block',flexShrink:0}}/>{fl.label}{fl.required?' *':''}</div>)}
+                </div>
               </div>
             </div>)}
           </div>);
@@ -427,7 +442,7 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
       <div style={{width:300,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:16,flexShrink:0}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <div style={{fontSize:14,fontWeight:700,color:C.ink}}>{node.type==='condition'?'Check if lead':'Section fields'}</div>
-          <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub}}>✕</button>
+          <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={15}/></button>
         </div>
         {node.type==='condition'&&<RuleEditor rules={node.rules||[]} onChange={r=>updateNode(node.id,{rules:r})}/>}
         {node.type==='section'&&<>
@@ -456,7 +471,7 @@ function RuleEditor({rules,onChange}){
           <select value={r.operator} onChange={e=>update(i,{operator:e.target.value})} style={{...inp,width:90}}>
             <option value="is">Is</option><option value="is_not">Is Not</option><option value="contains">Contains</option><option value="any">Any</option>
           </select>
-          <button onClick={()=>remove(i)} style={{background:'none',border:'none',color:C.red,cursor:'pointer'}}>✕</button>
+          <button onClick={()=>remove(i)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',display:'flex'}}><X size={13}/></button>
         </div>
         {fdef?.options?(
           <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
@@ -486,7 +501,7 @@ function FieldEditor({fields,onChange}){
       <div key={f.id} style={{border:`1px solid ${C.border}`,borderRadius:8,padding:10,display:'flex',flexDirection:'column',gap:6}}>
         <div style={{display:'flex',gap:6}}>
           <input value={f.label} onChange={e=>update(i,{label:e.target.value})} placeholder="Field label" style={{...inp,flex:1}}/>
-          <button onClick={()=>remove(i)} style={{background:'none',border:'none',color:C.red,cursor:'pointer'}}>✕</button>
+          <button onClick={()=>remove(i)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',display:'flex'}}><X size={13}/></button>
         </div>
         <div style={{display:'flex',gap:6}}>
           <select value={f.type} onChange={e=>update(i,{type:e.target.value})} style={{...inp,flex:1}}>
@@ -534,29 +549,29 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
 
   return(
   <div style={{display:'flex',flex:1,overflow:'hidden',position:'relative'}}>
-    <div style={{width:sidebarOpen?190:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
-      <div style={{width:190,padding:'12px 10px',overflowY:'auto',height:'100%'}}>
+    <div style={{width:sidebarOpen?256:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0}}>
+      <div style={{width:256,padding:'14px 10px 40px',overflowY:'auto',height:'100%'}}>
         <SidebarSection title="Actions" subtitle="Do this…">
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          <div style={{display:'flex',flexDirection:'column',gap:2}}>
             {ACTION_CATALOG.map(a=>(
-              <div key={a.type} onClick={()=>addAction(a.type)} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,padding:'8px 4px',borderRadius:8,cursor:'pointer',fontSize:11,color:C.sub,textAlign:'center',lineHeight:1.2}}
+              <div key={a.type} onClick={()=>addAction(a.type)} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink,transition:'background .1s'}}
                 onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                <span style={{fontSize:18}}>{a.icon}</span><span>{a.label}</span>
+                <a.Icon size={15} style={{color:C.sub,flexShrink:0}}/><span style={{flex:1}}>{a.label}</span>
               </div>
             ))}
           </div>
         </SidebarSection>
         <SidebarSection title="Lead Condition" subtitle="If…">
-          <div onClick={()=>addCondition('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-            <span style={{fontSize:16}}>🔀</span> If Else
+          <div onClick={()=>addCondition('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <GitBranch size={15} style={{color:C.sub,flexShrink:0}}/><span>If Else</span>
           </div>
         </SidebarSection>
         <SidebarSection title="Event Condition" subtitle="If…">
-          <div onClick={()=>addCondition('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-            <span style={{fontSize:16}}>🔀</span> If Else
+          <div onClick={()=>addCondition('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <GitBranch size={15} style={{color:C.sub,flexShrink:0}}/><span>If Else</span>
           </div>
         </SidebarSection>
-        <SidebarSection title="⚡ n8n" subtitle="Trigger on every submission">
+        <SidebarSection title="n8n" subtitle="Trigger on every submission">
           <select value={sf.n8nWorkflowId||''} onChange={e=>set({n8nWorkflowId:e.target.value})} style={{...inp,fontSize:12}}>
             <option value="">None</option>
             {n8nWfs.map(nw=><option key={nw.id} value={nw.id}>{nw.name}</option>)}
@@ -564,7 +579,7 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
         </SidebarSection>
       </div>
     </div>
-    <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{position:'absolute',left:sidebarOpen?190:0,top:'50%',zIndex:10,width:22,height:38,borderRadius:'0 8px 8px 0',border:`1px solid ${C.border}`,borderLeft:'none',background:'#fff',cursor:'pointer',fontSize:11,color:C.sub,transition:'left .2s'}}>{sidebarOpen?'◂':'▸'}</button>
+    <button onClick={()=>setSidebarOpen(!sidebarOpen)} style={{position:'absolute',left:sidebarOpen?256:0,top:'50%',zIndex:10,width:22,height:38,borderRadius:'0 8px 8px 0',border:`1px solid ${C.border}`,borderLeft:'none',background:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:C.sub,transition:'left .2s'}}>{sidebarOpen?<ChevronDown size={13} style={{transform:'rotate(90deg)'}}/>:<ChevronDown size={13} style={{transform:'rotate(-90deg)'}}/>}</button>
 
     <div style={{flex:1,position:'relative',overflow:'auto',background:'#faf9fe'}}>
       <div style={{transform:`scale(${zoom})`,transformOrigin:'top center',minHeight:800,minWidth:800,position:'relative',padding:20}}>
@@ -592,7 +607,7 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
       <div style={{width:300,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:16,flexShrink:0}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <div style={{fontSize:14,fontWeight:700,color:C.ink}}>Configure {node.type==='condition'?'Condition':'Action'}</div>
-          <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub}}>✕</button>
+          <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={15}/></button>
         </div>
         {node.type==='condition'&&<RuleEditor rules={node.rules||[]} onChange={r=>updateNode(node.id,{rules:r})}/>}
         {node.type==='action'&&<ActionConfig node={node} updateNode={updateNode} users={users} templates={templates} n8nWfs={n8nWfs}/>}
@@ -602,22 +617,29 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
 }
 
 function WorkflowNode({node,type,sub,selected,onClick,onRemove}){
-  const colors={event:C.purple,action:C.indigo,condition:'#0891b2'};
+  const colors={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
+  const tagBg={event:'#ede9fe',action:'#eef2ff',condition:'#e0f2fe'};
+  const tagFg={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
+  const tagLabels={event:'EVENT',action:'ACTION',condition:'CONDITION'};
   const header=colors[type]||C.indigo;
   const ac=ACTION_CATALOG.find(a=>a.type===node.actionType);
+  const NodeIcon=ac?.Icon;
   return(
-  <div onClick={onClick} style={{position:'absolute',left:node.x,top:node.y,width:180,cursor:'pointer',zIndex:1,boxShadow:selected?`0 0 0 2px ${header}`:'0 2px 8px rgba(0,0,0,.08)',borderRadius:10,overflow:'hidden',background:'#fff'}}>
-    <div style={{background:header,color:'#fff',padding:'6px 12px',fontSize:11,fontWeight:700,textTransform:'uppercase',display:'flex',justifyContent:'space-between'}}>
-      <span>{type==='event'?'EVENT':type==='condition'?'CONDITION':'ACTION'}</span>
-      {onRemove&&<button onClick={e=>{e.stopPropagation();onRemove()}} style={{background:'none',border:'none',color:'rgba(255,255,255,.7)',cursor:'pointer'}}>⋮</button>}
+  <div onClick={onClick} style={{position:'absolute',left:node.x,top:node.y,width:240,cursor:'pointer',zIndex:1}}>
+    <div style={{background:'#fff',borderRadius:12,border:selected?`2px solid ${header}`:`1.5px solid ${C.border}`,boxShadow:selected?`0 0 0 3px ${header}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
+      <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid #f1eef9`}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{background:tagBg[type],color:tagFg[type],padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>{tagLabels[type]}</span>
+          <span style={{fontSize:13.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
+        </div>
+        {onRemove&&<button onClick={e=>{e.stopPropagation();onRemove()}} style={{background:'none',border:'none',color:C.sub,cursor:'pointer',display:'flex',flexShrink:0}}><MoreVertical size={14}/></button>}
+      </div>
+      <div style={{padding:'8px 14px',display:'flex',alignItems:'center',gap:6}}>
+        {NodeIcon?<NodeIcon size={13} style={{color:header,flexShrink:0}}/>:null}
+        <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{type==='event'?sub:type==='condition'?`${node.conditionScope==='lead'?'Lead':'Event'} If Else`:'configured'}</span>
+      </div>
     </div>
-    <div style={{padding:'10px 12px'}}>
-      <div style={{fontSize:13,fontWeight:600,color:C.ink}}>{node.label}</div>
-      {type==='event'&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>{sub}</div>}
-      {type==='action'&&ac&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>{ac.icon} configured</div>}
-      {type==='condition'&&<div style={{fontSize:11,color:C.sub,marginTop:2}}>🔀 {node.conditionScope==='lead'?'Lead':'Event'} If Else</div>}
-    </div>
-    <div style={{position:'absolute',bottom:-6,left:'50%',transform:'translateX(-50%)',width:12,height:12,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff'}}/>
+    <div style={{position:'absolute',bottom:-8,left:'50%',transform:'translateX(-50%)',width:16,height:16,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff',zIndex:2}}/>
   </div>);
 }
 

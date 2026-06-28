@@ -140,10 +140,10 @@ const ACTION_CATALOG=[
 const STATUSES=['Fresh','Connected','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost'];
 
 /* ─── layout constants used by the canvas to avoid node/connector overlap ──── */
-const NODE_W=220, ROW_H=46, GAP=86;
+const NODE_W=280, ROW_H=52, GAP=72;
 function nodeHeight(node){
   const hasDetail = node.type==='event' ? !!node.detailLabel : (node.type==='condition' ? true : !!node.detailLabel);
-  return hasDetail ? ROW_H+44 : ROW_H;
+  return hasDetail ? ROW_H+40 : ROW_H;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -454,7 +454,11 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
   const [sidebarOpen,setSidebarOpen]=useState(true);
   const [selectedNode,setSelectedNode]=useState(null);
   const [zoom,setZoom]=useState(1);
-  const [configNode,setConfigNode]=useState(null);
+  const [configNode,setConfigNode]=useState(()=>{
+    // auto-open event node config so delay field is visible immediately for schedules
+    if(initial?.nodes?.length) return initial.nodes.find(n=>n.type==='event')?.id || null;
+    return 'evt_0';
+  });
   const [showAlerts,setShowAlerts]=useState(false);
   const [menuNode,setMenuNode]=useState(null);
   const [msgTemplates,setMsgTemplates]=useState([]);
@@ -559,18 +563,36 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     </div>
 
     {editorTab==='editor'?(
+    <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden',position:'relative'}}>
+      {/* SCHEDULE DELAY BANNER */}
+      {isSchedule&&(
+        <div style={{background:'#f0eeff',borderBottom:`1px solid #e0d9ff`,padding:'10px 20px',display:'flex',alignItems:'center',gap:16,flexShrink:0}}>
+          <Clock size={16} style={{color:C.indigo,flexShrink:0}}/>
+          <span style={{fontSize:13,fontWeight:600,color:C.indigo}}>Schedule Delay:</span>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <input type="number" min="0" value={wf.scheduleConfig?.delayMinutes??60}
+              onChange={e=>setWf(prev=>({...prev,scheduleConfig:{...prev.scheduleConfig,delayMinutes:Number(e.target.value)}}))}
+              style={{width:80,padding:'5px 10px',border:`1px solid #c4b5fd`,borderRadius:7,fontSize:13,fontWeight:600,color:C.ink,outline:'none',textAlign:'center'}}/>
+            <span style={{fontSize:13,color:C.sub}}>minutes</span>
+            <span style={{fontSize:12,color:C.sub,marginLeft:4}}>
+              {(()=>{const m=wf.scheduleConfig?.delayMinutes||0; if(m<60) return `(${m}m)`; if(m<1440) return `(${(m/60).toFixed(1)}h)`; return `(${(m/1440).toFixed(1)}d)`;})()}
+            </span>
+          </div>
+          <span style={{fontSize:12,color:C.sub}}>— actions run this long after the trigger event fires</span>
+        </div>
+      )}
     <div style={{display:'flex',flex:1,overflow:'hidden',position:'relative'}}>
       {/* LEFT SIDEBAR PALETTE */}
-      <div style={{width:sidebarOpen?224:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0,position:'relative'}}>
-        <div style={{width:224,padding:'14px 12px 40px',overflowY:'auto',height:'100%'}}>
+      <div style={{width:sidebarOpen?256:0,transition:'width .2s',overflow:'hidden',background:'#fff',borderRight:`1px solid ${C.border}`,flexShrink:0,position:'relative'}}>
+        <div style={{width:256,padding:'14px 10px 40px',overflowY:'auto',height:'100%'}}>
           {/* Events */}
           <SidebarSection title="Events" subtitle="When this happens">
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            <div style={{display:'flex',flexDirection:'column',gap:2}}>
               {siblingEvents.map(e=>(
                 <div key={e.value} onClick={()=>switchEvent(e)} style={paletteItem(e.value===wf.triggerEvent)}
                   onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background=e.value===wf.triggerEvent?C.indigoBg:'transparent'}>
-                  {e.Icon?<e.Icon size={18} style={{color:e.value===wf.triggerEvent?C.indigo:C.sub}}/>:e.badge?<BrandBadge {...e.badge}/>:null}
-                  <span>{e.label.replace(/^On /,'')}</span>
+                  {e.Icon?<e.Icon size={15} style={{color:e.value===wf.triggerEvent?C.indigo:C.sub,flexShrink:0}}/>:e.badge?<BrandBadge {...e.badge}/>:null}
+                  <span style={{flex:1,textAlign:'left'}}>{e.label.replace(/^On /,'')}</span>
                 </div>
               ))}
             </div>
@@ -578,12 +600,12 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
 
           {/* Actions */}
           <SidebarSection title="Actions" subtitle="Do this…" accent>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            <div style={{display:'flex',flexDirection:'column',gap:2}}>
               {ACTION_CATALOG.map(a=>(
                 <div key={a.type} onClick={()=>addActionNode(a.type)} style={paletteItem(false)}
                   onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background='transparent'}>
-                  <a.Icon size={18} style={{color:C.sub}}/>
-                  <span>{a.label}</span>
+                  <a.Icon size={15} style={{color:C.sub,flexShrink:0}}/>
+                  <span style={{flex:1,textAlign:'left'}}>{a.label}</span>
                 </div>
               ))}
             </div>
@@ -624,7 +646,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
             // Layout is recomputed from current node heights every render, so a node
             // that grows (e.g. once a field/value gets configured) never overlaps
             // whatever comes after it — positions are never read from stale x/y.
-            const BASE_X=380;
+            const BASE_X=320;
             let cursorY=60;
             const layout={};
             wf.nodes.forEach(n=>{ layout[n.id]={x:BASE_X,y:cursorY,h:nodeHeight(n)}; cursorY+=nodeHeight(n)+GAP; });
@@ -684,7 +706,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
         const cfg=node.config||{};
         const updCfg=(patch)=>upd({config:{...cfg,...patch}});
         return(
-        <div style={{width:290,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:16,flexShrink:0}}>
+        <div style={{width:300,background:'#fff',borderLeft:`1px solid ${C.border}`,overflowY:'auto',padding:20,flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
             <div style={{fontSize:14,fontWeight:700,color:C.ink}}>Configure {node.type==='event'?'Event':node.type==='condition'?'Condition':'Action'}</div>
             <button onClick={()=>setConfigNode(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.sub,display:'flex'}}><X size={16}/></button>
@@ -775,6 +797,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
         </div>
       )}
     </div>
+    </div>
     ):(
     <div style={{flex:1,overflow:'auto',padding:20}}>
       <ExecutionsTable executions={executions} hasId={!!id}/>
@@ -782,7 +805,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     )}
   </div>);
 }
-const paletteItem=(active)=>({display:'flex',flexDirection:'column',alignItems:'center',gap:5,padding:'10px 4px',borderRadius:8,cursor:'pointer',fontSize:11,color:active?C.indigo:C.sub,textAlign:'center',lineHeight:1.25,background:active?C.indigoBg:'transparent',transition:'background .1s'});
+const paletteItem=(active)=>({display:'flex',flexDirection:'row',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:active?C.indigo:C.ink,fontWeight:active?600:400,background:active?C.indigoBg:'transparent',transition:'background .1s',lineHeight:1.3});
 
 /* ─── SIDEBAR SECTION ─────────────────────────────────────────────────────── */
 function SidebarSection({title,subtitle,children,accent}){
@@ -799,7 +822,9 @@ function SidebarSection({title,subtitle,children,accent}){
 
 /* ─── FLOW NODE ───────────────────────────────────────────────────────────── */
 function FlowNode({node,pos,selected,menuOpen,onClick,onMenu,onDelete}){
-  const colors={event:C.purple,action:C.indigo,condition:'#0e7490'};
+  const colors={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
+  const tagBg={event:'#ede9fe',action:'#eef2ff',condition:'#e0f2fe'};
+  const tagFg={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
   const tagLabels={event:'EVENT',action:'ACTION',condition:'CONDITION'};
   const header=colors[node.type]||C.indigo;
   const ac=ACTION_CATALOG.find(a=>a.type===node.actionType);
@@ -809,25 +834,33 @@ function FlowNode({node,pos,selected,menuOpen,onClick,onMenu,onDelete}){
   return(
   <div style={{position:'absolute',left:pos.x,top:pos.y,width:NODE_W,zIndex:1}}>
     <div onClick={onClick} style={{cursor:'pointer'}}>
-      <div style={{display:'inline-block',background:header,color:'#fff',padding:'4px 14px',fontSize:10.5,fontWeight:700,textTransform:'uppercase',letterSpacing:'.05em',borderRadius:'7px 7px 0 0'}}>{tagLabels[node.type]}</div>
-      <div style={{background:'#fff',borderRadius:'0 10px 10px 10px',border:`1px solid ${C.border}`,boxShadow:selected?`0 0 0 2px ${header}`:'0 2px 10px rgba(30,20,80,.08)',overflow:'hidden'}}>
-        <div style={{padding:'11px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
-          <span style={{fontSize:14.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
-          {onDelete&&<button onClick={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',color:C.sub,cursor:'pointer',display:'flex',flexShrink:0}}><MoreVertical size={16}/></button>}
+      <div style={{
+        background:'#fff',borderRadius:12,
+        border:selected?`2px solid ${header}`:`1.5px solid ${C.border}`,
+        boxShadow:selected?`0 0 0 3px ${header}22`:'0 2px 12px rgba(30,20,80,.07)',
+        overflow:'visible',
+      }}>
+        {/* tag pill inside top-left */}
+        <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid #f1eef9`}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{background:tagBg[node.type],color:tagFg[node.type],padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>{tagLabels[node.type]}</span>
+            <span style={{fontSize:13.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
+          </div>
+          {onDelete&&<button onClick={e=>{e.stopPropagation();onMenu();}} style={{background:'none',border:'none',color:C.sub,cursor:'pointer',display:'flex',flexShrink:0,padding:2}}><MoreVertical size={15}/></button>}
         </div>
         {detail&&(
-          <div style={{borderTop:`1px solid #f1eef9`,padding:'9px 14px',display:'flex',alignItems:'center',gap:8}}>
-            {NodeIcon?<NodeIcon size={14} style={{color:C.sub,flexShrink:0}}/>:<Filter size={14} style={{color:C.sub,flexShrink:0}}/>}
-            <span style={{flex:1,fontSize:13,color:C.ink,fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{detail}</span>
-            <span style={{width:15,height:15,borderRadius:'50%',border:`1.5px solid ${C.border}`,flexShrink:0}}/>
+          <div style={{padding:'9px 14px',display:'flex',alignItems:'center',gap:8}}>
+            {NodeIcon?<NodeIcon size={14} style={{color:header,flexShrink:0}}/>:<Filter size={14} style={{color:header,flexShrink:0}}/>}
+            <span style={{flex:1,fontSize:12.5,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{detail}</span>
           </div>
         )}
+        {!detail&&<div style={{height:6}}/>}
       </div>
     </div>
-    {/* connector handle to next node — sits outside the overflow:hidden card so it never clips */}
-    <div style={{position:'absolute',bottom:-7,left:'50%',transform:'translateX(-50%)',width:14,height:14,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff',zIndex:2}}/>
+    {/* connector dot bottom center */}
+    <div style={{position:'absolute',bottom:-8,left:'50%',transform:'translateX(-50%)',width:16,height:16,borderRadius:'50%',border:`2px solid ${header}`,background:'#fff',zIndex:2}}/>
     {menuOpen&&onDelete&&(
-      <div style={{position:'absolute',top:30,right:0,background:'#fff',border:`1px solid ${C.border}`,borderRadius:8,boxShadow:'0 4px 14px rgba(0,0,0,.12)',zIndex:5,minWidth:120}}>
+      <div style={{position:'absolute',top:36,right:0,background:'#fff',border:`1px solid ${C.border}`,borderRadius:8,boxShadow:'0 4px 14px rgba(0,0,0,.12)',zIndex:5,minWidth:120}}>
         <div onClick={e=>{e.stopPropagation();onDelete();}} style={{padding:'9px 14px',fontSize:13,color:C.red,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}><Trash2 size={13}/> Delete</div>
       </div>
     )}

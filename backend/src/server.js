@@ -76,6 +76,8 @@ app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
 app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
 app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
 app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
+app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
+app.use('/api/email-campaigns', apiLimiter, require('./routes/emailCampaigns'));
 
 app.use('/api/lead-stages', apiLimiter, require('./routes/leadStages'));
 app.use('/api/lead-fields', apiLimiter, require('./routes/leadFields'));

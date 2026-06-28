@@ -76,8 +76,10 @@ function WebhookEditor({initial,events,onClose,onSaved}){
   const [mainTab,setMainTab]=useState('webhook');
   const [step,setStep]=useState(1);
   const [saving,setSaving]=useState(false);
+  const [wfList,setWfList]=useState([]);
   const set=p=>setH(x=>({...x,...p}));
   const setCfg=p=>set({config:{...h.config,...p}});
+  useEffect(()=>{workflowsAPI.getAll({limit:100}).then(r=>setWfList(r.data.workflows||[])).catch(()=>{});},[]);
 
   const save=async()=>{
     if(!h.name.trim())return alert('Name required');
@@ -156,12 +158,41 @@ function WebhookEditor({initial,events,onClose,onSaved}){
                   ))}
                   <button style={btnG} onClick={()=>set({fieldMappings:[...(h.fieldMappings||[]),{from:'',to:''}]})}>+ Add Mapping</button>
                 </div>)}
-                {s.num===7&&(<div>
-                  <label style={lbl}>Subscribe to Events</label>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-                    {events.map(e=>(
-                      <button key={e.value} onClick={()=>toggleEvent(e.value)} style={{padding:'5px 12px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:500,border:`1.5px solid ${h.events?.includes(e.value)?C.indigo:C.border}`,background:h.events?.includes(e.value)?'#f0eeff':'#fff',color:h.events?.includes(e.value)?C.indigo:C.sub}}>{e.label}</button>
-                    ))}
+                {s.num===7&&(<div style={{display:'flex',flexDirection:'column',gap:20}}>
+                  {/* Subscribe to events */}
+                  <div>
+                    <label style={lbl}>Subscribe to Events</label>
+                    <div style={{fontSize:12,color:C.sub,marginBottom:10}}>Select which AOTMS events will be forwarded to the connected workflow</div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                      {events.map(e=>(
+                        <button key={e.value} onClick={()=>toggleEvent(e.value)} style={{padding:'5px 12px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:500,border:`1.5px solid ${h.events?.includes(e.value)?C.indigo:C.border}`,background:h.events?.includes(e.value)?'#f0eeff':'#fff',color:h.events?.includes(e.value)?C.indigo:C.sub}}>{e.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Connect workflow */}
+                  <div style={{borderTop:`1px solid ${C.border}`,paddingTop:18}}>
+                    <label style={lbl}>Connect a Workflow</label>
+                    <div style={{fontSize:12,color:C.sub,marginBottom:12}}>When this webhook fires, it will also trigger the selected workflow</div>
+                    <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                      <select value={h.connectedWorkflowId||''} onChange={e=>set({connectedWorkflowId:e.target.value})}
+                        style={{...inp,flex:1,minWidth:220,maxWidth:400,fontSize:13,height:40,padding:'0 12px'}}>
+                        <option value=''>— None (no workflow) —</option>
+                        {wfList.map(w=><option key={w._id} value={w._id}>{w.name} {w.status==='published'?'✓':''}</option>)}
+                      </select>
+                      <span style={{fontSize:12,color:C.sub}}>or</span>
+                      <button onClick={()=>window.open('/workflows?create=1','_blank')} style={{...btnP,padding:'8px 16px',fontSize:13,display:'flex',alignItems:'center',gap:6,whiteSpace:'nowrap'}}>
+                        + Create New Workflow
+                      </button>
+                    </div>
+                    {h.connectedWorkflowId&&(
+                      <div style={{marginTop:12,padding:'10px 14px',background:'#f0fdf4',border:`1px solid #bbf7d0`,borderRadius:8,display:'flex',alignItems:'center',gap:8}}>
+                        <span style={{width:8,height:8,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>
+                        <span style={{fontSize:13,color:'#166534',fontWeight:500}}>
+                          Workflow connected: <strong>{wfList.find(w=>w._id===h.connectedWorkflowId)?.name||h.connectedWorkflowId}</strong>
+                        </span>
+                        <button onClick={()=>set({connectedWorkflowId:''})} style={{background:'none',border:'none',color:'#166534',cursor:'pointer',marginLeft:'auto',fontSize:18,lineHeight:1}}>×</button>
+                      </div>
+                    )}
                   </div>
                 </div>)}
               </div>

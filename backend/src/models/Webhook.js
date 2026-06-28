@@ -7,6 +7,7 @@ const webhookSchema = new mongoose.Schema({
   secret: { type: String, default: () => crypto.randomBytes(16).toString('hex') },
   // subscribed trigger events — reuses the same event names as Workflow.triggerEvent
   events: [{ type: String }],
+  connectedWorkflowId: { type: mongoose.Schema.Types.ObjectId, ref: 'Workflow', default: null },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   successCount: { type: Number, default: 0 },
   failCount: { type: Number, default: 0 },
