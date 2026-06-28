@@ -504,6 +504,18 @@ router.post('/:id/call', protect, async (req, res) => {
 
     await lead.save();
     await lead.populate('activities.performedBy', 'name avatar');
+
+    // Fire workflow events for call activities
+    const ctx = { lead, user: req.user, changes: { duration: duration||0, callStatus } };
+    if (callStatus === 'connected' || callStatus === 'answered') {
+      fireEvent('lead.call_outgoing_ended', ctx).catch(() => {});
+    } else if (callStatus === 'no_answer' || callStatus === 'missed') {
+      fireEvent('lead.call_missed', ctx).catch(() => {});
+    }
+    if (duration > 0) {
+      fireEvent('lead.call_recording_completed', ctx).catch(() => {});
+    }
+
     res.json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -516,13 +528,21 @@ router.post('/:id/note', protect, async (req, res) => {
     const { note, type } = req.body;
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
+    const noteType = type || 'note';
     lead.activities.unshift({
-      type: type || 'note',
+      type: noteType,
       description: note,
       performedBy: req.user._id,
     });
     await lead.save();
     await lead.populate('activities.performedBy', 'name avatar');
+
+    // Fire note workflow events
+    const noteCtx = { lead, user: req.user, changes: { type: noteType, note } };
+    fireEvent('lead.note_added', noteCtx).catch(() => {});
+    if (noteType === 'note') fireEvent('lead.user_note', noteCtx).catch(() => {});
+    else if (noteType === 'system') fireEvent('lead.system_note', noteCtx).catch(() => {});
+
     res.json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -7,6 +7,7 @@ const User = require('../models/User');
 const ImportHistory = require('../models/ImportHistory');
 const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
+const { fireEvent } = require('../services/workflowEngine');
 
 const router = express.Router();
 
@@ -315,6 +316,16 @@ router.post('/import', protect, authorize('manager','admin'), upload.single('fil
       }).catch(() => null)
     );
     await Promise.all(notifPromises);
+
+    // Fire workflow events for each imported lead (non-blocking)
+    if (inserted.length) {
+      setImmediate(() => {
+        inserted.forEach(lead => {
+          fireEvent('lead.created', { lead, user: req.user, changes: { source: 'excel_upload' } }).catch(() => {});
+          fireEvent('lead.excel_upload', { lead, user: req.user, changes: { source: 'excel_upload' } }).catch(() => {});
+        });
+      });
+    }
 
     res.json({
       message:'Import complete', total:rows.length, imported:inserted.length,

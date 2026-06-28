@@ -390,6 +390,7 @@ module.exports = {
   EVENT_DEFINITIONS,
   ACTION_DEFINITIONS,
   fireEvent,
+  executeWorkflow,
   startSchedulePoller,
   evaluateConditions,
 };

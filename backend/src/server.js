@@ -72,6 +72,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
 app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
 app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
+// Public inbound webhook endpoint (no auth — secured by token in URL)
 app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
 app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
 app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
@@ -85,6 +86,7 @@ app.use('/api/call-feedback', apiLimiter, require('./routes/callFeedback'));
 app.use('/api/custom-actions', apiLimiter, require('./routes/customActions'));
 app.use('/api/workspace-preferences', apiLimiter, require('./routes/workspacePreferences'));
 app.use('/api/permission-templates', apiLimiter, require('./routes/permissionTemplates'));
+app.use('/api/billing', apiLimiter, require('./routes/billing'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
