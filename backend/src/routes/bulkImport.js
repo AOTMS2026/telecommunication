@@ -7,6 +7,7 @@ const User = require('../models/User');
 const ImportHistory = require('../models/ImportHistory');
 const Notification = require('../models/Notification');
 const { protect, authorize } = require('../middleware/auth');
+const { fireEvent } = require('../services/workflowEngine');
 
 const router = express.Router();
 
@@ -145,7 +146,7 @@ function applyMapping(row, fieldMapping, campaignId, importId) {
 router.get('/system-fields', protect, (req, res) => res.json({ fields: SYSTEM_FIELDS }));
 
 // ── POST /api/bulk-import/parse-file ─────────────────────────────────────────
-router.post('/parse-file', protect, authorize('admin','super admin'), upload.single('file'), async (req, res) => {
+router.post('/parse-file', protect, authorize('manager','admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
@@ -157,7 +158,7 @@ router.post('/parse-file', protect, authorize('admin','super admin'), upload.sin
 });
 
 // ── POST /api/bulk-import/select-sheet ───────────────────────────────────────
-router.post('/select-sheet', protect, authorize('admin','super admin'), upload.single('file'), async (req, res) => {
+router.post('/select-sheet', protect, authorize('manager','admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
@@ -170,7 +171,7 @@ router.post('/select-sheet', protect, authorize('admin','super admin'), upload.s
 });
 
 // ── POST /api/bulk-import/check-duplicates ────────────────────────────────────
-router.post('/check-duplicates', protect, authorize('admin','super admin'), upload.single('file'), async (req, res) => {
+router.post('/check-duplicates', protect, authorize('manager','admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const { sheetName, fieldMapping: rawMapping } = req.body;
@@ -205,7 +206,7 @@ router.post('/check-duplicates', protect, authorize('admin','super admin'), uplo
 });
 
 // ── POST /api/bulk-import/import ──────────────────────────────────────────────
-router.post('/import', protect, authorize('admin','super admin'), upload.single('file'), async (req, res) => {
+router.post('/import', protect, authorize('manager','admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const { sheetName, fieldMapping:rawMapping, campaignId, duplicateHandling='skip', importName } = req.body;
@@ -316,6 +317,16 @@ router.post('/import', protect, authorize('admin','super admin'), upload.single(
     );
     await Promise.all(notifPromises);
 
+    // Fire workflow events for each imported lead (non-blocking)
+    if (inserted.length) {
+      setImmediate(() => {
+        inserted.forEach(lead => {
+          fireEvent('lead.created', { lead, user: req.user, changes: { source: 'excel_upload' } }).catch(() => {});
+          fireEvent('lead.excel_upload', { lead, user: req.user, changes: { source: 'excel_upload' } }).catch(() => {});
+        });
+      });
+    }
+
     res.json({
       message:'Import complete', total:rows.length, imported:inserted.length,
       skipped:duplicateCount, errors:failedCount, campaignName:campaign.name,
@@ -328,7 +339,7 @@ router.post('/import', protect, authorize('admin','super admin'), upload.single(
 });
 
 // ── GET /api/bulk-import/history ─────────────────────────────────────────────
-router.get('/history', protect, authorize('admin','super admin'), async (req, res) => {
+router.get('/history', protect, authorize('manager','admin'), async (req, res) => {
   try {
     const page = parseInt(req.query.page)||1, limit = parseInt(req.query.limit)||10;
     const [records, total] = await Promise.all([
@@ -342,7 +353,7 @@ router.get('/history', protect, authorize('admin','super admin'), async (req, re
 });
 
 // ── GET /api/bulk-import/history/:id/leads ───────────────────────────────────
-router.get('/history/:id/leads', protect, authorize('admin','super admin'), async (req, res) => {
+router.get('/history/:id/leads', protect, authorize('manager','admin'), async (req, res) => {
   try {
     const page = parseInt(req.query.page)||1, limit = parseInt(req.query.limit)||100;
     const [leads, total] = await Promise.all([
@@ -357,7 +368,7 @@ router.get('/history/:id/leads', protect, authorize('admin','super admin'), asyn
 
 // ── DELETE /api/bulk-import/history/:id ──────────────────────────────────────
 // Deletes import record AND all leads from that import
-router.delete('/history/:id', protect, authorize('admin','super admin'), async (req, res) => {
+router.delete('/history/:id', protect, authorize('manager','admin'), async (req, res) => {
   try {
     const [delLeads] = await Promise.all([
       Lead.deleteMany({ importId: req.params.id }),
@@ -369,7 +380,7 @@ router.delete('/history/:id', protect, authorize('admin','super admin'), async (
 
 // ── PUT /api/bulk-import/history/:id ─────────────────────────────────────────
 // Edit import: reassign callers / campaign
-router.put('/history/:id', protect, authorize('admin','super admin'), async (req, res) => {
+router.put('/history/:id', protect, authorize('manager','admin'), async (req, res) => {
   try {
     const { campaignId, callerAssignments } = req.body;
     const importRecord = await ImportHistory.findById(req.params.id);
@@ -435,7 +446,7 @@ router.put('/history/:id', protect, authorize('admin','super admin'), async (req
 });
 
 // ── Legacy endpoints (preserved) ─────────────────────────────────────────────
-router.post('/preview', protect, authorize('admin','super admin'), upload.single('file'), async (req, res) => {
+router.post('/preview', protect, authorize('manager','admin'), upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const wb = XLSX.read(req.file.buffer, { type:'buffer', cellDates:true });
@@ -457,7 +468,7 @@ router.get('/template', protect, (req, res) => {
   res.send(buf);
 });
 
-router.post('/assign', protect, authorize('admin','super admin'), async (req, res) => {
+router.post('/assign', protect, authorize('manager','admin'), async (req, res) => {
   try {
     const { leadIds, campaignId, callerId } = req.body;
     if (!leadIds?.length) return res.status(400).json({ message: 'No leads provided' });
