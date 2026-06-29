@@ -1,16 +1,4 @@
 // routes/recordings.js
-//
-// Matches the Flutter app's ApiService calls exactly:
-//   POST   /api/recordings          (multipart, field "audio")  -> uploadCallRecording()
-//   GET    /api/recordings/my                                   -> getMyRecordings()
-//   GET    /api/recordings?userId=  (admin/super admin only)     -> getAllRecordings()
-//
-// Mount this in your main server file with:
-//   app.use('/api/recordings', require('./routes/recordings'));
-//
-// Also serve the uploads folder as static files in your main server file:
-//   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -19,13 +7,10 @@ const crypto = require('crypto');
 
 const router = express.Router();
 const CallRecording = require('../models/CallRecording');
-
-// Adjust this import to match whatever auth middleware your project already
-// uses elsewhere (e.g. in routes/leads.js, routes/campaigns.js, etc).
-// It must set req.user = { id, role, ... } from the JWT.
+const Lead = require('../models/Lead');
 const { protect } = require('../middleware/auth');
 
-// ─── Storage setup ───────────────────────────────────────────────────────
+// ─── Storage setup ────────────────────────────────────────────────────────
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -42,7 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 25 * 1024 * 1024 }, // 25 MB per recording — adjust if needed
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /\.(m4a|amr|mp3|wav|3gp|3gpp|aac|ogg)$/i;
     if (allowed.test(file.originalname)) cb(null, true);
@@ -50,7 +35,50 @@ const upload = multer({
   },
 });
 
-// ─── POST /api/recordings — upload a recording ──────────────────────────
+// ─── Extract phone number from recording filename ─────────────────────────
+// Handles formats like:
+//   Call_+919876543210_20240101.m4a
+//   call_recorder_9876543210_2024-01-01.mp3
+//   +91-9876543210.amr
+//   Recording_919876543210.wav
+function extractPhoneFromFilename(filename) {
+  const name = path.basename(filename, path.extname(filename));
+
+  // Match sequences of digits (with optional +, -, spaces) that look like phone numbers
+  const matches = name.match(/[\+]?[\d][\d\s\-]{7,}/g);
+  if (!matches) return null;
+
+  for (const raw of matches) {
+    // Strip non-digit characters
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 7) continue;
+
+    // Last 10 digits (local number without country code)
+    const last10 = digits.slice(-10);
+    if (last10.length === 10) return last10;
+  }
+  return null;
+}
+
+// ─── Match phone to lead (tries multiple formats) ─────────────────────────
+async function findLeadByPhone(phone10, workspaceId) {
+  if (!phone10) return null;
+
+  // Try: exact last-10, with +91, with 0, with 91
+  const variants = [
+    phone10,
+    `+91${phone10}`,
+    `91${phone10}`,
+    `0${phone10}`,
+  ];
+
+  const query = { phone: { $in: variants } };
+  if (workspaceId) query.workspace = workspaceId;
+
+  return Lead.findOne(query).select('_id name phone').lean();
+}
+
+// ─── POST /api/recordings ─────────────────────────────────────────────────
 router.post('/', protect, upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) {
@@ -59,9 +87,22 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
 
     const { leadId, recordedAt } = req.body;
 
+    // Extract phone from original filename
+    const extractedPhone = extractPhoneFromFilename(req.file.originalname);
+
+    // Resolve lead: prefer explicit leadId, then auto-match by phone
+    let resolvedLead = null;
+    if (leadId) {
+      resolvedLead = leadId;
+    } else if (extractedPhone) {
+      const matched = await findLeadByPhone(extractedPhone, req.user.workspace);
+      if (matched) resolvedLead = matched._id;
+    }
+
     const doc = await CallRecording.create({
       user: req.user.id,
-      lead: leadId || null,
+      lead: resolvedLead || null,
+      phone: extractedPhone || null,
       originalName: req.file.originalname,
       storedName: req.file.filename,
       filePath: `recordings/${req.file.filename}`,
@@ -71,14 +112,73 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       recordedAt: recordedAt ? new Date(recordedAt) : new Date(),
     });
 
-    return res.status(201).json({ success: true, recording: doc });
+    // Populate lead info for response
+    const populated = await CallRecording.findById(doc._id)
+      .populate('lead', 'name phone')
+      .lean();
+
+    return res.status(201).json({ success: true, recording: populated });
   } catch (err) {
     console.error('Recording upload error:', err);
     return res.status(500).json({ error: 'Failed to save recording' });
   }
 });
 
-// ─── GET /api/recordings/my — current user's own recordings ─────────────
+// ─── POST /api/recordings/:id/link-lead — manually link/unlink a lead ────
+router.post('/:id/link-lead', protect, async (req, res) => {
+  try {
+    const { leadId } = req.body;
+    const update = { lead: leadId || null };
+
+    // If unlinking and we have a phone, try auto-match again
+    if (!leadId) {
+      const rec = await CallRecording.findById(req.params.id).lean();
+      if (rec && rec.phone) {
+        const matched = await findLeadByPhone(rec.phone, req.user.workspace);
+        if (matched) update.lead = matched._id;
+      }
+    }
+
+    const updated = await CallRecording.findByIdAndUpdate(
+      req.params.id,
+      update,
+      { new: true }
+    ).populate('lead', 'name phone').lean();
+
+    if (!updated) return res.status(404).json({ error: 'Recording not found' });
+    return res.json({ success: true, recording: updated });
+  } catch (err) {
+    console.error('link-lead error:', err);
+    return res.status(500).json({ error: 'Failed to link lead' });
+  }
+});
+
+// ─── POST /api/recordings/rematch — re-match all unlinked recordings ──────
+router.post('/rematch', protect, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const unlinked = await CallRecording.find({ lead: null, phone: { $ne: null } }).lean();
+    let matched = 0;
+
+    for (const rec of unlinked) {
+      const lead = await findLeadByPhone(rec.phone, req.user.workspace);
+      if (lead) {
+        await CallRecording.findByIdAndUpdate(rec._id, { lead: lead._id });
+        matched++;
+      }
+    }
+
+    return res.json({ success: true, total: unlinked.length, matched });
+  } catch (err) {
+    console.error('rematch error:', err);
+    return res.status(500).json({ error: 'Rematch failed' });
+  }
+});
+
+// ─── GET /api/recordings/my ───────────────────────────────────────────────
 router.get('/my', protect, async (req, res) => {
   try {
     const recordings = await CallRecording.find({ user: req.user.id })
@@ -94,7 +194,7 @@ router.get('/my', protect, async (req, res) => {
   }
 });
 
-// ─── GET /api/recordings?userId=... — admin/super admin, all employees ──
+// ─── GET /api/recordings ─────────────────────────────────────────────────
 router.get('/', protect, async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'manager') {
@@ -118,8 +218,6 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// ─── Helper: shape each doc the way the Flutter UI expects ───────────────
-// CallRecordingsScreen reads: recordedAt, url, userName/agentName
 function formatRecording(r) {
   return {
     _id: r._id,
@@ -127,15 +225,14 @@ function formatRecording(r) {
     url: absoluteUrl(r.url),
     size: r.size,
     mimeType: r.mimeType,
+    phone: r.phone || null,
     userName: r.user && r.user.name ? r.user.name : undefined,
-    leadName: r.lead && r.lead.name ? r.lead.name : undefined,
-    leadPhone: r.lead && r.lead.phone ? r.lead.phone : undefined,
+    leadId: r.lead ? r.lead._id : null,
+    leadName: r.lead && r.lead.name ? r.lead.name : null,
+    leadPhone: r.lead && r.lead.phone ? r.lead.phone : null,
   };
 }
 
-// Turns "/uploads/recordings/x.m4a" into a full URL the phone can play
-// directly. Uses BASE_URL env var if set, otherwise falls back to your
-// known render.com host — change this fallback to match your actual domain.
 function absoluteUrl(relativePath) {
   const base = process.env.BASE_URL || 'https://telecommunication-hfvm.onrender.com';
   return `${base}${relativePath}`;

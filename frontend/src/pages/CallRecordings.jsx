@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { recordingsAPI, usersAPI } from '../services/api';
+import axios from 'axios';
 
 const PURPLE = '#5b3fc7';
 const TEXT_MAIN = '#1a1a2e';
@@ -22,7 +23,7 @@ function fmtDate(d) {
   });
 }
 
-function AudioPlayer({ url, id }) {
+function AudioPlayer({ url }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -60,7 +61,6 @@ function AudioPlayer({ url, id }) {
       <button
         onClick={toggle}
         style={{ width: 34, height: 34, borderRadius: '50%', background: error ? '#fee2e2' : PURPLE, border: 'none', cursor: error ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-        title={error ? 'Cannot play this file' : (playing ? 'Pause' : 'Play')}
       >
         {error ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -71,10 +71,7 @@ function AudioPlayer({ url, id }) {
         )}
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          onClick={seek}
-          style={{ height: 4, background: '#ddd6fe', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
-        >
+        <div onClick={seek} style={{ height: 4, background: '#ddd6fe', borderRadius: 2, cursor: 'pointer', position: 'relative' }}>
           <div style={{ height: '100%', width: `${duration ? (progress / duration) * 100 : 0}%`, background: PURPLE, borderRadius: 2, transition: 'width 0.1s' }} />
         </div>
       </div>
@@ -97,6 +94,8 @@ export default function CallRecordings() {
   const [users, setUsers] = useState([]);
   const [filterUser, setFilterUser] = useState('');
   const [search, setSearch] = useState('');
+  const [rematching, setRematching] = useState(false);
+  const [rematchResult, setRematchResult] = useState(null);
 
   const load = async (uid = filterUser) => {
     setLoading(true); setError('');
@@ -113,9 +112,21 @@ export default function CallRecordings() {
   useEffect(() => {
     load();
     if (isAdmin) {
-      usersAPI.getAll().then(r => setUsers(r.data.users || [])).catch(() => {});
+      usersAPI.getAll().then(r => setUsers((r.data.users || []).filter(u => u.role === 'caller'))).catch(() => {});
     }
   }, []);
+
+  const handleRematch = async () => {
+    setRematching(true);
+    setRematchResult(null);
+    try {
+      const res = await axios.post('/api/recordings/rematch');
+      setRematchResult(res.data);
+      load();
+    } catch (e) {
+      setRematchResult({ error: e?.response?.data?.error || 'Rematch failed' });
+    } finally { setRematching(false); }
+  };
 
   const filtered = recordings.filter(r => {
     if (!search) return true;
@@ -123,9 +134,12 @@ export default function CallRecordings() {
     return (
       (r.leadName || '').toLowerCase().includes(q) ||
       (r.leadPhone || '').toLowerCase().includes(q) ||
+      (r.phone || '').toLowerCase().includes(q) ||
       (r.userName || '').toLowerCase().includes(q)
     );
   });
+
+  const unlinkedCount = recordings.filter(r => !r.leadName).length;
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 900, margin: '0 auto' }}>
@@ -137,15 +151,40 @@ export default function CallRecordings() {
           </span>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Call Recordings</h1>
           <span style={{ fontSize: 12, background: '#ede9fe', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
+          {unlinkedCount > 0 && (
+            <span style={{ fontSize: 12, background: '#fef3c7', color: '#d97706', borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{unlinkedCount} unlinked</span>
+          )}
         </div>
-        <button
-          onClick={() => load()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Refresh
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {isAdmin && unlinkedCount > 0 && (
+            <button
+              onClick={handleRematch}
+              disabled={rematching}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: rematching ? 'not-allowed' : 'pointer', opacity: rematching ? 0.7 : 1 }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              {rematching ? 'Matching...' : 'Auto-Match Leads'}
+            </button>
+          )}
+          <button
+            onClick={() => load()}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Rematch result banner */}
+      {rematchResult && (
+        <div style={{ marginBottom: 16, padding: '10px 16px', borderRadius: 8, background: rematchResult.error ? '#fee2e2' : '#d1fae5', color: rematchResult.error ? '#dc2626' : '#065f46', fontSize: 13, fontWeight: 600 }}>
+          {rematchResult.error
+            ? `Error: ${rematchResult.error}`
+            : `✓ Matched ${rematchResult.matched} of ${rematchResult.total} unlinked recordings to leads`
+          }
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -162,7 +201,7 @@ export default function CallRecordings() {
             onChange={e => { setFilterUser(e.target.value); load(e.target.value); }}
             style={{ padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT_MAIN, background: '#fff', minWidth: 160 }}
           >
-            <option value="">All Agents</option>
+            <option value="">All Callers</option>
             {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
           </select>
         )}
@@ -189,16 +228,24 @@ export default function CallRecordings() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(r => (
-            <div key={r._id} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 4px #0000000a' }}>
+            <div key={r._id} style={{ background: '#fff', border: `1px solid ${r.leadName ? BORDER : '#fde68a'}`, borderRadius: 12, padding: '16px 18px', boxShadow: '0 1px 4px #0000000a' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  {r.leadName && (
+                  {r.leadName ? (
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN }}>{r.leadName}</span>
                       {r.leadPhone && <span style={{ fontSize: 12, color: TEXT_MUTED, marginLeft: 6 }}>{r.leadPhone}</span>}
                     </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, color: '#d97706', fontStyle: 'italic', fontWeight: 600 }}>No lead linked</span>
+                      {r.phone && (
+                        <span style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', borderRadius: 12, padding: '2px 8px', fontWeight: 600 }}>
+                          📞 {r.phone}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {!r.leadName && <span style={{ fontSize: 13, color: TEXT_MUTED, fontStyle: 'italic' }}>No lead linked</span>}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {isAdmin && r.userName && (
@@ -208,7 +255,7 @@ export default function CallRecordings() {
                   <span style={{ fontSize: 11, color: TEXT_MUTED }}>{fmtDate(r.recordedAt)}</span>
                 </div>
               </div>
-              <AudioPlayer url={r.url} id={r._id} />
+              <AudioPlayer url={r.url} />
             </div>
           ))}
         </div>
