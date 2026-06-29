@@ -273,6 +273,24 @@ export default function Topbar() {
       }}>
         {/* Left: logo + org name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 34, height: 34, background: '#fff', borderRadius: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.12)'
+          }}>
+            <img
+              src="/atm-logo.jpeg"
+              alt="ATM"
+              style={{ width: 30, height: 30, objectFit: 'contain' }}
+              onError={e => {
+                const t = e.currentTarget;
+                if (t.src.endsWith('.jpeg')) { t.src = '/atm-logo.jpg'; }
+                else if (t.src.endsWith('.jpg')) { t.src = '/atm-logo.png'; }
+                else if (t.src.endsWith('.png')) { t.src = '/atm-logo.webp'; }
+                else { t.style.display = 'none'; }
+              }}
+            />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', letterSpacing: 0.2 }}>AOTMS GLOBAL PVT. LTD</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
