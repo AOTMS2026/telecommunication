@@ -178,6 +178,7 @@ async function runSingleAction(action, context, log) {
         if (!lead || !action.config.listName) { log.push({ type: action.type, ok: false, message: 'No list name configured' }); return false; }
         if (!lead.lists.includes(action.config.listName)) lead.lists.push(action.config.listName);
         await lead.save();
+        fireEvent('lead.added_to_list', { lead, user: context.user, changes: { listName: action.config.listName } }).catch(() => {});
         log.push({ type: action.type, ok: true, message: `Added to list "${action.config.listName}"` });
         return true;
       }
@@ -185,6 +186,7 @@ async function runSingleAction(action, context, log) {
         if (!lead || !action.config.listName) { log.push({ type: action.type, ok: false, message: 'No list name configured' }); return false; }
         lead.lists = lead.lists.filter(l => l !== action.config.listName);
         await lead.save();
+        fireEvent('lead.removed_from_list', { lead, user: context.user, changes: { listName: action.config.listName } }).catch(() => {});
         log.push({ type: action.type, ok: true, message: `Removed from list "${action.config.listName}"` });
         return true;
       }

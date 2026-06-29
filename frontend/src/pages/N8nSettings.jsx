@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { n8nAPI } from '../services/api';
 
-const C = { indigo: '#6366f1', border: '#e5e2f5', ink: '#1e1b4b', sub: '#6b7280' };
+const C = { indigo: 'var(--theme-primary-alt)', border: 'var(--theme-border-tint)', ink: 'var(--theme-text-strongest)', sub: '#6b7280' };
 const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12 };
 const btnPrimary = { padding: '8px 18px', borderRadius: 8, border: 'none', background: C.indigo, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' };
 const btnGhost = { padding: '7px 14px', borderRadius: 8, border: `1.5px solid ${C.border}`, background: '#fff', color: C.ink, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
@@ -121,7 +121,7 @@ export default function N8nSettings() {
       </div>
 
       {/* How it works */}
-      <div style={{ ...card, padding: 20, marginBottom: 20, background: '#f8faff' }}>
+      <div style={{ ...card, padding: 20, marginBottom: 20, background: 'var(--theme-surface-faint)' }}>
         <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700, color: C.ink }}>How it works</h3>
         <div style={{ fontSize: 13, color: C.sub, lineHeight: 1.7 }}>
           <p style={{ margin: '0 0 8px' }}>Once connected, AOTMS can trigger n8n workflows when CRM events happen (lead created, status changed, etc.).</p>

@@ -135,18 +135,18 @@ export default function MessageTemplates() {
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#2d2d6b' }}>Message Templates</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--theme-text-strong)' }}>Message Templates</div>
         <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Manage reusable message templates for WhatsApp, SMS, and Email. Shared templates are visible to all team members.</div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1.5px solid #e5e2f5', paddingBottom: 0 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1.5px solid var(--theme-border-tint)', paddingBottom: 0 }}>
         {TABS.map(tab => (
           <button key={tab} onClick={() => handleTabChange(tab)} style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '8px 18px', border: 'none', background: 'none',
-            borderBottom: activeTab === tab ? '2.5px solid #5b3fc7' : '2.5px solid transparent',
-            color: activeTab === tab ? '#5b3fc7' : '#888',
+            borderBottom: activeTab === tab ? '2.5px solid var(--theme-primary)' : '2.5px solid transparent',
+            color: activeTab === tab ? 'var(--theme-primary)' : '#888',
             fontWeight: activeTab === tab ? 700 : 500,
             fontSize: 13, cursor: 'pointer', transition: 'all 0.15s'
           }}>
@@ -157,39 +157,39 @@ export default function MessageTemplates() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, minHeight: 500 }}>
         {/* Left Sidebar */}
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {activeTab === 'EMAIL' ? (
             <>
               {/* Email tab header: search + new template */}
-              <div style={{ padding: '12px 14px', borderBottom: '1px solid #f0ecff', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--theme-surface-tint)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ flex: 1, position: 'relative' }}>
                   <Search size={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#bbb' }} />
                   <input
                     type="text" placeholder="Search templates..." value={emailSearch}
                     onChange={(e) => setEmailSearch(e.target.value)}
-                    style={{ width: '100%', padding: '7px 8px 7px 28px', border: '1.5px solid #e5e2f5', borderRadius: 7, fontSize: 12, color: '#444', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '7px 8px 7px 28px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 7, fontSize: 12, color: '#444', background: '#fff', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <button
                   title="New Email Template"
                   onClick={() => setShowEmailTemplateModal(true)}
-                  style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#5b3fc7', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
+                  style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--theme-primary)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
                 >
                   <Plus size={15} />
                 </button>
               </div>
 
               {/* Primary email actions */}
-              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid #f0ecff' }}>
+              <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--theme-surface-tint)' }}>
                 <button onClick={openWizardFresh} style={{
-                  padding: '10px 12px', background: 'linear-gradient(135deg,#5b3fc7,#7c5ce0)',
+                  padding: '10px 12px', background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))',
                   color: '#fff', border: 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
                 }}>
                   <Mail size={14} /> Create Email Campaign
                 </button>
                 <button onClick={() => setShowEmailHistory(true)} style={{
-                  padding: '9px 12px', background: '#f7f5ff', color: '#5b3fc7', border: '1.5px solid #e5e2f5',
+                  padding: '9px 12px', background: 'var(--theme-surface-faint7)', color: 'var(--theme-primary)', border: '1.5px solid var(--theme-border-tint)',
                   borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
                 }}>
@@ -199,15 +199,15 @@ export default function MessageTemplates() {
             </>
           ) : (
             /* WhatsApp / SMS — unchanged filter + New */
-            <div style={{ padding: '12px 14px', borderBottom: '1px solid #f0ecff', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <select value={filter} onChange={e => setFilter(e.target.value)}
-                style={{ flex: 1, padding: '6px 8px', border: '1.5px solid #e5e2f5', borderRadius: 7, fontSize: 12, color: '#444', background: '#fff', outline: 'none' }}>
+                style={{ flex: 1, padding: '6px 8px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 7, fontSize: 12, color: '#444', background: '#fff', outline: 'none' }}>
                 <option>All</option>
                 <option>Mine</option>
                 <option>Shared</option>
               </select>
               <button onClick={() => setShowNewModal(true)} style={{
-                padding: '6px 12px', background: '#5b3fc7', color: '#fff', border: 'none',
+                padding: '6px 12px', background: 'var(--theme-primary)', color: '#fff', border: 'none',
                 borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
               }}>+ New</button>
             </div>
@@ -220,30 +220,30 @@ export default function MessageTemplates() {
             ) : filteredTemplates.length === 0 ? (
               <div style={{ padding: 24, textAlign: 'center', color: '#aaa', fontSize: 13 }}>
                 No templates yet.<br />
-                <span style={{ color: '#5b3fc7', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => activeTab === 'EMAIL' ? setShowEmailTemplateModal(true) : setShowNewModal(true)}>Create one →</span>
+                <span style={{ color: 'var(--theme-primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => activeTab === 'EMAIL' ? setShowEmailTemplateModal(true) : setShowNewModal(true)}>Create one →</span>
               </div>
             ) : filteredTemplates.map(t => (
               <div key={t._id}
                 onClick={() => setSelected(t)}
                 style={{
                   padding: '12px 14px', cursor: 'pointer',
-                  borderBottom: '1px solid #faf9ff',
-                  background: selected?._id === t._id ? '#f0ecff' : 'transparent',
-                  borderLeft: selected?._id === t._id ? '3px solid #5b3fc7' : '3px solid transparent',
+                  borderBottom: '1px solid var(--theme-surface-faint)',
+                  background: selected?._id === t._id ? 'var(--theme-surface-tint)' : 'transparent',
+                  borderLeft: selected?._id === t._id ? '3px solid var(--theme-primary)' : '3px solid transparent',
                   transition: 'all 0.12s'
                 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#2d2d6b', marginBottom: 3 }}>/{t.shortcut}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--theme-text-strong)', marginBottom: 3 }}>/{t.shortcut}</div>
                 <div style={{ fontSize: 11.5, color: '#888', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                   {t.bodyFormat === 'html' ? (t.subject || 'Rich email template') : t.message}
                 </div>
-                {t.isShared && <div style={{ fontSize: 10, color: '#5b3fc7', marginTop: 3, fontWeight: 600 }}>Shared</div>}
+                {t.isShared && <div style={{ fontSize: 10, color: 'var(--theme-primary)', marginTop: 3, fontWeight: 600 }}>Shared</div>}
               </div>
             ))}
           </div>
         </div>
 
         {/* Right — Preview */}
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column' }}>
           {!selected ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>
               Select a template to preview
@@ -252,7 +252,7 @@ export default function MessageTemplates() {
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#2d2d6b' }}>/{selected.shortcut}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)' }}>/{selected.shortcut}</div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                     Created by {selected.createdBy?.name || 'You'} · {selected.isShared ? 'Shared with team' : 'Private'}
                   </div>
@@ -260,7 +260,7 @@ export default function MessageTemplates() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => handleCopy(selected)}
-                    style={{ padding: '7px 14px', background: '#f0ecff', color: '#5b3fc7', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                    style={{ padding: '7px 14px', background: 'var(--theme-surface-tint)', color: 'var(--theme-primary)', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                   >Copy</button>
                   <button
                     onClick={() => handleDelete(selected._id)}
@@ -270,10 +270,10 @@ export default function MessageTemplates() {
               </div>
 
               {selected.bodyFormat === 'html' ? (
-                <div style={{ flex: 1, border: '1.5px solid #e5e2f5', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '12px 16px', background: '#f7f5ff', borderBottom: '1px solid #e5e2f5' }}>
+                <div style={{ flex: 1, border: '1.5px solid var(--theme-border-tint)', borderRadius: 10, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '12px 16px', background: 'var(--theme-surface-faint7)', borderBottom: '1px solid var(--theme-border-tint)' }}>
                     <div style={{ fontSize: 11, color: '#aaa' }}>Subject</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#2d2d6b' }}>{selected.subject || '(no subject)'}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--theme-text-strong)' }}>{selected.subject || '(no subject)'}</div>
                   </div>
                   <div
                     style={{ flex: 1, padding: 18, fontSize: 13.5, color: '#333', lineHeight: 1.7, overflowY: 'auto' }}
@@ -282,10 +282,10 @@ export default function MessageTemplates() {
                 </div>
               ) : (
                 <div style={{
-                  flex: 1, background: '#f7f5ff', borderRadius: 10,
+                  flex: 1, background: 'var(--theme-surface-faint7)', borderRadius: 10,
                   padding: 18, fontSize: 13.5, color: '#333',
                   lineHeight: 1.7, whiteSpace: 'pre-wrap',
-                  border: '1.5px solid #e5e2f5'
+                  border: '1.5px solid var(--theme-border-tint)'
                 }}>
                   {selected.message}
                 </div>
@@ -299,24 +299,24 @@ export default function MessageTemplates() {
       {showNewModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,45,107,0.4)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
           <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, padding: 28, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)' }}>
-            <div style={{ fontSize: 17, fontWeight: 700, color: '#2d2d6b', marginBottom: 20 }}>New {activeTab} Template</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--theme-text-strong)', marginBottom: 20 }}>New {activeTab} Template</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#2d2d6b', marginBottom: 6 }}>Shortcut (no spaces)</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--theme-text-strong)', marginBottom: 6 }}>Shortcut (no spaces)</label>
                 <input
                   type="text" placeholder="e.g. intro"
                   value={newTemplate.shortcut}
                   onChange={e => setNewTemplate({ ...newTemplate, shortcut: e.target.value.replace(/\s/g, '') })}
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e5e2f5', borderRadius: 8, fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 8, fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#2d2d6b', marginBottom: 6 }}>Message</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--theme-text-strong)', marginBottom: 6 }}>Message</label>
                 <textarea
                   rows={6} placeholder="Hi {{NAME}}, this is {{MY NAME}} from..."
                   value={newTemplate.message}
                   onChange={e => setNewTemplate({ ...newTemplate, message: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e5e2f5', borderRadius: 8, fontSize: 13.5, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 8, fontSize: 13.5, outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
                 />
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
@@ -324,8 +324,8 @@ export default function MessageTemplates() {
                 Share with all team members
               </label>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowNewModal(false)} style={{ padding: '10px 18px', border: '1.5px solid #e5e2f5', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#fff', color: '#2d2d6b', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleAdd} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#5b3fc7', color: '#fff', cursor: 'pointer' }}>Save Template</button>
+                <button onClick={() => setShowNewModal(false)} style={{ padding: '10px 18px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#fff', color: 'var(--theme-text-strong)', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleAdd} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--theme-primary)', color: '#fff', cursor: 'pointer' }}>Save Template</button>
               </div>
             </div>
           </div>

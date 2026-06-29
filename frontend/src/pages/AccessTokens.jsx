@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { accessTokensAPI } from '../services/api';
 
-const C = { indigo: '#6366f1', border: '#e5e2f5', ink: '#1e1b4b', sub: '#6b7280' };
+const C = { indigo: 'var(--theme-primary-alt)', border: 'var(--theme-border-tint)', ink: 'var(--theme-text-strongest)', sub: '#6b7280' };
 const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12 };
 const btnPrimary = { padding: '8px 18px', borderRadius: 8, border: 'none', background: C.indigo, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' };
 const btnGhost = { padding: '7px 14px', borderRadius: 8, border: `1.5px solid ${C.border}`, background: '#fff', color: C.ink, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
@@ -43,11 +43,11 @@ export default function AccessTokens() {
           </div>
         ) : (
           <div style={{ ...card, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr 120px', padding: '12px 18px', background: '#f9f8ff', borderBottom: `1px solid ${C.border}`, fontSize: 12, fontWeight: 700, color: C.sub, textTransform: 'uppercase' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr 120px', padding: '12px 18px', background: 'var(--theme-surface-faint2)', borderBottom: `1px solid ${C.border}`, fontSize: 12, fontWeight: 700, color: C.sub, textTransform: 'uppercase' }}>
               <span>Token</span><span>Type</span><span>Status</span><span>Recapture</span><span style={{ textAlign: 'right' }}>Actions</span>
             </div>
             {tokens.map((t, i) => (
-              <div key={t._id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr 120px', padding: '14px 18px', alignItems: 'center', borderBottom: i < tokens.length - 1 ? '1px solid #f0eef8' : 'none' }}>
+              <div key={t._id} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr 1.2fr 120px', padding: '14px 18px', alignItems: 'center', borderBottom: i < tokens.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none' }}>
                 <div><div style={{ fontWeight: 600, color: C.ink }}>{t.name}</div><code style={{ fontSize: 12, color: C.sub }}>{t.tokenPrefix}••••</code></div>
                 <span style={{ fontSize: 13, color: C.indigo, fontWeight: 600, textTransform: 'capitalize' }}>{t.apiType}</span>
                 <span><span style={{ background: t.status === 'active' ? '#d1fae5' : '#fee2e2', color: t.status === 'active' ? '#059669' : '#dc2626', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{t.status}</span></span>
@@ -103,7 +103,7 @@ function CreateModal({ onClose, onCreated }) {
           <div><label style={lbl}>API Type</label>
             <div style={{ display: 'grid', gap: 10 }}>
               {[['async', 'Async APIs', 'Fire-and-forget, ideal for high-volume lead processing. 18,000 req/hr.'], ['sync', 'Sync APIs', 'Rate-limited, immediate response. Lower throughput.']].map(([val, t, d]) => (
-                <label key={val} style={{ border: `1.5px solid ${f.apiType === val ? C.indigo : C.border}`, borderRadius: 10, padding: 12, cursor: 'pointer', background: f.apiType === val ? '#f0eeff' : '#fff' }}>
+                <label key={val} style={{ border: `1.5px solid ${f.apiType === val ? C.indigo : C.border}`, borderRadius: 10, padding: 12, cursor: 'pointer', background: f.apiType === val ? 'var(--theme-surface-faint4)' : '#fff' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <input type="radio" checked={f.apiType === val} onChange={() => set({ apiType: val })} />
                     <span style={{ fontWeight: 600, color: C.ink }}>{t}</span>

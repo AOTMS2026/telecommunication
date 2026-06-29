@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { callIqAPI } from '../services/api';
 
-const C = { indigo: '#6366f1', border: '#e5e2f5', ink: '#1e1b4b', sub: '#6b7280' };
+const C = { indigo: 'var(--theme-primary-alt)', border: 'var(--theme-border-tint)', ink: 'var(--theme-text-strongest)', sub: '#6b7280' };
 const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12 };
 const btnPrimary = { padding: '8px 18px', borderRadius: 8, border: 'none', background: C.indigo, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer' };
 const btnGhost = { padding: '7px 14px', borderRadius: 8, border: `1.5px solid ${C.border}`, background: '#fff', color: C.ink, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
@@ -24,7 +24,7 @@ export default function CallIqAgents() {
     <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: C.ink }}>Call-IQ Agents <span style={{ fontSize: 11, background: '#ede9fe', color: C.indigo, padding: '2px 8px', borderRadius: 10, verticalAlign: 'middle' }}>BETA</span></h2>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: C.ink }}>Call-IQ Agents <span style={{ fontSize: 11, background: 'var(--theme-surface-tint2)', color: C.indigo, padding: '2px 8px', borderRadius: 10, verticalAlign: 'middle' }}>BETA</span></h2>
           <p style={{ margin: '4px 0 0', color: C.sub, fontSize: 14 }}>Your intelligent assistants for AI-powered call audits</p>
         </div>
         <button style={btnPrimary} onClick={() => setPicking(true)}>+ Create New</button>
@@ -43,7 +43,7 @@ export default function CallIqAgents() {
             {agents.map(a => (
               <div key={a._id} style={{ ...card, padding: 18, cursor: 'pointer' }} onClick={() => setEditing(a)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🤖</div>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--theme-surface-tint2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🤖</div>
                   <div style={{ fontWeight: 700, color: C.ink }}>{a.name}</div>
                 </div>
                 <div style={{ fontSize: 12, color: C.sub }}>{a.provider} · {a.model}</div>
@@ -168,7 +168,7 @@ function AgentEditor({ initial, onClose, onSaved }) {
             <div style={{ marginTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Recent audits</div>
               {audits.map(au => (
-                <div key={au._id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 8, background: '#fafaff' }}>
+                <div key={au._id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 8, background: 'var(--theme-surface-faint)' }}>
                   <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>{au.lead?.name || 'Pasted transcript'} · {new Date(au.createdAt).toLocaleString()} · <span style={{ color: au.status === 'success' ? '#059669' : '#dc2626' }}>{au.status}</span></div>
                   <pre style={{ margin: 0, fontSize: 12, color: C.ink, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{JSON.stringify(au.result, null, 2)}</pre>
                 </div>

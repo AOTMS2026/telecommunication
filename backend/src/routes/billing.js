@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/billing/info
 router.get('/info', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
-    const info = await BillingInfo.findOne({ workspace: req.user.workspace });
+    const info = await BillingInfo.findOne().sort({ createdAt: -1 });
     res.json({ info: info || null, hasBilling: !!info });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -21,13 +21,12 @@ router.post('/info', protect, authorize('manager', 'admin'), async (req, res) =>
     if (!companyName || !address || !pincode || !email || !phone) {
       return res.status(400).json({ message: 'All required fields must be filled.' });
     }
-    let info = await BillingInfo.findOne({ workspace: req.user.workspace });
+    let info = await BillingInfo.findOne().sort({ createdAt: -1 });
     if (info) {
       Object.assign(info, { country, companyName, address, address2, pincode, email, phone });
       await info.save();
     } else {
       info = await BillingInfo.create({
-        workspace: req.user.workspace,
         country, companyName, address, address2, pincode, email, phone,
         createdBy: req.user._id,
       });
@@ -42,7 +41,7 @@ router.post('/info', protect, authorize('manager', 'admin'), async (req, res) =>
 router.get('/transactions', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { status, cycle, page = 1, limit = 20 } = req.query;
-    const query = { workspace: req.user.workspace };
+    const query = {};
     if (status) {
       const statuses = Array.isArray(status) ? status : status.split(',');
       query.status = { $in: statuses };
@@ -62,7 +61,7 @@ router.get('/transactions', protect, authorize('manager', 'admin'), async (req, 
 // GET /api/billing/licenses
 router.get('/licenses', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
-    const license = await License.findOne({ workspace: req.user.workspace });
+    const license = await License.findOne().sort({ createdAt: -1 });
     res.json({ license: license || null });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -82,7 +81,6 @@ router.post('/buy', protect, authorize('manager', 'admin'), async (req, res) => 
 
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     const transaction = await Transaction.create({
-      workspace: req.user.workspace,
       orderId, plan, licenses, amount, cycle,
       status: 'Pending Payment',
       createdBy: req.user._id,

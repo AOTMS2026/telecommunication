@@ -11,10 +11,10 @@ const STEPS = [
   { key: 'send', label: 'Send' },
 ];
 
-const PURPLE = '#5b3fc7';
-const NAVY = '#2d2d6b';
-const BORDER = '#e5e2f5';
-const LIGHT = '#f0ecff';
+const PURPLE = 'var(--theme-primary)';
+const NAVY = 'var(--theme-text-strong)';
+const BORDER = 'var(--theme-border-tint)';
+const LIGHT = 'var(--theme-surface-tint)';
 
 // Converts a saved MessageTemplate (legacy plain-text OR new rich-html) into
 // { subject, bodyHtml } ready to seed the rich editor.
@@ -202,7 +202,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,45,107,0.45)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
         <div style={{ background: '#fff', borderRadius: 16, padding: 32, textAlign: 'center', minWidth: 280 }}>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '4px solid #f0ecff', borderTopColor: PURPLE, margin: '0 auto 16px', animation: 'aotmsEmailSpin 0.8s linear infinite' }} />
+          <div style={{ width: 40, height: 40, borderRadius: '50%', border: '4px solid var(--theme-surface-tint)', borderTopColor: PURPLE, margin: '0 auto 16px', animation: 'aotmsEmailSpin 0.8s linear infinite' }} />
           <style>{`@keyframes aotmsEmailSpin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ fontSize: 13.5, fontWeight: 600, color: NAVY }}>Loading previous campaign…</div>
         </div>
@@ -215,7 +215,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
       <style>{`@keyframes aotmsEmailSpin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 860, maxHeight: '92vh', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ padding: '20px 28px 0', borderBottom: '1px solid #f0ecff', flexShrink: 0 }}>
+        <div style={{ padding: '20px 28px 0', borderBottom: '1px solid var(--theme-surface-tint)', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: NAVY }}>
@@ -266,7 +266,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                   filteredCampaigns.map((c) => {
                     const checked = selectedCampaignIds.includes(c._id);
                     return (
-                      <label key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid #faf9ff', cursor: 'pointer', background: checked ? '#f7f5ff' : '#fff' }}>
+                      <label key={c._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: '1px solid var(--theme-surface-faint)', cursor: 'pointer', background: checked ? 'var(--theme-surface-faint7)' : '#fff' }}>
                         <input type="checkbox" checked={checked} onChange={() => toggleCampaign(c._id)} />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{c.name}</div>
@@ -290,7 +290,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
               ) : previewData && (
                 <>
                   <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
-                    <div style={{ flex: 1, background: '#f7f5ff', borderRadius: 12, padding: 18, textAlign: 'center' }}>
+                    <div style={{ flex: 1, background: 'var(--theme-surface-faint7)', borderRadius: 12, padding: 18, textAlign: 'center' }}>
                       <div style={{ fontSize: 26, fontWeight: 800, color: PURPLE }}>{previewData.totalCampaigns}</div>
                       <div style={{ fontSize: 11.5, color: '#888', marginTop: 4 }}>Campaigns Selected</div>
                     </div>
@@ -320,7 +320,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                   ) : (
                     <div style={{ border: `1px solid ${BORDER}`, borderRadius: 10, maxHeight: 220, overflowY: 'auto' }}>
                       {previewData.students.slice(0, 50).map((s) => (
-                        <div key={s.leadId} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', borderBottom: '1px solid #faf9ff', fontSize: 12.5 }}>
+                        <div key={s.leadId} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 14px', borderBottom: '1px solid var(--theme-surface-faint)', fontSize: 12.5 }}>
                           <span style={{ fontWeight: 600, color: NAVY, flex: 1 }}>{s.name}</span>
                           <span style={{ color: '#888', flex: 1.4 }}>{s.email}</span>
                           <span style={{ color: '#aaa', flex: 1, textAlign: 'right' }}>{s.campaignName}</span>
@@ -341,7 +341,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: NAVY, marginBottom: 10 }}>Choose a saved Email template, or write a custom one</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: 170, overflowY: 'auto' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1.5px solid ${selectedTemplateId === 'custom' ? PURPLE : BORDER}`, borderRadius: 10, cursor: 'pointer', background: selectedTemplateId === 'custom' ? '#f7f5ff' : '#fff' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1.5px solid ${selectedTemplateId === 'custom' ? PURPLE : BORDER}`, borderRadius: 10, cursor: 'pointer', background: selectedTemplateId === 'custom' ? 'var(--theme-surface-faint7)' : '#fff' }}>
                   <input type="radio" checked={selectedTemplateId === 'custom'} onChange={handleWriteCustom} />
                   <span style={{ fontSize: 13, fontWeight: 600, color: NAVY }}>✎ Write custom email</span>
                 </label>
@@ -351,7 +351,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                   <div style={{ padding: 14, color: '#aaa', fontSize: 12.5 }}>No saved email templates yet. You can still write a custom email below.</div>
                 ) : (
                   emailTemplates.map((t) => (
-                    <label key={t._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1.5px solid ${selectedTemplateId === t._id ? PURPLE : BORDER}`, borderRadius: 10, cursor: 'pointer', background: selectedTemplateId === t._id ? '#f7f5ff' : '#fff' }}>
+                    <label key={t._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1.5px solid ${selectedTemplateId === t._id ? PURPLE : BORDER}`, borderRadius: 10, cursor: 'pointer', background: selectedTemplateId === t._id ? 'var(--theme-surface-faint7)' : '#fff' }}>
                       <input type="radio" checked={selectedTemplateId === t._id} onChange={() => handlePickTemplate(t)} />
                       <div style={{ overflow: 'hidden' }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>/{t.shortcut}</div>
@@ -386,10 +386,10 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                 Previewing with <strong style={{ color: NAVY }}>{sampleStudent.name}</strong> ({sampleStudent.email}) as a sample student. Each of the {previewData?.totalStudents || 0} students will receive their own personalized copy.
               </div>
               <div style={{ border: `1.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg,#5b3fc7,#7c5ce0)' }}>
+                <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))' }}>
                   <span style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>AOTMS</span>
                 </div>
-                <div style={{ padding: '12px 18px', background: '#f7f5ff', borderBottom: `1px solid ${BORDER}` }}>
+                <div style={{ padding: '12px 18px', background: 'var(--theme-surface-faint7)', borderBottom: `1px solid ${BORDER}` }}>
                   <div style={{ fontSize: 11, color: '#aaa' }}>Subject</div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{previewSubject || '(no subject)'}</div>
                 </div>
@@ -397,7 +397,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                   style={{ padding: 18, fontSize: 13.5, color: '#333', lineHeight: 1.7, minHeight: 140 }}
                   dangerouslySetInnerHTML={{ __html: previewBodyHtml || '<span style="color:#bbb">(empty body)</span>' }}
                 />
-                <div style={{ padding: '10px 18px', background: '#faf9ff', borderTop: `1px solid ${BORDER}`, fontSize: 10.5, color: '#aaa' }}>
+                <div style={{ padding: '10px 18px', background: 'var(--theme-surface-faint)', borderTop: `1px solid ${BORDER}`, fontSize: 10.5, color: '#aaa' }}>
                   This email was sent by AOTMS · Academy Of Tech Masters
                 </div>
               </div>
@@ -418,11 +418,11 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                       <div style={{ fontSize: 24, fontWeight: 800, color: '#1a9e5c' }}>{sendResult.sent}</div>
                       <div style={{ fontSize: 11.5, color: '#888' }}>Sent</div>
                     </div>
-                    <div style={{ background: sendResult.failed > 0 ? '#fff0f0' : '#f7f5ff', borderRadius: 12, padding: '16px 22px', minWidth: 100 }}>
+                    <div style={{ background: sendResult.failed > 0 ? '#fff0f0' : 'var(--theme-surface-faint7)', borderRadius: 12, padding: '16px 22px', minWidth: 100 }}>
                       <div style={{ fontSize: 24, fontWeight: 800, color: sendResult.failed > 0 ? '#e53e3e' : '#aaa' }}>{sendResult.failed}</div>
                       <div style={{ fontSize: 11.5, color: '#888' }}>Failed</div>
                     </div>
-                    <div style={{ background: '#f7f5ff', borderRadius: 12, padding: '16px 22px', minWidth: 100 }}>
+                    <div style={{ background: 'var(--theme-surface-faint7)', borderRadius: 12, padding: '16px 22px', minWidth: 100 }}>
                       <div style={{ fontSize: 24, fontWeight: 800, color: PURPLE }}>{sendResult.totalRecipients}</div>
                       <div style={{ fontSize: 11.5, color: '#888' }}>Total Students</div>
                     </div>
@@ -439,7 +439,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                 </div>
               ) : (
                 <div>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', border: '4px solid #f0ecff', borderTopColor: PURPLE, margin: '0 auto 20px', animation: 'aotmsEmailSpin 0.8s linear infinite' }} />
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', border: '4px solid var(--theme-surface-tint)', borderTopColor: PURPLE, margin: '0 auto 20px', animation: 'aotmsEmailSpin 0.8s linear infinite' }} />
                   <div style={{ fontSize: 14, fontWeight: 700, color: NAVY, marginBottom: 14 }}>
                     Sending personalized emails to {previewData?.totalStudents || 0} students...
                   </div>
@@ -454,14 +454,14 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 28px', borderTop: '1px solid #f0ecff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '16px 28px', borderTop: '1px solid var(--theme-surface-tint)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           {step === 4 ? (
             <>
               <div />
               {(sendResult || sendError) ? (
                 <button onClick={onClose} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: PURPLE, color: '#fff', cursor: 'pointer' }}>Done</button>
               ) : (
-                <button disabled style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#e5e2f5', color: '#aaa', cursor: 'not-allowed' }}>Sending...</button>
+                <button disabled style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--theme-border-tint)', color: '#aaa', cursor: 'not-allowed' }}>Sending...</button>
               )}
             </>
           ) : (
@@ -473,17 +473,17 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
               >Back</button>
 
               {step === 0 && (
-                <button onClick={goToStudentsPreview} disabled={selectedCampaignIds.length === 0} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: selectedCampaignIds.length === 0 ? '#e5e2f5' : PURPLE, color: selectedCampaignIds.length === 0 ? '#aaa' : '#fff', cursor: selectedCampaignIds.length === 0 ? 'not-allowed' : 'pointer' }}>
+                <button onClick={goToStudentsPreview} disabled={selectedCampaignIds.length === 0} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: selectedCampaignIds.length === 0 ? 'var(--theme-border-tint)' : PURPLE, color: selectedCampaignIds.length === 0 ? '#aaa' : '#fff', cursor: selectedCampaignIds.length === 0 ? 'not-allowed' : 'pointer' }}>
                   Next ({selectedCampaignIds.length} selected)
                 </button>
               )}
               {step === 1 && (
-                <button onClick={goToTemplateStep} disabled={!canGoNextFromStudents} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: !canGoNextFromStudents ? '#e5e2f5' : PURPLE, color: !canGoNextFromStudents ? '#aaa' : '#fff', cursor: !canGoNextFromStudents ? 'not-allowed' : 'pointer' }}>
+                <button onClick={goToTemplateStep} disabled={!canGoNextFromStudents} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: !canGoNextFromStudents ? 'var(--theme-border-tint)' : PURPLE, color: !canGoNextFromStudents ? '#aaa' : '#fff', cursor: !canGoNextFromStudents ? 'not-allowed' : 'pointer' }}>
                   Next: Choose Template
                 </button>
               )}
               {step === 2 && (
-                <button onClick={() => setStep(3)} disabled={!canGoNextFromTemplate} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: !canGoNextFromTemplate ? '#e5e2f5' : PURPLE, color: !canGoNextFromTemplate ? '#aaa' : '#fff', cursor: !canGoNextFromTemplate ? 'not-allowed' : 'pointer' }}>
+                <button onClick={() => setStep(3)} disabled={!canGoNextFromTemplate} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: !canGoNextFromTemplate ? 'var(--theme-border-tint)' : PURPLE, color: !canGoNextFromTemplate ? '#aaa' : '#fff', cursor: !canGoNextFromTemplate ? 'not-allowed' : 'pointer' }}>
                   Next: Preview Email
                 </button>
               )}

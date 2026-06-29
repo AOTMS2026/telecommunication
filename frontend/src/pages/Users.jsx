@@ -3,11 +3,11 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usersAPI } from '../services/api';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const TEXT_MAIN = '#2d2d6b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const TEXT_MAIN = 'var(--theme-text-strong)';
 const TEXT_MUTED = '#888';
-const BORDER = '#e5e2f5';
+const BORDER = 'var(--theme-border-tint)';
 const WHITE = '#ffffff';
 const GREEN = '#22a163';
 const RED = '#e53e3e';
@@ -136,7 +136,7 @@ export default function Users() {
 
   const modalContentStyle = {
     background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16,
-    width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 12px 40px rgba(91, 63, 199, 0.15)',
+    width: '100%', maxWidth: 440, padding: 24, boxShadow: '0 12px 40px rgba(var(--theme-primary-rgb), 0.15)',
     display: 'flex', flexDirection: 'column', gap: 16, position: 'relative'
   };
 
@@ -147,7 +147,7 @@ export default function Users() {
 
   const inputStyle = {
     width: '100%', padding: '10px 12px', border: `1px solid ${BORDER}`,
-    borderRadius: 8, fontSize: 13, outline: 'none', background: '#faf9ff',
+    borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--theme-surface-faint)',
     color: TEXT_MAIN, boxSizing: 'border-box'
   };
 
@@ -165,7 +165,7 @@ export default function Users() {
   const getRoleBadgeStyle = (role) => {
     let bg = '#eff6ff', color = '#1e40af';
     if (role === 'admin') { bg = '#fef2f2'; color = '#991b1b'; }
-    if (role === 'manager') { bg = '#f5f3ff'; color = '#5b3fc7'; }
+    if (role === 'manager') { bg = 'var(--theme-surface-faint8)'; color = 'var(--theme-primary)'; }
     return {
       display: 'inline-block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
       padding: '2px 8px', borderRadius: 20, background: bg, color
@@ -189,7 +189,7 @@ export default function Users() {
       <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: '#faf9ff', borderBottom: `1px solid ${BORDER}` }}>
+            <tr style={{ background: 'var(--theme-surface-faint)', borderBottom: `1px solid ${BORDER}` }}>
               <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase' }}>Name</th>
               <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase' }}>Email</th>
               <th style={{ padding: '12px 18px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase' }}>Phone</th>
@@ -201,8 +201,8 @@ export default function Users() {
           <tbody>
             {loading ? (
               Array(3).fill(0).map((_, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid #f9f8ff` }}>
-                  <td colSpan={6} style={{ padding: '16px' }}><div style={{ height: 20, background: '#f0ecff', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /></td>
+                <tr key={i} style={{ borderBottom: `1px solid var(--theme-surface-faint2)` }}>
+                  <td colSpan={6} style={{ padding: '16px' }}><div style={{ height: 20, background: 'var(--theme-surface-tint)', borderRadius: 4, animation: 'pulse 1.5s infinite' }} /></td>
                 </tr>
               ))
             ) : users.length === 0 ? (
@@ -213,8 +213,8 @@ export default function Users() {
               users.map(u => {
                 const initials = u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
                 return (
-                  <tr key={u._id} style={{ borderBottom: `1px solid #faf9ff` }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#faf8ff'}
+                  <tr key={u._id} style={{ borderBottom: `1px solid var(--theme-surface-faint)` }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>

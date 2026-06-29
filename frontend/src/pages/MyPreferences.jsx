@@ -6,7 +6,7 @@ const Toggle = ({ checked, onChange }) => (
     onClick={() => onChange(!checked)}
     style={{
       width: 44, height: 24, borderRadius: 12, cursor: 'pointer',
-      background: checked ? '#3d2f8f' : '#ddd',
+      background: checked ? 'var(--theme-text-strongest)' : '#ddd',
       position: 'relative', transition: 'background 0.2s', flexShrink: 0
     }}
   >
@@ -24,7 +24,7 @@ const RadioOption = ({ label, checked, onChange }) => (
   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: '#444' }}>
     <input
       type="radio" checked={checked} onChange={onChange}
-      style={{ accentColor: '#5b3fc7', width: 15, height: 15, cursor: 'pointer' }}
+      style={{ accentColor: 'var(--theme-primary)', width: 15, height: 15, cursor: 'pointer' }}
     />
     {label}
   </label>
@@ -100,18 +100,18 @@ export default function MyPreferences() {
   ];
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 48px)', background: '#f3f1fb', padding: '32px 32px' }}>
+    <div style={{ minHeight: 'calc(100vh - 48px)', background: 'var(--theme-surface-faint3)', padding: '32px 32px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ fontSize: 15, color: '#666', marginBottom: 24, fontWeight: 500 }}>My Preferences</div>
 
         {/* Desktop Preferences */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e2f5', marginBottom: 20, overflow: 'hidden' }}>
-          <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0ecff' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#2d2d6b', margin: 0 }}>Desktop Preferences</h2>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--theme-border-tint)', marginBottom: 20, overflow: 'hidden' }}>
+          <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--theme-surface-tint)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)', margin: 0 }}>Desktop Preferences</h2>
           </div>
 
           {/* Email */}
-          <div style={{ padding: '16px 28px', borderBottom: '1px solid #f9f8ff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ padding: '16px 28px', borderBottom: '1px solid var(--theme-surface-faint2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>1. How to handle one-click email</span>
             <div style={{ display: 'flex', gap: 24 }}>
               <RadioOption label="Web" checked={emailPref === 'Web'} onChange={() => setEmailPref('Web')} />
@@ -130,9 +130,9 @@ export default function MyPreferences() {
         </div>
 
         {/* Notification Categories */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e2f5', overflow: 'hidden' }}>
-          <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0ecff' }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#2d2d6b', margin: 0 }}>Notification Categories</h2>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--theme-border-tint)', overflow: 'hidden' }}>
+          <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--theme-surface-tint)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)', margin: 0 }}>Notification Categories</h2>
           </div>
 
           {notifItems.map((item, idx) => (
@@ -140,7 +140,7 @@ export default function MyPreferences() {
               key={item.key}
               style={{
                 padding: '16px 28px',
-                borderBottom: idx < notifItems.length - 1 ? '1px solid #f9f8ff' : 'none',
+                borderBottom: idx < notifItems.length - 1 ? '1px solid var(--theme-surface-faint2)' : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between'
               }}
             >

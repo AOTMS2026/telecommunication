@@ -6,26 +6,26 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import LeadDetailsPage from '../components/LeadDetails/LeadDetailsPage';
 
 // ─── Design tokens ──────────────────────────────────────────────────────────
-const P = '#5b3fc7';
-const P_LIGHT = '#f0ecff';
-const TEXT = '#1a1a3e';
+const P = 'var(--theme-primary)';
+const P_LIGHT = 'var(--theme-surface-tint)';
+const TEXT = 'var(--theme-text-strongest)';
 const MUTED = '#888';
 const BORDER = '#ede9f8';
 
 const STATUS_COLORS = {
-  Fresh: '#6366f1',
+  Fresh: 'var(--theme-primary-alt)',
   Connected: '#10b981',
   'Call Not Responding': '#ea580c',
   'Call Back Later': '#f59e0b',
   'Not interested': '#6b7280',
-  'Demo Scheduled': '#8b5cf6',
+  'Demo Scheduled': 'var(--theme-primary-accent2)',
   'Demo Done': '#3b82f6',
   Won: '#16a34a',
   Lost: '#dc2626',
   Blocked: '#111827',
 };
 
-const PIE_COLORS = ['#5b3fc7', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '#3b82f6', '#ec4899'];
+const PIE_COLORS = ['var(--theme-primary)', '#ef4444', '#f59e0b', '#10b981', 'var(--theme-primary-accent2)', '#3b82f6', '#ec4899'];
 
 function Avatar({ name, size = 32, bg = P_LIGHT, color = P }) {
   const initials = name
@@ -236,7 +236,7 @@ function AICallingPanel({ campaignId, campaign, onStatusChange }) {
               disabled={loading}
               style={{
                 width: '100%', padding: '8px', borderRadius: 8,
-                background: loading ? '#d4c9f7' : P,
+                background: loading ? 'var(--theme-primary-pale)' : P,
                 border: 'none', color: '#fff',
                 fontSize: 12, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -314,7 +314,7 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(91,63,199,0.18)' }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(var(--theme-primary-rgb), 0.18)' }}>
         {/* Header */}
         <div style={{ padding: '18px 20px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
@@ -326,7 +326,7 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
 
         {/* Search */}
         <div style={{ padding: '12px 20px', borderBottom: `1px solid ${BORDER}` }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f7ff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--theme-surface-faint6)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '7px 12px' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or phone..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 13, color: TEXT, width: '100%' }} />
           </div>
@@ -344,7 +344,7 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
               </div>
               {filtered.map(lead => (
                 <div key={lead._id} onClick={() => toggle(lead._id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid #f9f8ff` }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid var(--theme-surface-faint2)` }}>
                   <input type="checkbox" readOnly checked={selected.has(lead._id)} style={{ accentColor: P, width: 15, height: 15, flexShrink: 0 }} />
                   <Avatar name={lead.name} size={32} />
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -365,7 +365,7 @@ function AddLeadsModal({ campaignId, onClose, onSuccess }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onClose} style={{ padding: '8px 16px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, cursor: 'pointer', background: '#fff', color: TEXT }}>Cancel</button>
             <button onClick={handleAdd} disabled={saving || selected.size === 0}
-              style={{ padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: selected.size === 0 ? 'not-allowed' : 'pointer', background: selected.size === 0 ? '#d4c9f7' : P, color: '#fff' }}>
+              style={{ padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: selected.size === 0 ? 'not-allowed' : 'pointer', background: selected.size === 0 ? 'var(--theme-primary-pale)' : P, color: '#fff' }}>
               {saving ? 'Adding...' : `Add ${selected.size > 0 ? selected.size : ''} Student${selected.size !== 1 ? 's' : ''}`}
             </button>
           </div>
@@ -465,7 +465,7 @@ export default function CampaignDetail() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
               <StatCard label="Total" value={totalLeads} color={P} />
-              <StatCard label="Fresh" value={freshLeads} color="#6366f1" />
+              <StatCard label="Fresh" value={freshLeads} color="var(--theme-primary-alt)" />
               <StatCard label="Won" value={wonLeads} color="#22c55e" />
               <StatCard label="Callers" value={campaign.assignedCallers?.length || 0} color={TEXT} />
             </div>
@@ -483,7 +483,7 @@ export default function CampaignDetail() {
 
         {/* Search + filter */}
         <div style={{ padding: '10px 12px', borderBottom: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f8f7ff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--theme-surface-faint6)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 10px' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={handleSearchSubmit}
               placeholder="Search students..." style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: TEXT, width: '100%' }} />
@@ -517,7 +517,7 @@ export default function CampaignDetail() {
           ) : leads.map(lead => (
             <div key={lead._id} onClick={() => setSelectedLead(lead)}
               style={{
-                padding: '11px 14px', borderBottom: `1px solid #f9f8ff`, cursor: 'pointer',
+                padding: '11px 14px', borderBottom: `1px solid var(--theme-surface-faint2)`, cursor: 'pointer',
                 background: selectedLead?._id === lead._id ? P_LIGHT : 'transparent',
                 borderLeft: selectedLead?._id === lead._id ? `3px solid ${P}` : '3px solid transparent',
                 transition: 'background 0.1s',
@@ -557,7 +557,7 @@ export default function CampaignDetail() {
       </div>
 
       {/* ─── MIDDLE PANEL: Analytics ──────────────────────────────────────────── */}
-      <div style={{ width: 240, flexShrink: 0, background: '#faf9ff', borderRight: `1px solid ${BORDER}`, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ width: 240, flexShrink: 0, background: 'var(--theme-surface-faint)', borderRight: `1px solid ${BORDER}`, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
         {/* Lead Status Distribution (Pie) */}
         <div style={{ background: '#fff', borderRadius: 12, padding: '14px 12px', border: `1px solid ${BORDER}` }}>
@@ -600,7 +600,7 @@ export default function CampaignDetail() {
                   <span style={{ color: '#555' }}>{r._id}</span>
                   <span style={{ fontWeight: 600, color: TEXT }}>{r.count}</span>
                 </div>
-                <div style={{ height: 5, background: '#f0ecff', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: 5, background: 'var(--theme-surface-tint)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', background: PIE_COLORS[i % PIE_COLORS.length], borderRadius: 4, width: `${totalLeads > 0 ? Math.round(r.count / totalLeads * 100) : 0}%`, transition: 'width 0.5s' }} />
                 </div>
               </div>
@@ -618,7 +618,7 @@ export default function CampaignDetail() {
                   <span style={{ color: '#555', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s._id}</span>
                   <span style={{ fontWeight: 600, color: TEXT }}>{s.count}</span>
                 </div>
-                <div style={{ height: 5, background: '#f0ecff', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: 5, background: 'var(--theme-surface-tint)', borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', background: STATUS_COLORS[s._id] || PIE_COLORS[i % PIE_COLORS.length], borderRadius: 4, width: `${totalLeads > 0 ? Math.round(s.count / totalLeads * 100) : 0}%`, transition: 'width 0.5s' }} />
                 </div>
               </div>

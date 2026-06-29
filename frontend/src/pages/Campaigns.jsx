@@ -3,18 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { campaignsAPI, usersAPI, leadsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const PURPLE = '#6c47ff';
-const PURPLE_DARK = '#4f35c0';
-const PURPLE_LIGHT = '#ede9ff';
-const PURPLE_MID = '#a78bfa';
-const TEXT_MAIN = '#1a1a2e';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_DARK = 'var(--theme-primary-dark)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint2)';
+const PURPLE_MID = 'var(--theme-primary-soft)';
+const TEXT_MAIN = 'var(--theme-text-strongest)';
 const TEXT_MUTED = '#94a3b8';
 const TEXT_SUB = '#64748b';
 const SURFACE = '#ffffff';
-const BG = '#f6f5ff';
+const BG = 'var(--theme-surface-faint)';
 const BORDER = '#e8e4fb';
-const GRADIENT = 'linear-gradient(135deg, #6c47ff 0%, #9b6dff 100%)';
-const GRADIENT_SUBTLE = 'linear-gradient(135deg, #ede9ff 0%, #f0f4ff 100%)';
+const GRADIENT = 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-light) 100%)';
+const GRADIENT_SUBTLE = 'linear-gradient(135deg, var(--theme-surface-tint2) 0%, #f0f4ff 100%)';
 
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -22,7 +22,7 @@ const globalStyles = `
   .campaign-page * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
   .campaign-row { transition: all 0.18s cubic-bezier(0.4,0,0.2,1); }
-  .campaign-row:hover { background: linear-gradient(90deg, #f5f3ff 0%, #f8f7ff 100%) !important; transform: translateX(2px); box-shadow: inset 3px 0 0 #6c47ff; }
+  .campaign-row:hover { background: linear-gradient(90deg, var(--theme-surface-faint8) 0%, var(--theme-surface-faint6) 100%) !important; transform: translateX(2px); box-shadow: inset 3px 0 0 var(--theme-primary); }
 
   .action-btn { transition: all 0.15s ease; }
   .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,71,255,0.2); }
@@ -33,10 +33,10 @@ const globalStyles = `
   .create-btn:active { transform: translateY(0); }
 
   .filter-pill { transition: all 0.15s ease; }
-  .filter-pill:hover { border-color: #6c47ff !important; box-shadow: 0 2px 8px rgba(108,71,255,0.12); }
+  .filter-pill:hover { border-color: var(--theme-primary) !important; box-shadow: 0 2px 8px rgba(108,71,255,0.12); }
 
   .search-box { transition: all 0.15s ease; }
-  .search-box:focus-within { border-color: #6c47ff !important; box-shadow: 0 0 0 3px rgba(108,71,255,0.1) !important; }
+  .search-box:focus-within { border-color: var(--theme-primary) !important; box-shadow: 0 0 0 3px rgba(108,71,255,0.1) !important; }
 
   .stat-card { transition: all 0.2s ease; }
   .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(108,71,255,0.15) !important; }
@@ -207,7 +207,7 @@ function TransferLeadsModal({ onClose }) {
                       {/* Lead selection list */}
                       {transferMode === 'select' && (
                         <div style={{ border: `1.5px solid ${BORDER}`, borderRadius: 12, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
-                          <div style={{ padding: '8px 12px', background: '#f8f7ff', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ padding: '8px 12px', background: 'var(--theme-surface-faint6)', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', gap: 8 }}>
                             <input type="checkbox" checked={selectedLeads.length === fromLeads.length && fromLeads.length > 0} onChange={toggleAll} style={{ cursor: 'pointer' }} />
                             <span style={{ fontSize: 11.5, fontWeight: 600, color: TEXT_SUB }}>
                               {selectedLeads.length > 0 ? `${selectedLeads.length} selected` : 'Select all'}
@@ -217,7 +217,7 @@ function TransferLeadsModal({ onClose }) {
                             <div
                               key={lead._id}
                               onClick={() => toggleLead(lead._id)}
-                              style={{ padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: `1px solid #f0eeff`, background: selectedLeads.includes(lead._id) ? '#f5f3ff' : '#fff', transition: 'background 0.12s' }}
+                              style={{ padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', borderBottom: `1px solid var(--theme-surface-faint4)`, background: selectedLeads.includes(lead._id) ? 'var(--theme-surface-faint8)' : '#fff', transition: 'background 0.12s' }}
                             >
                               <input type="checkbox" checked={selectedLeads.includes(lead._id)} onChange={() => {}} style={{ cursor: 'pointer', pointerEvents: 'none' }} />
                               <div style={{ flex: 1 }}>
@@ -248,7 +248,7 @@ function TransferLeadsModal({ onClose }) {
             <button
               onClick={handleTransfer}
               disabled={saving || !fromCaller || !toCaller || (transferMode === 'select' && selectedLeads.length === 0)}
-              style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: (!fromCaller || !toCaller || saving) ? '#c4b8ff' : GRADIENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (!fromCaller || !toCaller || saving) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: (!fromCaller || !toCaller || saving) ? 'var(--theme-primary-pale)' : GRADIENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (!fromCaller || !toCaller || saving) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
             >
               {saving ? 'Transferring...' : `Transfer ${transferMode === 'select' && selectedLeads.length > 0 ? selectedLeads.length + ' Lead(s)' : transferMode === 'all' && fromLeads.length > 0 ? fromLeads.length + ' Lead(s)' : 'Leads'}`}
             </button>
@@ -327,10 +327,10 @@ function CreateCampaignModal({ onClose, onSuccess }) {
 
 function AssigneeAvatars({ callers }) {
   const colors = [
-    { bg: '#e0d9ff', color: '#5b21b6' },
+    { bg: 'var(--theme-primary-pale2)', color: 'var(--theme-primary-deep)' },
     { bg: '#dbeafe', color: '#1d4ed8' },
     { bg: '#d1fae5', color: '#065f46' },
-    { bg: '#fce7f3', color: '#9d174d' },
+    { bg: '#fce7f3', color: 'var(--theme-text-strong)' },
   ];
   if (!callers || callers.length === 0) return <span style={{ color: TEXT_MUTED, fontSize: 12 }}>—</span>;
   const shown = callers.slice(0, 4);
@@ -366,7 +366,7 @@ function ProgressCircle({ value = 0 }) {
   const pct = Math.min(100, Math.max(0, value));
   const dash = (pct / 100) * circ;
   const color = pct === 100 ? '#22c55e' : pct >= 70 ? PURPLE : pct >= 40 ? '#f59e0b' : '#f87171';
-  const trackColor = pct === 100 ? '#dcfce7' : pct >= 70 ? '#ede9ff' : pct >= 40 ? '#fef9c3' : '#fee2e2';
+  const trackColor = pct === 100 ? '#dcfce7' : pct >= 70 ? 'var(--theme-surface-tint2)' : pct >= 40 ? '#fef9c3' : '#fee2e2';
   return (
     <div className="progress-glow" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <svg width="40" height="40" viewBox="0 0 40 40">
@@ -806,7 +806,7 @@ export default function Campaigns() {
                   <tr
                     key={c._id}
                     className="campaign-row"
-                    style={{ borderBottom: `1px solid #f4f2ff`, cursor: 'pointer' }}
+                    style={{ borderBottom: `1px solid var(--theme-surface-faint)`, cursor: 'pointer' }}
                     onClick={() => navigate(`/campaigns/${c._id}`)}
                   >
                     {/* Name */}
@@ -857,7 +857,7 @@ export default function Campaigns() {
 
                     {/* Created on */}
                     <td style={{ padding: '15px 18px' }}>
-                      <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500, background: '#f8f8ff', padding: '3px 8px', borderRadius: 6, border: `1px solid ${BORDER}` }}>
+                      <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500, background: 'var(--theme-surface-faint)', padding: '3px 8px', borderRadius: 6, border: `1px solid ${BORDER}` }}>
                         {timeAgo(c.createdAt)}
                       </span>
                     </td>
@@ -888,7 +888,7 @@ export default function Campaigns() {
                         <button
                           className="action-btn"
                           title="Refresh"
-                          style={{ background: '#f8f8ff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: TEXT_SUB }}
+                          style={{ background: 'var(--theme-surface-faint)', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: TEXT_SUB }}
                           onClick={loadCampaigns}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

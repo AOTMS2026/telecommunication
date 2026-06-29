@@ -3,14 +3,14 @@ import { X, History, RotateCcw, Pencil, Trash2, ChevronDown, Users, CheckCircle2
 import { emailCampaignsAPI } from '../services/api';
 import { formatDateTime } from '../utils/emailTemplateUtils';
 
-const PURPLE = '#5b3fc7';
-const NAVY = '#2d2d6b';
-const BORDER = '#e5e2f5';
+const PURPLE = 'var(--theme-primary)';
+const NAVY = 'var(--theme-text-strong)';
+const BORDER = 'var(--theme-border-tint)';
 
 const STATUS_STYLES = {
   completed: { bg: '#f0fff4', color: '#1a9e5c', label: 'Completed' },
   sending: { bg: '#fffaf0', color: '#c47f17', label: 'Sending' },
-  pending: { bg: '#f0f4ff', color: '#5b3fc7', label: 'Pending' },
+  pending: { bg: '#f0f4ff', color: 'var(--theme-primary)', label: 'Pending' },
   failed: { bg: '#fff0f0', color: '#e53e3e', label: 'Failed' },
 };
 
@@ -82,7 +82,7 @@ export default function EmailCampaignHistory({ onClose, onReuse }) {
         {/* Header */}
         <div style={{ padding: '18px 26px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#5b3fc7,#7c5ce0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <History size={17} color="#fff" />
             </div>
             <div>
@@ -94,7 +94,7 @@ export default function EmailCampaignHistory({ onClose, onReuse }) {
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: '#faf9ff' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 20, background: 'var(--theme-surface-faint)' }}>
           {loading ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#888', fontSize: 13.5 }}>Loading campaign history...</div>
           ) : error ? (
@@ -121,7 +121,7 @@ export default function EmailCampaignHistory({ onClose, onReuse }) {
                         <div style={{ fontSize: 12, color: '#888', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.subject}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
                           {(item.sourceCampaigns || []).map((c) => (
-                            <span key={c._id} style={{ fontSize: 10.5, background: '#f0ecff', color: PURPLE, padding: '3px 9px', borderRadius: 12, fontWeight: 600 }}>{c.name}</span>
+                            <span key={c._id} style={{ fontSize: 10.5, background: 'var(--theme-surface-tint)', color: PURPLE, padding: '3px 9px', borderRadius: 12, fontWeight: 600 }}>{c.name}</span>
                           ))}
                         </div>
                         <div style={{ display: 'flex', gap: 16, fontSize: 11.5, color: '#999' }}>
@@ -146,7 +146,7 @@ export default function EmailCampaignHistory({ onClose, onReuse }) {
 
                     <button
                       onClick={() => toggleExpand(item)}
-                      style={{ width: '100%', padding: '8px 18px', background: '#faf9ff', border: 'none', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: '#888', fontSize: 11.5, fontWeight: 600 }}
+                      style={{ width: '100%', padding: '8px 18px', background: 'var(--theme-surface-faint)', border: 'none', borderTop: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', color: '#888', fontSize: 11.5, fontWeight: 600 }}
                     >
                       {isExpanded ? 'Hide' : 'View'} recipient details
                       <ChevronDown size={13} style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
@@ -158,7 +158,7 @@ export default function EmailCampaignHistory({ onClose, onReuse }) {
                           <div style={{ padding: 16, textAlign: 'center', color: '#888', fontSize: 12.5 }}>Loading recipients...</div>
                         ) : detail ? (
                           detail.recipients.map((r, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '8px 18px', borderBottom: '1px solid #faf9ff', fontSize: 12 }}>
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '8px 18px', borderBottom: '1px solid var(--theme-surface-faint)', fontSize: 12 }}>
                               <span style={{ color: NAVY, fontWeight: 600, flex: 1 }}>{r.name}</span>
                               <span style={{ color: '#888', flex: 1.4 }}>{r.email}</span>
                               <span style={{ color: r.status === 'sent' ? '#1a9e5c' : '#e53e3e', fontWeight: 600, flex: 1, textAlign: 'right' }}>
@@ -200,7 +200,7 @@ function ActionBtn({ children, title, onClick, danger, loading }) {
       style={{
         width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
         border: `1.5px solid ${danger ? '#ffd6d6' : BORDER}`, background: danger ? '#fff5f5' : '#fff',
-        borderRadius: 7, color: danger ? '#e53e3e' : '#5b5b7a', cursor: loading ? 'not-allowed' : 'pointer',
+        borderRadius: 7, color: danger ? '#e53e3e' : 'var(--theme-text-strong)', cursor: loading ? 'not-allowed' : 'pointer',
         opacity: loading ? 0.5 : 1,
       }}
     >

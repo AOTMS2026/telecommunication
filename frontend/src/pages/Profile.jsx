@@ -26,20 +26,20 @@ export default function Profile() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f3f1fb', padding: '32px 0' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--theme-surface-faint3)', padding: '32px 0' }}>
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2" strokeLinecap="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2" strokeLinecap="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <line x1="19" y1="8" x2="19" y2="14"/>
             <line x1="22" y1="11" x2="16" y2="11"/>
           </svg>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#2d2d6b' }}>User</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)' }}>User</span>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e2f5', padding: '32px 36px' }}>
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--theme-border-tint)', padding: '32px 36px' }}>
           {/* Name + Initials row */}
           <div style={{ display: 'flex', gap: 20, marginBottom: 22 }}>
             <div style={{ flex: 1 }}>
@@ -98,7 +98,7 @@ export default function Profile() {
           {/* Roles */}
           <div style={{ marginBottom: 22 }}>
             <label style={labelStyle}>Roles</label>
-            <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, background: '#f9f9fb' }}>
+            <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--theme-surface-faint)' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2">
                 <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
                 <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
@@ -113,7 +113,7 @@ export default function Profile() {
             <input
               value={form.permissionTemplate}
               readOnly
-              style={{ ...inputStyle, background: '#f9f9fb', color: '#666', cursor: 'default' }}
+              style={{ ...inputStyle, background: 'var(--theme-surface-faint)', color: '#666', cursor: 'default' }}
             />
           </div>
 
@@ -131,7 +131,7 @@ export default function Profile() {
           {/* Phone */}
           <div style={{ marginBottom: 28 }}>
             <label style={labelStyle}>Phone</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid #ddd', borderRadius: 8, background: '#f9f9fb', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: '1px solid #ddd', borderRadius: 8, background: 'var(--theme-surface-faint)', overflow: 'hidden' }}>
               <div style={{ padding: '10px 12px', borderRight: '1px solid #ddd', display: 'flex', alignItems: 'center', gap: 6, background: '#fff' }}>
                 <span style={{ fontSize: 16 }}>🇮🇳</span>
               </div>
@@ -149,7 +149,7 @@ export default function Profile() {
             <button
               onClick={handleSave}
               style={{
-                background: saved ? '#22a163' : '#5b3fc7',
+                background: saved ? '#22a163' : 'var(--theme-primary)',
                 color: '#fff', border: 'none', borderRadius: 8,
                 padding: '10px 28px', fontSize: 13, fontWeight: 600,
                 cursor: 'pointer', transition: 'background 0.2s'

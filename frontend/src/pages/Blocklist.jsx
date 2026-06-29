@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { blocklistAPI } from '../services/api';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
 const GREEN = '#22a163';
 const RED = '#e53e3e';
 const AMBER = '#d97706';
-const TEXT_MAIN = '#2d2d6b';
+const TEXT_MAIN = 'var(--theme-text-strong)';
 const TEXT_MUTED = '#888';
-const BORDER = '#e5e2f5';
+const BORDER = 'var(--theme-border-tint)';
 
 // FIX BUG-05: Replaced localStorage with real API calls
 export default function Blocklist() {
@@ -79,7 +79,7 @@ export default function Blocklist() {
       {notification && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24,
-          background: '#2d2d6b', color: '#fff',
+          background: 'var(--theme-text-strong)', color: '#fff',
           padding: '12px 24px', borderRadius: 8,
           fontSize: 13.5, fontWeight: 600,
           boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
@@ -90,7 +90,7 @@ export default function Blocklist() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>🚫</span> Blocklist & Spam Control
@@ -165,7 +165,7 @@ export default function Blocklist() {
               </thead>
               <tbody>
                 {filteredList.map(item => (
-                  <tr key={item._id} style={{ borderBottom: '1px solid #faf9ff', height: 46 }}>
+                  <tr key={item._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 46 }}>
                     <td style={{ padding: '8px 0', fontWeight: 700, color: RED, fontFamily: 'monospace' }}>{item.phone}</td>
                     <td style={{ padding: '8px 0', fontWeight: 600, color: TEXT_MAIN }}>{item.name}</td>
                     <td style={{ padding: '8px 0' }}>

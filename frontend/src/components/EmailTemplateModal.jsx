@@ -4,9 +4,9 @@ import { messageTemplatesAPI } from '../services/api';
 import EmailRichEditor from './EmailRichEditor';
 import { applyTemplateVariables } from '../utils/emailTemplateUtils';
 
-const PURPLE = '#5b3fc7';
-const NAVY = '#2d2d6b';
-const BORDER = '#e5e2f5';
+const PURPLE = 'var(--theme-primary)';
+const NAVY = 'var(--theme-text-strong)';
+const BORDER = 'var(--theme-border-tint)';
 
 const SAMPLE_DATA = { student_name: 'John Doe', student_email: 'john@example.com', campaign_name: 'Sample Campaign' };
 
@@ -50,7 +50,7 @@ export default function EmailTemplateModal({ onClose, onSaved }) {
         {/* Header */}
         <div style={{ padding: '18px 26px', borderBottom: `1px solid ${BORDER}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#5b3fc7,#7c5ce0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Sparkles size={17} color="#fff" />
             </div>
             <div>
@@ -97,10 +97,10 @@ export default function EmailTemplateModal({ onClose, onSaved }) {
           </div>
 
           {/* Live preview */}
-          <div style={{ flex: '1 1 42%', padding: 24, background: '#f7f5ff', minWidth: 0 }}>
+          <div style={{ flex: '1 1 42%', padding: 24, background: 'var(--theme-surface-faint7)', minWidth: 0 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: '#aaa', marginBottom: 10, letterSpacing: 0.4 }}>LIVE PREVIEW</div>
-            <div style={{ background: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`, overflow: 'hidden', boxShadow: '0 8px 20px -8px rgba(91,63,199,0.18)' }}>
-              <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg,#5b3fc7,#7c5ce0)' }}>
+            <div style={{ background: '#fff', borderRadius: 12, border: `1px solid ${BORDER}`, overflow: 'hidden', boxShadow: '0 8px 20px -8px rgba(var(--theme-primary-rgb), 0.18)' }}>
+              <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))' }}>
                 <div style={{ color: '#fff', fontSize: 13, fontWeight: 800 }}>AOTMS</div>
               </div>
               <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER}` }}>
@@ -111,7 +111,7 @@ export default function EmailTemplateModal({ onClose, onSaved }) {
                 style={{ padding: 18, fontSize: 13, color: '#333', lineHeight: 1.7, minHeight: 160 }}
                 dangerouslySetInnerHTML={{ __html: previewBodyHtml || '<span style="color:#bbb">Start typing your email body…</span>' }}
               />
-              <div style={{ padding: '12px 18px', background: '#faf9ff', fontSize: 10.5, color: '#aaa', borderTop: `1px solid ${BORDER}` }}>
+              <div style={{ padding: '12px 18px', background: 'var(--theme-surface-faint)', fontSize: 10.5, color: '#aaa', borderTop: `1px solid ${BORDER}` }}>
                 Sent via AOTMS · Academy Of Tech Masters
               </div>
             </div>
@@ -125,7 +125,7 @@ export default function EmailTemplateModal({ onClose, onSaved }) {
           <button
             onClick={handleSave}
             disabled={!canSave || saving}
-            style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: (!canSave || saving) ? '#e5e2f5' : PURPLE, color: (!canSave || saving) ? '#aaa' : '#fff', cursor: (!canSave || saving) ? 'not-allowed' : 'pointer' }}
+            style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: (!canSave || saving) ? 'var(--theme-border-tint)' : PURPLE, color: (!canSave || saving) ? '#aaa' : '#fff', cursor: (!canSave || saving) ? 'not-allowed' : 'pointer' }}
           >
             {saving ? 'Saving…' : 'Save Template'}
           </button>

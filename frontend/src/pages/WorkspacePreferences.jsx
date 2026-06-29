@@ -5,7 +5,7 @@ function Toggle({ checked, onChange }) {
   return (
     <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22 }}>
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-      <span onClick={() => onChange(!checked)} style={{ position: 'absolute', cursor: 'pointer', inset: 0, background: checked ? '#7c5cf0' : '#ccc', borderRadius: 22, transition: '0.2s' }}>
+      <span onClick={() => onChange(!checked)} style={{ position: 'absolute', cursor: 'pointer', inset: 0, background: checked ? 'var(--theme-primary-mid)' : '#ccc', borderRadius: 22, transition: '0.2s' }}>
         <span style={{ position: 'absolute', height: 18, width: 18, left: checked ? 20 : 2, bottom: 2, background: '#fff', borderRadius: '50%', transition: '0.2s' }} />
       </span>
     </label>
@@ -14,7 +14,7 @@ function Toggle({ checked, onChange }) {
 
 function Row({ icon, label, children }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderBottom: '1px solid #f4f3fa' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 4px', borderBottom: '1px solid var(--theme-surface-faint)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ color: '#888' }}>{icon}</span>
         <span style={{ fontSize: 13.5, fontWeight: 500, color: '#333' }}>{label}</span>
@@ -72,19 +72,19 @@ export default function WorkspacePreferences() {
   if (error || !prefs) return (
     <div style={{ padding: 40, textAlign: 'center' }}>
       <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error || 'Something went wrong while loading.'}</p>
-      <button onClick={load} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+      <button onClick={load} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: 'var(--theme-primary-mid)', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
     </div>
   );
 
   return (
     <div style={{ padding: 24, maxWidth: 760 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1f1f3d', margin: '0 0 14px' }}>Workspace Preferences</h2>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: '0 0 14px' }}>Workspace Preferences</h2>
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '4px 18px', marginBottom: 22 }}>
         <Row icon={gearIcon} label="Default Country Code">
-          <input value={prefs.defaultCountryCode} onChange={e => save({ defaultCountryCode: e.target.value })} style={{ width: 70, padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
+          <input value={prefs.defaultCountryCode} onChange={e => save({ defaultCountryCode: e.target.value })} style={{ width: 70, padding: '6px 10px', border: '1px solid var(--theme-border-tint2)', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
         </Row>
         <Row icon={gearIcon} label="Default Timezone">
-          <select value={prefs.defaultTimezone} onChange={e => save({ defaultTimezone: e.target.value })} style={{ padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 13, minWidth: 160 }}>
+          <select value={prefs.defaultTimezone} onChange={e => save({ defaultTimezone: e.target.value })} style={{ padding: '6px 10px', border: '1px solid var(--theme-border-tint2)', borderRadius: 6, fontSize: 13, minWidth: 160 }}>
             <option value="Asia/Kolkata">Asia/Kolkata</option>
             <option value="Asia/Dubai">Asia/Dubai</option>
             <option value="UTC">UTC</option>
@@ -93,7 +93,7 @@ export default function WorkspacePreferences() {
           </select>
         </Row>
         <Row icon={gearIcon} label="Default Currency">
-          <select value={prefs.defaultCurrency} onChange={e => save({ defaultCurrency: e.target.value })} style={{ padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 13, minWidth: 100 }}>
+          <select value={prefs.defaultCurrency} onChange={e => save({ defaultCurrency: e.target.value })} style={{ padding: '6px 10px', border: '1px solid var(--theme-border-tint2)', borderRadius: 6, fontSize: 13, minWidth: 100 }}>
             <option value="INR">INR</option>
             <option value="USD">USD</option>
             <option value="EUR">EUR</option>
@@ -102,10 +102,10 @@ export default function WorkspacePreferences() {
           </select>
         </Row>
         <Row icon={gearIcon} label="Connected Call Minimum Duration (in sec)">
-          <input type="number" min={0} value={prefs.connectedCallMinDuration} onChange={e => save({ connectedCallMinDuration: Number(e.target.value) })} style={{ width: 70, padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
+          <input type="number" min={0} value={prefs.connectedCallMinDuration} onChange={e => save({ connectedCallMinDuration: Number(e.target.value) })} style={{ width: 70, padding: '6px 10px', border: '1px solid var(--theme-border-tint2)', borderRadius: 6, fontSize: 13, textAlign: 'right' }} />
         </Row>
         <Row icon={powerIcon} label="Session Timeout">
-          <select value={prefs.sessionTimeout} onChange={e => save({ sessionTimeout: e.target.value })} style={{ padding: '6px 10px', border: '1px solid #e0ddf0', borderRadius: 6, fontSize: 13, minWidth: 110 }}>
+          <select value={prefs.sessionTimeout} onChange={e => save({ sessionTimeout: e.target.value })} style={{ padding: '6px 10px', border: '1px solid var(--theme-border-tint2)', borderRadius: 6, fontSize: 13, minWidth: 110 }}>
             <option value="Never">Never</option>
             <option value="1 hour">1 hour</option>
             <option value="8 hours">8 hours</option>
@@ -115,7 +115,7 @@ export default function WorkspacePreferences() {
         </Row>
       </div>
 
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1f1f3d', margin: '0 0 10px' }}>Leaderboard</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: '0 0 10px' }}>Leaderboard</h3>
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '4px 18px', marginBottom: 22 }}>
         <Row icon={stageIcon} label="Lead Stage">
           <Toggle checked={prefs.leaderboard.leadStage} onChange={v => saveNested('leaderboard', 'leadStage', v)} />
@@ -125,7 +125,7 @@ export default function WorkspacePreferences() {
         </Row>
       </div>
 
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1f1f3d', margin: '0 0 10px' }}>Features</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: '0 0 10px' }}>Features</h3>
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '4px 18px', marginBottom: 22 }}>
         <Row icon={pinIcon} label="Location Check-in">
           <Toggle checked={prefs.features.locationCheckIn} onChange={v => saveNested('features', 'locationCheckIn', v)} />
@@ -144,7 +144,7 @@ export default function WorkspacePreferences() {
         </Row>
       </div>
 
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1f1f3d', margin: '0 0 10px' }}>Sync Permissions</h3>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: '0 0 10px' }}>Sync Permissions</h3>
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 12, padding: '4px 18px' }}>
         <Row icon={syncIcon} label="Smart Syncing">
           <Toggle checked={prefs.syncPermissions.smartSyncing} onChange={v => saveNested('syncPermissions', 'smartSyncing', v)} />

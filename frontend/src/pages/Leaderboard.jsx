@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#ede9ff';
-const PURPLE_MID = '#7c5cfc';
-const TEXT_MAIN = '#1e1b4b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint2)';
+const PURPLE_MID = 'var(--theme-primary-mid)';
+const TEXT_MAIN = 'var(--theme-text-strongest)';
 const TEXT_MUTED = '#6b7280';
 const GREEN = '#059669';
 const GOLD = '#d97706';
 const SILVER = '#6b7280';
 const BRONZE = '#b45309';
-const BG = '#f5f3ff';
+const BG = 'var(--theme-surface-faint8)';
 
 const TABS = ['DAY', 'WEEK', 'MONTH', 'YEAR'];
 const METRICS = [
@@ -72,12 +72,12 @@ function BarChart({ data, metric }) {
   const formatVal = (v) => metric === 'Duration' ? fmtDuration(v) : metric === 'Sales' ? fmtMoney(v) : v;
 
   const colors = [
-    '#5b3fc7', '#7c5cfc', '#9d7ff9', '#bba4fb', '#d4cafd',
-    '#e9e4ff', '#ede9ff', '#f3f0ff', '#f8f6ff', '#faf9ff'
+    'var(--theme-primary)', 'var(--theme-primary-mid)', 'var(--theme-primary-light)', 'var(--theme-primary-pale)', 'var(--theme-primary-pale)',
+    'var(--theme-surface-tint)', 'var(--theme-surface-tint2)', 'var(--theme-surface-tint)', 'var(--theme-surface-faint)', 'var(--theme-surface-faint)'
   ];
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN, marginBottom: 16 }}>
         📊 {metric} Comparison
       </div>
@@ -121,13 +121,13 @@ function CallerCard({ caller, rank, metric, maxVals }) {
   return (
     <div style={{
       background: isTop ? topColors[rank - 1] : '#fff',
-      border: `1px solid ${isTop ? (rank === 1 ? '#f59e0b44' : rank === 2 ? '#cbd5e144' : '#f59e0b33') : '#e5e2f5'}`,
+      border: `1px solid ${isTop ? (rank === 1 ? '#f59e0b44' : rank === 2 ? '#cbd5e144' : '#f59e0b33') : 'var(--theme-border-tint)'}`,
       borderRadius: 14,
       padding: '14px 20px',
       display: 'flex', alignItems: 'center', gap: 16,
       transition: 'box-shadow 0.15s, transform 0.15s',
     }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,63,199,0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 6px 24px rgba(var(--theme-primary-rgb), 0.12)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
     >
       {/* Rank number */}
@@ -139,7 +139,7 @@ function CallerCard({ caller, rank, metric, maxVals }) {
       <div style={{
         width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
         background: `linear-gradient(135deg, ${PURPLE_LIGHT}, ${PURPLE_MID}22)`,
-        border: `2px solid ${rank === 1 ? '#f59e0b' : rank === 2 ? '#cbd5e1' : rank === 3 ? '#f59e0b88' : '#e5e2f5'}`,
+        border: `2px solid ${rank === 1 ? '#f59e0b' : rank === 2 ? '#cbd5e1' : rank === 3 ? '#f59e0b88' : 'var(--theme-border-tint)'}`,
         color: PURPLE, display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: 14, fontWeight: 700
       }}>{initials}</div>
@@ -197,16 +197,16 @@ function DatePickerModal({ onClose, onApply, initial }) {
           <div>
             <label style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>From</label>
             <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-              style={{ display: 'block', width: '100%', marginTop: 6, border: '1px solid #e5e2f5', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }} />
+              style={{ display: 'block', width: '100%', marginTop: 6, border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }} />
           </div>
           <div>
             <label style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>To</label>
             <input type="date" value={to} onChange={e => setTo(e.target.value)}
-              style={{ display: 'block', width: '100%', marginTop: 6, border: '1px solid #e5e2f5', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }} />
+              style={{ display: 'block', width: '100%', marginTop: 6, border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none' }} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '9px 0', border: '1px solid #e5e2f5', borderRadius: 8, cursor: 'pointer', background: '#fff', fontSize: 13, color: TEXT_MUTED }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '9px 0', border: '1px solid var(--theme-border-tint)', borderRadius: 8, cursor: 'pointer', background: '#fff', fontSize: 13, color: TEXT_MUTED }}>Cancel</button>
           <button onClick={() => onApply(from, to)} style={{ flex: 1, padding: '9px 0', border: 'none', borderRadius: 8, cursor: 'pointer', background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700 }}>Apply</button>
         </div>
       </div>
@@ -337,12 +337,12 @@ export default function Leaderboard() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Date range label */}
-          <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600, background: '#fff', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 12px' }}>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 600, background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 12px' }}>
             📅 {getDateRange()}
           </div>
           {/* Bar chart toggle */}
           <button onClick={() => setShowBarChart(v => !v)}
-            style={{ background: showBarChart ? PURPLE : '#fff', border: `1px solid ${showBarChart ? PURPLE : '#e5e2f5'}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s' }}
+            style={{ background: showBarChart ? PURPLE : '#fff', border: `1px solid ${showBarChart ? PURPLE : 'var(--theme-border-tint)'}`, borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s' }}
             title="Toggle bar chart">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showBarChart ? '#fff' : PURPLE} strokeWidth="2">
               <polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/>
@@ -350,7 +350,7 @@ export default function Leaderboard() {
           </button>
           {/* Download CSV */}
           <button onClick={downloadCSV}
-            style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex' }}
+            style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '7px 10px', cursor: 'pointer', display: 'flex' }}
             title="Download CSV">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -366,9 +366,9 @@ export default function Leaderboard() {
             { icon: '📞', label: 'Total Calls', value: totalCalls, color: PURPLE },
             { icon: '⏱️', label: 'Total Duration', value: fmtDuration(totalDuration), color: '#0891b2' },
             { icon: '💰', label: 'Total Sales', value: totalSales, color: GREEN },
-            { icon: '👥', label: 'Active Callers', value: filtered.length, color: '#7c3aed' },
+            { icon: '👥', label: 'Active Callers', value: filtered.length, color: 'var(--theme-primary)' },
           ].map(s => (
-            <div key={s.label} style={{ flex: '1 1 120px', background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={s.label} style={{ flex: '1 1 120px', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 22 }}>{s.icon}</span>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -380,7 +380,7 @@ export default function Leaderboard() {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid #e5e2f5', background: '#fff', borderRadius: '12px 12px 0 0', padding: '0 8px' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--theme-border-tint)', background: '#fff', borderRadius: '12px 12px 0 0', padding: '0 8px' }}>
         {allTabs.map(tab => (
           <button key={tab} onClick={() => tab === 'CUSTOM' ? setShowDatePicker(true) : setActiveTab(tab)}
             style={{
@@ -398,11 +398,11 @@ export default function Leaderboard() {
       </div>
 
       {/* Controls row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap', background: '#fff', padding: '12px 16px', borderRadius: 12, border: '1px solid #e5e2f5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap', background: '#fff', padding: '12px 16px', borderRadius: 12, border: '1px solid var(--theme-border-tint)' }}>
         {/* Metric dropdown */}
         <div ref={metricRef} style={{ position: 'relative' }}>
           <button onClick={() => setShowMetricDrop(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${showMetricDrop ? PURPLE : '#e5e2f5'}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', background: showMetricDrop ? PURPLE_LIGHT : '#fff', fontSize: 12, color: TEXT_MAIN, fontWeight: 600, transition: 'all 0.15s' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, border: `1px solid ${showMetricDrop ? PURPLE : 'var(--theme-border-tint)'}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer', background: showMetricDrop ? PURPLE_LIGHT : '#fff', fontSize: 12, color: TEXT_MAIN, fontWeight: 600, transition: 'all 0.15s' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
               <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
               <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
@@ -411,7 +411,7 @@ export default function Leaderboard() {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           {showMetricDrop && (
-            <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1px solid #e5e2f5', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, minWidth: 140, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '110%', left: 0, background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 50, minWidth: 140, overflow: 'hidden' }}>
               {METRICS.map(m2 => (
                 <button key={m2.key}
                   onClick={() => { setMetric(m2.key); setShowMetricDrop(false); }}
@@ -424,7 +424,7 @@ export default function Leaderboard() {
         </div>
 
         {/* Search */}
-        <div style={{ flex: 1, minWidth: 180, maxWidth: 320, display: 'flex', alignItems: 'center', gap: 8, background: BG, border: '1px solid #e5e2f5', borderRadius: 8, padding: '7px 12px' }}>
+        <div style={{ flex: 1, minWidth: 180, maxWidth: 320, display: 'flex', alignItems: 'center', gap: 8, background: BG, border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '7px 12px' }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -446,13 +446,13 @@ export default function Leaderboard() {
 
       {/* Content */}
       {loading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: 200, gap: 12, background: '#fff', borderRadius: 16, border: '1px solid #e5e2f5' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: 200, gap: 12, background: '#fff', borderRadius: 16, border: '1px solid var(--theme-border-tint)' }}>
           <div style={{ width: 36, height: 36, border: `4px solid ${PURPLE_LIGHT}`, borderTopColor: PURPLE, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>Loading leaderboard...</div>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, marginBottom: 8 }}>No data yet</div>
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>

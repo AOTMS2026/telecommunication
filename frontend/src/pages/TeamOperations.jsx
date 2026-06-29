@@ -4,14 +4,14 @@ import { reportsAPI, usersAPI, leadsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const TEXT_MAIN = '#2d2d6b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const TEXT_MAIN = 'var(--theme-text-strong)';
 const TEXT_MUTED = '#888';
 const GREEN = '#22a163';
 const RED = '#e53e3e';
 const AMBER = '#d97706';
-const BORDER = '#e5e2f5';
+const BORDER = 'var(--theme-border-tint)';
 
 export default function TeamOperations() {
   const { user } = useAuth();
@@ -95,7 +95,7 @@ export default function TeamOperations() {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>Team Operations Console</h2>
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
@@ -112,7 +112,7 @@ export default function TeamOperations() {
 
       {/* Operations Quick Widgets */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e8f8f0', display: 'flex', alignItems: 'center', justify: 'center', color: GREEN, fontSize: 20 }}>🟢</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Active Callers Now</div>
@@ -121,22 +121,22 @@ export default function TeamOperations() {
             </div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fffbeb', display: 'flex', alignItems: 'center', justify: 'center', color: AMBER, fontSize: 20 }}>❓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Unassigned Leads</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.unassignedCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fff0f0', display: 'flex', alignItems: 'center', justify: 'center', color: RED, fontSize: 20 }}>⚠️</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Overdue Follow-ups</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.overdueFollowupsCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#f0ecff', display: 'flex', alignItems: 'center', justify: 'center', color: PURPLE, fontSize: 20 }}>🎓</div>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justify: 'center', color: PURPLE, fontSize: 20 }}>🎓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Weekly Demos Scheduled</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{upcomingDemos.length}</div>
@@ -185,9 +185,9 @@ export default function TeamOperations() {
             {unassignedLeads.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 All leads have been assigned to callers!</div>
             ) : (
-              <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid #f0ecff', borderRadius: 8 }}>
+              <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--theme-surface-tint)', borderRadius: 8 }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead style={{ background: '#faf9ff', position: 'sticky', top: 0 }}>
+                  <thead style={{ background: 'var(--theme-surface-faint)', position: 'sticky', top: 0 }}>
                     <tr style={{ borderBottom: `1px solid ${BORDER}`, color: TEXT_MUTED, height: 32 }}>
                       <th style={{ textAlign: 'left', fontWeight: 600, paddingLeft: 12 }}>Name</th>
                       <th style={{ textAlign: 'center', fontWeight: 600 }}>Source</th>
@@ -196,7 +196,7 @@ export default function TeamOperations() {
                   </thead>
                   <tbody>
                     {unassignedLeads.slice(0, 15).map(lead => (
-                      <tr key={lead._id} style={{ borderBottom: '1px solid #faf9ff', height: 42 }}>
+                      <tr key={lead._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 42 }}>
                         <td style={{ paddingLeft: 12 }}>
                           <strong style={{ color: TEXT_MAIN }}>{lead.name}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>{lead.phone}</div>
@@ -209,7 +209,7 @@ export default function TeamOperations() {
                             disabled={assigningId === lead._id}
                             value=""
                             onChange={(e) => handleAssignUnassigned(lead._id, e.target.value)}
-                            style={{ border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                            style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
                           >
                             <option value="">Select Caller...</option>
                             {callers.map(c => (
@@ -245,7 +245,7 @@ export default function TeamOperations() {
                   </thead>
                   <tbody>
                     {detailedOverdueFollowups.slice(0, 15).map(fu => (
-                      <tr key={fu._id} style={{ borderBottom: '1px solid #faf9ff', height: 42 }}>
+                      <tr key={fu._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 42 }}>
                         <td>
                           <strong style={{ color: TEXT_MAIN }}>{fu.lead?.name || 'Lead'}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>{fu.lead?.phone}</div>
@@ -261,7 +261,7 @@ export default function TeamOperations() {
                             disabled={updatingId === fu.lead?._id}
                             value={fu.assignedTo?._id || ''}
                             onChange={(e) => handleReassignLead(fu.lead?._id, e.target.value)}
-                            style={{ border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                            style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
                           >
                             <option value="">Choose Caller...</option>
                             {callers.map(c => (
@@ -290,12 +290,12 @@ export default function TeamOperations() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 320, overflowY: 'auto', paddingRight: 6 }}>
                 {notifications.slice(0, 20).map(note => {
-                  let badgeBg = '#f0ecff', badgeColor = PURPLE;
+                  let badgeBg = 'var(--theme-surface-tint)', badgeColor = PURPLE;
                   if (note.type === 'overdue') { badgeBg = '#fff0f0'; badgeColor = RED; }
                   else if (note.type === 'demo') { badgeBg = '#e8f8f0'; badgeColor = GREEN; }
                   else if (note.type === 'idle') { badgeBg = '#fff8e6'; badgeColor = AMBER; }
                   return (
-                    <div key={note.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, background: '#faf9ff', border: '1px solid #f0ecff', borderRadius: 8, padding: 10, fontSize: 12 }}>
+                    <div key={note.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--theme-surface-faint)', border: '1px solid var(--theme-surface-tint)', borderRadius: 8, padding: 10, fontSize: 12 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ background: badgeBg, color: badgeColor, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase' }}>
                           {note.title}
@@ -347,7 +347,7 @@ export default function TeamOperations() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {workload.map(item => (
-                  <div key={item.user?._id} style={{ display: 'flex', justify: 'space-between', alignItems: 'center', padding: '6px 12px', border: '1px solid #faf9ff', borderRadius: 6, background: '#fcfbfe', fontSize: 13 }}>
+                  <div key={item.user?._id} style={{ display: 'flex', justify: 'space-between', alignItems: 'center', padding: '6px 12px', border: '1px solid var(--theme-surface-faint)', borderRadius: 6, background: 'var(--theme-surface-faint)', fontSize: 13 }}>
                     <strong style={{ color: TEXT_MAIN }}>{item.user?.name}</strong>
                     <span style={{ color: PURPLE, fontWeight: 700 }}>{item.count} callbacks</span>
                   </div>

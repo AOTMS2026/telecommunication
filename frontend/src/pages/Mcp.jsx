@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { mcpAPI } from '../services/api';
 
-const C = { indigo: '#6366f1', border: '#e5e2f5', ink: '#1e1b4b', sub: '#6b7280' };
+const C = { indigo: 'var(--theme-primary-alt)', border: 'var(--theme-border-tint)', ink: 'var(--theme-text-strongest)', sub: '#6b7280' };
 const card = { background: '#fff', border: `1px solid ${C.border}`, borderRadius: 12 };
 
 export default function Mcp() {
@@ -32,13 +32,13 @@ export default function Mcp() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <span style={{ fontSize: 22 }}>📎</span>
         <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: C.ink }}>Model Context Protocol</h2>
-        <span style={{ background: '#ede9fe', color: '#7c3aed', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6 }}>BETA</span>
+        <span style={{ background: 'var(--theme-surface-tint2)', color: 'var(--theme-primary)', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 6 }}>BETA</span>
       </div>
       <p style={{ color: C.sub, fontSize: 15, margin: '0 0 22px', maxWidth: 720 }}>
         Connect Claude, ChatGPT, or Gemini directly to your workspace. Query leads, run summaries, and build AI workflows in plain language.
       </p>
 
-      <div style={{ background: 'linear-gradient(135deg,#1e1b4b,#3b2f6e)', borderRadius: 16, padding: 36, color: '#fff', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(135deg,var(--theme-text-strongest),var(--theme-text-strongest))', borderRadius: 16, padding: 36, color: '#fff', position: 'relative', overflow: 'hidden' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
           ⚡ CLOSED BETA · BY INVITATION
         </span>
@@ -46,12 +46,12 @@ export default function Mcp() {
         {status?.betaEnabled ? (
           <>
             <h1 style={{ fontSize: 34, fontWeight: 800, margin: '20px 0 10px' }}>MCP is enabled for this workspace.</h1>
-            <p style={{ color: '#c7c3e8', fontSize: 15, maxWidth: 560, marginBottom: 20 }}>
+            <p style={{ color: 'var(--theme-primary-pale)', fontSize: 15, maxWidth: 560, marginBottom: 20 }}>
               Approved connections appear below. Tokens are workspace-scoped, read-only, and revocable anytime.
             </p>
             <div style={{ display: 'grid', gap: 10, maxWidth: 480 }}>
               {(status.connections || []).length === 0 && (
-                <div style={{ color: '#c7c3e8', fontSize: 14 }}>No providers connected yet.</div>
+                <div style={{ color: 'var(--theme-primary-pale)', fontSize: 14 }}>No providers connected yet.</div>
               )}
               {(status.connections || []).map(c => (
                 <div key={c._id} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between' }}>
@@ -66,18 +66,18 @@ export default function Mcp() {
             <h1 style={{ fontSize: 38, fontWeight: 800, margin: '20px 0 10px', lineHeight: 1.15 }}>
               You don't have access to<br />MCP yet.
             </h1>
-            <p style={{ color: '#c7c3e8', fontSize: 15, maxWidth: 560, marginBottom: 24 }}>
+            <p style={{ color: 'var(--theme-primary-pale)', fontSize: 15, maxWidth: 560, marginBottom: 24 }}>
               This feature is currently in closed beta. Reach out to your account manager to request access — we'll respond within 2 business days.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <button
                 onClick={requestAccess}
                 disabled={requesting || requested}
-                style={{ background: '#fff', color: '#1e1b4b', border: 'none', borderRadius: 8, padding: '11px 22px', fontWeight: 700, fontSize: 14, cursor: requested ? 'default' : 'pointer', opacity: requesting ? 0.7 : 1 }}
+                style={{ background: '#fff', color: 'var(--theme-text-strongest)', border: 'none', borderRadius: 8, padding: '11px 22px', fontWeight: 700, fontSize: 14, cursor: requested ? 'default' : 'pointer', opacity: requesting ? 0.7 : 1 }}
               >
                 ✉ {requested ? 'Request sent' : requesting ? 'Sending…' : 'Request access'}
               </button>
-              <span style={{ color: '#c7c3e8', fontSize: 13 }}>Avg approval · 2 business days</span>
+              <span style={{ color: 'var(--theme-primary-pale)', fontSize: 13 }}>Avg approval · 2 business days</span>
             </div>
           </>
         )}

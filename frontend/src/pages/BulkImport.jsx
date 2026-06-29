@@ -4,11 +4,11 @@ import { campaignsAPI, usersAPI } from '../services/api';
 import api from '../services/api';
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const TEXT_MAIN = '#2d2d6b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const TEXT_MAIN = 'var(--theme-text-strong)';
 const TEXT_MUTED = '#888';
-const BORDER = '#e5e2f5';
+const BORDER = 'var(--theme-border-tint)';
 const GREEN = '#22c55e';
 const ORANGE = '#f59e0b';
 const RED = '#ef4444';
@@ -16,13 +16,13 @@ const RED = '#ef4444';
 // ── UI Helpers ────────────────────────────────────────────────────────────────
 const Step = ({ n, label, active, done }) => (
   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-    <div style={{ width:30, height:30, borderRadius:'50%', background:done?GREEN:active?PURPLE:'#e5e2f5', color:done||active?'#fff':TEXT_MUTED, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:13, flexShrink:0 }}>{done?'✓':n}</div>
+    <div style={{ width:30, height:30, borderRadius:'50%', background:done?GREEN:active?PURPLE:'var(--theme-border-tint)', color:done||active?'#fff':TEXT_MUTED, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700, fontSize:13, flexShrink:0 }}>{done?'✓':n}</div>
     <span style={{ fontSize:12, fontWeight:active?700:400, color:active?PURPLE:TEXT_MUTED, whiteSpace:'nowrap' }}>{label}</span>
   </div>
 );
 const Divider = () => <div style={{ flex:1, height:2, background:BORDER, margin:'0 4px' }} />;
 const Card = ({ children, style={} }) => (
-  <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 16px rgba(91,63,199,0.08)', padding:24, ...style }}>{children}</div>
+  <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 16px rgba(var(--theme-primary-rgb), 0.08)', padding:24, ...style }}>{children}</div>
 );
 const Btn = ({ children, onClick, disabled, variant='primary', style={} }) => {
   const variants = { primary:{background:PURPLE,color:'#fff'}, outline:{background:'#fff',color:PURPLE,border:`1.5px solid ${PURPLE}`}, danger:{background:RED,color:'#fff'}, success:{background:GREEN,color:'#fff'} };
@@ -460,7 +460,7 @@ export default function BulkImport() {
             onDragOver={e=>{ e.preventDefault(); setDragOver(true); }}
             onDragLeave={()=>setDragOver(false)}
             onClick={()=>fileRef.current?.click()}
-            style={{ border:`2px dashed ${dragOver?PURPLE:BORDER}`, borderRadius:12, padding:'48px 24px', textAlign:'center', cursor:'pointer', background:dragOver?PURPLE_LIGHT:'#fafbff', transition:'all .2s' }}
+            style={{ border:`2px dashed ${dragOver?PURPLE:BORDER}`, borderRadius:12, padding:'48px 24px', textAlign:'center', cursor:'pointer', background:dragOver?PURPLE_LIGHT:'var(--theme-surface-faint)', transition:'all .2s' }}
           >
             <div style={{ fontSize:40, marginBottom:12 }}>☁️</div>
             <p style={{ margin:'0 0 4px', fontWeight:600, color:TEXT_MAIN, fontSize:16 }}>{loadingSheet?'Parsing file…':'Click to upload .csv or .xlsx files'}</p>

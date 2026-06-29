@@ -7,14 +7,14 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line, Area, AreaChart
 } from 'recharts';
 
-const COLORS = ['#5b3fc7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', '#6366F1'];
+const COLORS = ['var(--theme-primary)', '#10B981', '#F59E0B', '#EF4444', 'var(--theme-primary-accent2)', '#EC4899', '#3B82F6', '#14B8A6', '#F97316', 'var(--theme-primary-alt)'];
 const STATUS_COLORS = {
   'Fresh':               '#3B82F6',
   'Connected':           '#10B981',
   'Call Not Responding': '#EA580C',
   'Call Back Later':     '#F59E0B',
   'Not interested':      '#EF4444',
-  'Demo Scheduled':      '#8B5CF6',
+  'Demo Scheduled':      'var(--theme-primary-accent2)',
   'Demo Done':           '#14B8A6',
   'Won':                 '#16A34A',
   'Lost':                '#DC2626',
@@ -110,7 +110,7 @@ function LeaderboardTab() {
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
                 <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: 12 }} />
-                <Bar dataKey="calls" name="Total Calls" fill="#5b3fc7" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="calls" name="Total Calls" fill="var(--theme-primary)" radius={[5, 5, 0, 0]} />
                 <Bar dataKey="sales" name="Sales Won" fill="#10B981" radius={[5, 5, 0, 0]} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </BarChart>
@@ -329,15 +329,15 @@ function LeadViewCharts({ summary }) {
                 <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 20 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#5b3fc7" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#5b3fc7" stopOpacity={0.01} />
+                      <stop offset="5%" stopColor="var(--theme-primary)" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="var(--theme-primary)" stopOpacity={0.01} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
                   <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
                   <Tooltip contentStyle={{ borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: 12 }} />
-                  <Area type="monotone" dataKey="value" name="Leads" stroke="#5b3fc7" strokeWidth={2} fill="url(#colorValue)" />
+                  <Area type="monotone" dataKey="value" name="Leads" stroke="var(--theme-primary)" strokeWidth={2} fill="url(#colorValue)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}

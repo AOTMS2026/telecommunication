@@ -3,6 +3,7 @@ const Salesform = require('../models/Salesform');
 const SalesformSubmission = require('../models/SalesformSubmission');
 const Lead = require('../models/Lead');
 const { protect, authorize } = require('../middleware/auth');
+const { fireEvent } = require('../services/workflowEngine');
 const { matchPath, runWorkflow } = require('../services/salesformEngine');
 
 const router = express.Router();
@@ -207,6 +208,11 @@ router.post('/:id/submit', protect, async (req, res) => {
         performedBy: req.user._id,
       });
       await lead.save();
+    }
+
+    // Fire workflow events for salesform submission
+    if (changed) {
+      fireEvent('lead.field_changed', { lead, user: req.user, changes: { source: 'salesform', salesformName: salesform.name } }).catch(() => {});
     }
 
     // Run the post-submission automation chain (Workflow tab + linked n8n workflow)

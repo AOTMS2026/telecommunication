@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiTemplatesAPI, workflowsAPI } from '../services/api';
 
-const C={indigo:'#6366f1',purple:'#7c3aed',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',greenBg:'#ecfdf5',red:'#dc2626',redBg:'#fef2f2',amber:'#b45309'};
+const C={indigo:'var(--theme-primary-alt)',purple:'var(--theme-primary)',indigoBg:'var(--theme-surface-faint4)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',greenBg:'#ecfdf5',red:'#dc2626',redBg:'#fef2f2',amber:'#b45309'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
 const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
@@ -47,14 +47,14 @@ export default function ApiTemplates(){
     </div>
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'12px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
         <span>Template Name</span><span>Endpoint URL</span><span>Variables Used</span><span>Workflow</span><span>Last Modified ↕</span><span>Last Modified By</span><span style={{textAlign:'right'}}>Actions</span>
       </div>
       {templates.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No API templates found, <span style={{color:C.indigo,cursor:'pointer',fontWeight:600}} onClick={()=>setEditing(blank())}>+ Create new</span></div>
       :templates.map((t,i)=>{
         const wfs=t.usedInWorkflows||[];
         return(
-        <div key={t._id} style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'14px 18px',alignItems:'center',borderBottom:i<templates.length-1?'1px solid #f0eef8':'none'}}>
+        <div key={t._id} style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'14px 18px',alignItems:'center',borderBottom:i<templates.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.indigo,cursor:'pointer'}} onClick={()=>setEditing(t)}>{t.name}</span>
           <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.endpointUrl}</span>
           <span style={{fontSize:13,color:C.sub}}>{t.variablesUsed?.length?t.variablesUsed.length:'None'}</span>
@@ -103,12 +103,12 @@ function ImpactedLeads({template,onClose}){
     </div>)}
     {loading?<div style={{textAlign:'center',padding:40,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1.2fr 1fr',padding:'11px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1.2fr 1fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
         <span>Name</span><span>Status</span><span>Rating</span><span>Assignee</span><span>Created On</span>
       </div>
       {leads.length===0?<div style={{padding:30,textAlign:'center',color:C.sub}}>No leads found</div>
       :leads.map((l,i)=>(
-        <div key={l._id} style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1.2fr 1fr',padding:'12px 18px',alignItems:'center',borderBottom:i<leads.length-1?'1px solid #f0eef8':'none',fontSize:13}}>
+        <div key={l._id} style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1.2fr 1fr',padding:'12px 18px',alignItems:'center',borderBottom:i<leads.length-1?'1px solid var(--theme-surface-faint5)':'none',fontSize:13}}>
           <span style={{fontWeight:600,color:C.ink}}>{l.name}</span><span>{l.status}</span><span>{'★'.repeat(l.rating||0)||'—'}</span><span>{l.assignedTo?.name||'Unassigned'}</span><span>{new Date(l.createdAt).toLocaleDateString()}</span>
         </div>
       ))}
@@ -287,7 +287,7 @@ function TemplateEditor({initial,onClose,onSaved}){
               </span>
               {!testResult.ok&&<button style={{...btnG,padding:'4px 10px',fontSize:12}} onClick={runTest}>↺ Retry API Test</button>}
             </div>
-            <pre style={{margin:0,padding:14,fontSize:12,fontFamily:'monospace',maxHeight:260,overflow:'auto',background:'#fafaff',color:C.ink}}>{JSON.stringify(testResult.body??testResult.error??testResult,null,2)}</pre>
+            <pre style={{margin:0,padding:14,fontSize:12,fontFamily:'monospace',maxHeight:260,overflow:'auto',background:'var(--theme-surface-faint)',color:C.ink}}>{JSON.stringify(testResult.body??testResult.error??testResult,null,2)}</pre>
             {testResult.ok&&<div style={{padding:'10px 14px',borderTop:`1px solid ${C.border}`,textAlign:'right'}}><button style={btnP} onClick={continueToMapping}>Continue to Response Mapper →</button></div>}
           </div>)}
 
@@ -332,7 +332,7 @@ function ResponseMapper({t,onPrevious,onSaved}){
       <div style={{display:'flex',flexWrap:'wrap',gap:8,maxHeight:180,overflowY:'auto',padding:4,border:`1px solid ${C.border}`,borderRadius:8,marginBottom:20}}>
         {filtered.length===0?<span style={{fontSize:12,color:C.sub,padding:8}}>No response cached yet — run "Test Template" in step 1 first.</span>
         :filtered.map((p,i)=>(
-          <button key={i} onClick={()=>addMapping(p.path)} title={String(p.value)} style={{padding:'7px 12px',borderRadius:8,border:`1px solid ${C.border}`,background:mapping.some(m=>m.jsonPath===p.path)?C.indigoBg:'#fafafe',cursor:'pointer',fontSize:12,maxWidth:260,overflow:'hidden'}}>
+          <button key={i} onClick={()=>addMapping(p.path)} title={String(p.value)} style={{padding:'7px 12px',borderRadius:8,border:`1px solid ${C.border}`,background:mapping.some(m=>m.jsonPath===p.path)?C.indigoBg:'var(--theme-surface-faint)',cursor:'pointer',fontSize:12,maxWidth:260,overflow:'hidden'}}>
             <div style={{fontWeight:700,color:C.ink,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.path}</div>
             <div style={{color:C.sub,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:240}}>{String(p.value)}</div>
           </button>
@@ -403,7 +403,7 @@ function TemplateSummary({t,onEdit,onClose,onSaved}){
       <div style={{padding:'16px 20px'}}>
         <div style={{fontWeight:700,color:C.ink,marginBottom:10}}>Workflows</div>
         {wfs.length===0?(
-        <div style={{...card,padding:16,background:'#fafafe'}}>
+        <div style={{...card,padding:16,background:'var(--theme-surface-faint)'}}>
           <div style={{fontWeight:700,color:C.ink,marginBottom:4}}>No workflows attached</div>
           <div style={{fontSize:13,color:C.sub,marginBottom:12}}>This API Template Manager isn't connected to any workflows yet. Learn how to use workflows to automate data processing, send notifications, and trigger actions based on your data.</div>
           <div style={{display:'flex',gap:8}}>
@@ -503,7 +503,7 @@ function AttachWorkflowModal({template,onClose,onAttached}){
           <div style={{...card,padding:16}}>
             <div style={{fontWeight:700,color:C.ink,marginBottom:10}}>Custom API</div>
             <label style={lbl}>Select template</label>
-            <input value={template.name} disabled style={{...inp,background:'#f3f2fb',color:C.sub}}/>
+            <input value={template.name} disabled style={{...inp,background:'var(--theme-surface-faint)',color:C.sub}}/>
           </div>
           <div style={{display:'flex',justifyContent:'space-between',marginTop:20}}>
             <button style={btnG} onClick={()=>setPicked(null)}>← Back</button>
@@ -526,7 +526,7 @@ function GroupRow({group,items,onPick}){
 }
 function EventRow({ev,onClick,indent}){
   return <div onClick={onClick} style={{display:'flex',alignItems:'center',gap:10,padding:`9px 22px 9px ${indent?40:22}px`,cursor:'pointer'}}
-    onMouseEnter={e=>e.currentTarget.style.background='#faf9ff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+    onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
     <span style={{flex:1,fontSize:14,color:C.ink}}>{ev.label}</span>
   </div>;
 }

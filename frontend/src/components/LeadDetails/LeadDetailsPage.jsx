@@ -1069,9 +1069,9 @@ export default function LeadDetailsPage({
                     onClick={() => setActivityFilter(tab.key)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                     style={{
-                      background: isActive ? '#5b3fc7' : '#f3f4f6',
+                      background: isActive ? 'var(--theme-primary)' : '#f3f4f6',
                       color: isActive ? '#fff' : '#6b7280',
-                      border: isActive ? '1px solid #5b3fc7' : '1px solid #e5e7eb',
+                      border: isActive ? '1px solid var(--theme-primary)' : '1px solid #e5e7eb',
                     }}
                   >
                     {tab.label}

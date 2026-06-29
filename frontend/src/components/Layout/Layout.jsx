@@ -1,10 +1,15 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import { useAuth } from '../../context/AuthContext';
+import useTheme, { roleToTheme } from '../../hooks/useTheme';
 
 export default function Layout() {
+  const { user } = useAuth();
+  useTheme(roleToTheme(user?.role));
+
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif", background: '#f0f7ff', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif", background: 'var(--theme-surface-faint)', minHeight: '100vh' }}>
       <Topbar />
       <Sidebar />
       <main style={{ marginLeft: 48, marginTop: 48, minHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>

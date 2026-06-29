@@ -3,7 +3,7 @@ import { salesformsAPI, usersAPI, apiTemplatesAPI, n8nAPI } from '../services/ap
 import { Link2, Sparkles, Bell, Users, Settings, Star, Filter, Clock, MessageCircle, ListPlus, ListMinus, PhoneCall, XCircle, IndianRupee, Headphones, Webhook, Zap, Mail, GitBranch, X, MoreVertical, Trash2, Plus, Minus, Maximize2, ChevronDown, ChevronRight } from 'lucide-react';
 
 /* ─── palette (matches Workflows.jsx for visual consistency) ──────────────── */
-const C={indigo:'#6366f1',purple:'#7c3aed',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309'};
+const C={indigo:'var(--theme-primary-alt)',purple:'var(--theme-primary)',indigoBg:'var(--theme-surface-faint4)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
 const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
@@ -124,14 +124,14 @@ export default function Salesforms(){
 
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'11px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
+      <div style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
         <span>Name</span><span>Events</span>
         {tab==='published'?<><span>Status</span><span>Status Updated On</span><span>Status Updated by</span></>:<><span>Updated On</span><span>Updated by</span></>}
         <span style={{textAlign:'right'}}>Actions</span>
       </div>
       {filtered.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Salesforms Found</div>
       :filtered.map((f,i)=>(
-        <div key={f._id} style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid #f0eef8':'none'}}>
+        <div key={f._id} style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.indigo,cursor:'pointer'}} onClick={()=>setEditing(f)}>{f.name}</span>
           <span style={{fontSize:13,color:C.sub}}>{eventLabel(f)}</span>
           {tab==='published'?(<>
@@ -203,8 +203,8 @@ function EventPickerDrawer({onSelect,onClose}){
   </div>);
 }
 function EventRow({ev,onClick,indent,selected}){
-  return <div onClick={onClick} style={{display:'flex',alignItems:'center',gap:10,padding:`9px 22px 9px ${indent?40:22}px`,cursor:'pointer',background:selected?'#f5f3ff':'transparent'}}
-    onMouseEnter={e=>{if(!selected)e.currentTarget.style.background='#faf9ff'}} onMouseLeave={e=>{if(!selected)e.currentTarget.style.background='transparent'}}>
+  return <div onClick={onClick} style={{display:'flex',alignItems:'center',gap:10,padding:`9px 22px 9px ${indent?40:22}px`,cursor:'pointer',background:selected?'var(--theme-surface-faint8)':'transparent'}}
+    onMouseEnter={e=>{if(!selected)e.currentTarget.style.background='var(--theme-surface-faint)'}} onMouseLeave={e=>{if(!selected)e.currentTarget.style.background='transparent'}}>
     {selected&&<span style={{color:C.indigo,fontSize:13}}>✓</span>}
     <span style={{flex:1,fontSize:14,color:C.ink}}>{ev.label}</span>
   </div>;
@@ -272,7 +272,7 @@ function SalesformEditor({initial,onClose,onSaved}){
   })();
 
   return(
-  <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#f8f7fc'}}>
+  <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'var(--theme-surface-faint)'}}>
     <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',background:'#fff',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
       <button onClick={onClose} style={{...btnG,padding:'6px 12px'}}>←</button>
       <input value={sf.name} onChange={e=>set({name:e.target.value})} style={{fontWeight:700,fontSize:16,maxWidth:300,background:'transparent',border:'none',outline:'none',color:C.ink}}/>
@@ -372,15 +372,15 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
             if(!from||!to) return null;
             const pf=posOf(from), pt=posOf(to);
             const x1=pf.x+90+30,y1=pf.y+(from.type==='event'?70:96)+30; const x2=pt.x+90+30,y2=pt.y+30; const midY=(y1+y2)/2;
-            return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke="#c4b5fd" strokeWidth={2} fill="none"/>;
+            return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke="var(--theme-primary-pale)" strokeWidth={2} fill="none"/>;
           })}
         </svg>
 
         {evt&&(
         <div style={{position:'absolute',left:evt.x+30,top:evt.y+30,width:220,zIndex:1}}>
           <div style={{background:'#fff',borderRadius:12,border:`1.5px solid ${C.border}`,boxShadow:'0 2px 12px rgba(30,20,80,.07)'}}>
-            <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`}}>
-              <span style={{background:'#ede9fe',color:'#4338ca',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em'}}>EVENT</span>
+            <div style={{padding:'12px 14px 10px',borderBottom:`1px solid var(--theme-surface-tint)`}}>
+              <span style={{background:'var(--theme-surface-tint2)',color:'var(--theme-primary-deep)',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em'}}>EVENT</span>
             </div>
             <div style={{padding:'8px 14px',fontSize:13,fontWeight:700,color:C.ink}}>{eventLabel(sf)}</div>
           </div>
@@ -397,8 +397,8 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
             </div>
             <div onClick={()=>setConfigNode(cond.id)} style={{position:'absolute',left:cp.x+30,top:cp.y+30,width:220,cursor:'pointer',zIndex:1}}>
               <div style={{background:'#fff',borderRadius:12,border:configNode===cond.id?`2px solid ${C.purple}`:`1.5px solid ${C.border}`,boxShadow:configNode===cond.id?`0 0 0 3px ${C.purple}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
-                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`,display:'flex',alignItems:'center',gap:8}}>
-                  <span style={{background:'#ede9fe',color:'#7c3aed',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>CONDITION</span>
+                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid var(--theme-surface-tint)`,display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{background:'var(--theme-surface-tint2)',color:'var(--theme-primary)',padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>CONDITION</span>
                   <span style={{fontSize:13,fontWeight:700,color:C.ink}}>Check if lead</span>
                 </div>
                 <div style={{padding:'8px 14px',display:'flex',flexDirection:'column',gap:3}}>
@@ -414,7 +414,7 @@ function SalesformCanvas({sf,set,selectedNode,setSelectedNode,configNode,setConf
             {sec&&sp&&(
             <div onClick={()=>setConfigNode(sec.id)} style={{position:'absolute',left:sp.x+30,top:sp.y+30,width:220,cursor:'pointer',zIndex:1}}>
               <div style={{background:'#fff',borderRadius:12,border:configNode===sec.id?`2px solid ${C.indigo}`:`1.5px solid ${C.border}`,boxShadow:configNode===sec.id?`0 0 0 3px ${C.indigo}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
-                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid #f1eef9`,display:'flex',alignItems:'center',gap:8}}>
+                <div style={{padding:'12px 14px 10px',borderBottom:`1px solid var(--theme-surface-tint)`,display:'flex',alignItems:'center',gap:8}}>
                   <span style={{background:'#eef2ff',color:C.indigo,padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>SECTION</span>
                   <span style={{fontSize:13,fontWeight:700,color:C.ink}}>{sec.label}</span>
                 </div>
@@ -555,19 +555,19 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
           <div style={{display:'flex',flexDirection:'column',gap:2}}>
             {ACTION_CATALOG.map(a=>(
               <div key={a.type} onClick={()=>addAction(a.type)} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink,transition:'background .1s'}}
-                onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                 <a.Icon size={15} style={{color:C.sub,flexShrink:0}}/><span style={{flex:1}}>{a.label}</span>
               </div>
             ))}
           </div>
         </SidebarSection>
         <SidebarSection title="Lead Condition" subtitle="If…">
-          <div onClick={()=>addCondition('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+          <div onClick={()=>addCondition('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
             <GitBranch size={15} style={{color:C.sub,flexShrink:0}}/><span>If Else</span>
           </div>
         </SidebarSection>
         <SidebarSection title="Event Condition" subtitle="If…">
-          <div onClick={()=>addCondition('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+          <div onClick={()=>addCondition('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 8px',borderRadius:7,cursor:'pointer',fontSize:12,color:C.ink}} onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
             <GitBranch size={15} style={{color:C.sub,flexShrink:0}}/><span>If Else</span>
           </div>
         </SidebarSection>
@@ -588,7 +588,7 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
             const from=allNodes.find(n=>n.id===edge.from); const to=allNodes.find(n=>n.id===edge.to);
             if(!from||!to) return null;
             const x1=from.x+90,y1=from.y+70; const x2=to.x+90,y2=to.y; const midY=(y1+y2)/2;
-            return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke="#c4b5fd" strokeWidth={2} fill="none"/>;
+            return <path key={i} d={`M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`} stroke="var(--theme-primary-pale)" strokeWidth={2} fill="none"/>;
           })}
         </svg>
         <WorkflowNode node={evt} sub={eventLabel(sf)} type="event" selected={selectedNode===evt.id} onClick={()=>{setSelectedNode(evt.id);setConfigNode(null)}}/>
@@ -617,9 +617,9 @@ function WorkflowCanvas({sf,set,users,templates,n8nWfs,selectedNode,setSelectedN
 }
 
 function WorkflowNode({node,type,sub,selected,onClick,onRemove}){
-  const colors={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
-  const tagBg={event:'#ede9fe',action:'#eef2ff',condition:'#e0f2fe'};
-  const tagFg={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
+  const colors={event:'var(--theme-primary-deep)',action:C.indigo,condition:'#0e7490'};
+  const tagBg={event:'var(--theme-surface-tint2)',action:'#eef2ff',condition:'#e0f2fe'};
+  const tagFg={event:'var(--theme-primary-deep)',action:C.indigo,condition:'#0e7490'};
   const tagLabels={event:'EVENT',action:'ACTION',condition:'CONDITION'};
   const header=colors[type]||C.indigo;
   const ac=ACTION_CATALOG.find(a=>a.type===node.actionType);
@@ -627,7 +627,7 @@ function WorkflowNode({node,type,sub,selected,onClick,onRemove}){
   return(
   <div onClick={onClick} style={{position:'absolute',left:node.x,top:node.y,width:240,cursor:'pointer',zIndex:1}}>
     <div style={{background:'#fff',borderRadius:12,border:selected?`2px solid ${header}`:`1.5px solid ${C.border}`,boxShadow:selected?`0 0 0 3px ${header}22`:'0 2px 12px rgba(30,20,80,.07)'}}>
-      <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid #f1eef9`}}>
+      <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid var(--theme-surface-tint)`}}>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{background:tagBg[type],color:tagFg[type],padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>{tagLabels[type]}</span>
           <span style={{fontSize:13.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
@@ -693,11 +693,11 @@ function ConfigurationTab({sf,set}){
     <div style={{fontSize:13,color:C.sub,marginBottom:12}}>Handle this salesform access based on role</div>
     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search Permission Name" style={{...inp,marginBottom:14}}/>
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'11px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+      <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
         <span>Name</span><span>View</span><span>Submit</span>
       </div>
       {filtered.map((p,i)=>(
-        <div key={p.role} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid #f0eef8':'none'}}>
+        <div key={p.role} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.ink,fontSize:14}}>{ROLE_LABELS[p.role]||p.role}</span>
           <ToggleSmall on={p.view} onToggle={()=>update(p.role,{view:!p.view})}/>
           <ToggleSmall on={p.submit} onToggle={()=>update(p.role,{submit:!p.submit})}/>

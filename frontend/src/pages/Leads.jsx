@@ -14,9 +14,9 @@ import {
   Users, Phone, CheckCircle
 } from 'lucide-react';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const COLORS = ['#5b3fc7','#10B981','#F59E0B','#EF4444','#8B5CF6','#3B82F6','#EC4899','#14B8A6','#F97316','#6366F1'];
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const COLORS = ['var(--theme-primary)','#10B981','#F59E0B','#EF4444','var(--theme-primary-accent2)','#3B82F6','#EC4899','#14B8A6','#F97316','var(--theme-primary-alt)'];
 
 const FALLBACK_STATUSES = ['All', 'Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost', 'Blocked'];
 const SOURCES = ['All', 'Manual', 'Facebook', 'WhatsApp', 'Website', 'Excel'];
@@ -231,9 +231,9 @@ export default function Leads() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             {showAddMenu && (
-              <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #e5e2f5', borderRadius: 10, boxShadow: '0 8px 24px rgba(99,102,241,0.13)', minWidth: 200, zIndex: 300, overflow: 'hidden' }}
+              <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 10, boxShadow: '0 8px 24px rgba(99,102,241,0.13)', minWidth: 200, zIndex: 300, overflow: 'hidden' }}
                 onMouseLeave={() => setShowAddMenu(false)}>
-                <div style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid #f0eef8' }}>Add Leads</div>
+                <div style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid var(--theme-surface-faint5)' }}>Add Leads</div>
                 {[
                   { label: 'Add Single Lead', to: '/leads/new', icon: '👤' },
                   { label: 'Add From Excel', to: '/bulk-import', icon: '📊' },
@@ -242,7 +242,7 @@ export default function Leads() {
                   <div key={item.to}
                     onClick={() => { setShowAddMenu(false); navigate(item.to); }}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', fontSize: 14, color: '#374151' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint)'}
                     onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                   >
                     <span>{item.icon}</span>{item.label}

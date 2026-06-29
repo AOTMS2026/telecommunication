@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { webhooksAPI, workflowsAPI } from '../services/api';
 
-const C={indigo:'#6366f1',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626'};
+const C={indigo:'var(--theme-primary-alt)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',red:'#dc2626'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
 const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
@@ -50,11 +50,11 @@ export default function Webhooks(){
       </div>
     ):(
       <div style={{...card,overflow:'hidden'}}>
-        <div style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'12px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
           <span>Name</span><span>URL</span><span>Events</span><span>Status</span><span style={{textAlign:'right'}}>Actions</span>
         </div>
         {hooks.map((h,i)=>(
-          <div key={h._id} style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'14px 18px',alignItems:'center',borderBottom:i<hooks.length-1?'1px solid #f0eef8':'none'}}>
+          <div key={h._id} style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'14px 18px',alignItems:'center',borderBottom:i<hooks.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
             <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(h)}>{h.name}</span>
             <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.url}</span>
             <span style={{fontSize:13,color:C.sub}}>{h.events?.length||0}</span>
@@ -165,7 +165,7 @@ function WebhookEditor({initial,events,onClose,onSaved}){
                     <div style={{fontSize:12,color:C.sub,marginBottom:10}}>Select which AOTMS events will be forwarded to the connected workflow</div>
                     <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
                       {events.map(e=>(
-                        <button key={e.value} onClick={()=>toggleEvent(e.value)} style={{padding:'5px 12px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:500,border:`1.5px solid ${h.events?.includes(e.value)?C.indigo:C.border}`,background:h.events?.includes(e.value)?'#f0eeff':'#fff',color:h.events?.includes(e.value)?C.indigo:C.sub}}>{e.label}</button>
+                        <button key={e.value} onClick={()=>toggleEvent(e.value)} style={{padding:'5px 12px',borderRadius:20,fontSize:13,cursor:'pointer',fontWeight:500,border:`1.5px solid ${h.events?.includes(e.value)?C.indigo:C.border}`,background:h.events?.includes(e.value)?'var(--theme-surface-faint4)':'#fff',color:h.events?.includes(e.value)?C.indigo:C.sub}}>{e.label}</button>
                       ))}
                     </div>
                   </div>

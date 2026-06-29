@@ -2,8 +2,8 @@ import { useRef, useEffect, useState } from 'react';
 import { Bold, Italic, Underline, List, Link as LinkIcon, Image as ImageIcon, LayoutTemplate } from 'lucide-react';
 import { TEMPLATE_VARIABLES } from '../utils/emailTemplateUtils';
 
-const PURPLE = '#5b3fc7';
-const BORDER = '#e5e2f5';
+const PURPLE = 'var(--theme-primary)';
+const BORDER = 'var(--theme-border-tint)';
 
 /**
  * Self-contained rich text editor for composing professional email bodies.
@@ -107,7 +107,7 @@ export default function EmailRichEditor({ initialHtml, onChange, resetSignal, mi
   return (
     <div style={{ border: `1.5px solid ${BORDER}`, borderRadius: 10, overflow: 'hidden' }}>
       {/* Formatting toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '8px 10px', background: '#faf9ff', borderBottom: `1px solid ${BORDER}`, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '8px 10px', background: 'var(--theme-surface-faint)', borderBottom: `1px solid ${BORDER}`, flexWrap: 'wrap' }}>
         <ToolbarButton icon={<Bold size={15} />} title="Bold" onClick={() => runCommand('bold')} />
         <ToolbarButton icon={<Italic size={15} />} title="Italic" onClick={() => runCommand('italic')} />
         <ToolbarButton icon={<Underline size={15} />} title="Underline" onClick={() => runCommand('underline')} />
@@ -143,7 +143,7 @@ export default function EmailRichEditor({ initialHtml, onChange, resetSignal, mi
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => insertTextAtCursor(v.token)}
-            style={{ padding: '4px 10px', background: '#f0ecff', color: PURPLE, border: 'none', borderRadius: 14, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+            style={{ padding: '4px 10px', background: 'var(--theme-surface-tint)', color: PURPLE, border: 'none', borderRadius: 14, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
           >
             + {v.label}
           </button>
@@ -171,11 +171,11 @@ function ToolbarButton({ icon, title, onClick, active }) {
       onClick={onClick}
       style={{
         width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: 'none', background: active ? '#ece8fb' : 'transparent', borderRadius: 6,
-        cursor: 'pointer', color: active ? PURPLE : '#5b5b7a',
+        border: 'none', background: active ? 'var(--theme-surface-tint)' : 'transparent', borderRadius: 6,
+        cursor: 'pointer', color: active ? PURPLE : 'var(--theme-text-strong)',
       }}
-      onMouseOver={(e) => { e.currentTarget.style.background = '#ece8fb'; }}
-      onMouseOut={(e) => { e.currentTarget.style.background = active ? '#ece8fb' : 'transparent'; }}
+      onMouseOver={(e) => { e.currentTarget.style.background = 'var(--theme-surface-tint)'; }}
+      onMouseOut={(e) => { e.currentTarget.style.background = active ? 'var(--theme-surface-tint)' : 'transparent'; }}
     >
       {icon}
     </button>

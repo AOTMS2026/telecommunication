@@ -14,7 +14,7 @@ import {
 } from '../services/api';
 
 /* ─── palette ─────────────────────────────────────────────────────────────── */
-const C={indigo:'#6366f1',purple:'#4338ca',indigoBg:'#f0eeff',border:'#e5e2f5',ink:'#1e1b4b',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309',line:'#c4b5fd'};
+const C={indigo:'var(--theme-primary-alt)',purple:'var(--theme-primary-deep)',indigoBg:'var(--theme-surface-faint4)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309',line:'var(--theme-primary-pale)'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
 const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
@@ -71,7 +71,7 @@ const EVENT_TREE=[
   {value:'lead.facebook_lead',label:'On Facebook lead',Icon:Facebook,wfType:'Lead Creation',iconColor:'#1877f2',draft:true},
   {value:'lead.web_created',label:'On Website lead',Icon:Globe,wfType:'Lead Creation',draft:true},
   {value:'lead.justdial_lead',label:'On Justdial lead',badge:{letters:'Jd',bg:'#f97316'},wfType:'Lead Creation'},
-  {value:'lead.woocommerce',label:'On WooCommerce payment',badge:{letters:'W',bg:'#7c3aed'},wfType:'Lead Creation'},
+  {value:'lead.woocommerce',label:'On WooCommerce payment',badge:{letters:'W',bg:'var(--theme-primary)'},wfType:'Lead Creation'},
   {value:'lead.call_log',label:'On call log lead',Icon:Phone,wfType:'Lead Creation'},
   {value:'lead.excel_upload',label:'On Excel upload lead',Icon:FileSpreadsheet,iconColor:'#15803d',wfType:'Lead Creation',draft:true},
   {value:'lead.manual_created',label:'On manual lead',Icon:Settings,wfType:'Lead Creation',draft:true},
@@ -113,7 +113,7 @@ EVENT_TREE.forEach(item=>{
   if(item.type==='group') item.children.forEach(c=>EVENT_FLAT.push(c));
   else EVENT_FLAT.push(item);
 });
-const wfTypeColor={'Lead Creation':['#ede9fe','#7c3aed'],'Lead Updation':['#dbeafe','#2563eb'],'Lead Activity':['#d1fae5','#059669'],'Messaging':['#fef3c7','#b45309']};
+const wfTypeColor={'Lead Creation':['var(--theme-surface-tint2)','var(--theme-primary)'],'Lead Updation':['#dbeafe','#2563eb'],'Lead Activity':['#d1fae5','#059669'],'Messaging':['#fef3c7','#b45309']};
 
 /* ─── action catalog — full real-CRM action palette ───────────────────────── */
 const ACTION_CATALOG=[
@@ -280,7 +280,7 @@ export default function Workflows({kind='WORKFLOW'}){
     {/* table */}
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'11px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
+      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
         <span>Name</span><span>Events</span><span>Status</span><span>Updated by</span><span>Total runs</span><span style={{textAlign:'right'}}>Actions</span>
       </div>
       {pageRows.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Flowcharts Found</div>
@@ -288,7 +288,7 @@ export default function Workflows({kind='WORKFLOW'}){
         const ev=EVENT_FLAT.find(e=>e.value===w.triggerEvent);
         const initials=(w.updatedBy?.name||w.createdBy?.name||'—').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
         return(
-        <div key={w._id} style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<pageRows.length-1?'1px solid #f0eef8':'none'}}>
+        <div key={w._id} style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<pageRows.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(w)}>{w.name}</span>
           <span><EventBadge ev={ev} triggerEvent={w.triggerEvent}/></span>
           <span><StatusToggle status={w.status} onToggle={async()=>{await workflowsAPI.setStatus(w._id,w.status==='published'?'draft':'published').catch(e=>alert(e.response?.data?.message||'Failed'));load();}}/></span>
@@ -426,7 +426,7 @@ function EventSelectionModal({onSelect,onClose}){
 const rowStyle={display:'flex',alignItems:'center',gap:10,padding:'9px 22px',cursor:'pointer',transition:'background .1s'};
 function EventRow({ev,onClick,chevron}){
   return <div onClick={onClick} style={rowStyle}
-    onMouseEnter={e=>e.currentTarget.style.background='#f5f3ff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+    onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint8)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
     {chevron&&(chevron==='down'?<ChevronDown size={14} style={{color:C.sub}}/>:<ChevronRight size={14} style={{color:C.sub}}/>)}
     {ev.Icon?<ev.Icon size={16} style={{color:ev.iconColor||C.sub,flexShrink:0}}/>:ev.badge?<BrandBadge {...ev.badge}/>:<span style={{width:16}}/>}
     <span style={{flex:1,fontSize:14,color:C.ink,fontWeight:500}}>{ev.label}</span>
@@ -537,7 +537,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
   const siblingEvents=EVENT_FLAT.filter(e=>e.wfType===wf.workflowType);
 
   return(
-  <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#f8f7fc'}}>
+  <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'var(--theme-surface-faint)'}}>
     {/* top bar */}
     <div style={{display:'flex',alignItems:'center',gap:14,padding:'14px 20px',background:'#fff',borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
       <button onClick={onClose} style={{...btnG,padding:'6px 12px'}}>←</button>
@@ -566,13 +566,13 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
     <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden',position:'relative'}}>
       {/* SCHEDULE DELAY BANNER */}
       {isSchedule&&(
-        <div style={{background:'#f0eeff',borderBottom:`1px solid #e0d9ff`,padding:'10px 20px',display:'flex',alignItems:'center',gap:16,flexShrink:0}}>
+        <div style={{background:'var(--theme-surface-faint4)',borderBottom:`1px solid var(--theme-primary-pale2)`,padding:'10px 20px',display:'flex',alignItems:'center',gap:16,flexShrink:0}}>
           <Clock size={16} style={{color:C.indigo,flexShrink:0}}/>
           <span style={{fontSize:13,fontWeight:600,color:C.indigo}}>Schedule Delay:</span>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <input type="number" min="0" value={wf.scheduleConfig?.delayMinutes??60}
               onChange={e=>setWf(prev=>({...prev,scheduleConfig:{...prev.scheduleConfig,delayMinutes:Number(e.target.value)}}))}
-              style={{width:80,padding:'5px 10px',border:`1px solid #c4b5fd`,borderRadius:7,fontSize:13,fontWeight:600,color:C.ink,outline:'none',textAlign:'center'}}/>
+              style={{width:80,padding:'5px 10px',border:`1px solid var(--theme-primary-pale)`,borderRadius:7,fontSize:13,fontWeight:600,color:C.ink,outline:'none',textAlign:'center'}}/>
             <span style={{fontSize:13,color:C.sub}}>minutes</span>
             <span style={{fontSize:12,color:C.sub,marginLeft:4}}>
               {(()=>{const m=wf.scheduleConfig?.delayMinutes||0; if(m<60) return `(${m}m)`; if(m<1440) return `(${(m/60).toFixed(1)}h)`; return `(${(m/1440).toFixed(1)}d)`;})()}
@@ -590,7 +590,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
             <div style={{display:'flex',flexDirection:'column',gap:2}}>
               {siblingEvents.map(e=>(
                 <div key={e.value} onClick={()=>switchEvent(e)} style={paletteItem(e.value===wf.triggerEvent)}
-                  onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background=e.value===wf.triggerEvent?C.indigoBg:'transparent'}>
+                  onMouseEnter={ev=>ev.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={ev=>ev.currentTarget.style.background=e.value===wf.triggerEvent?C.indigoBg:'transparent'}>
                   {e.Icon?<e.Icon size={15} style={{color:e.value===wf.triggerEvent?C.indigo:C.sub,flexShrink:0}}/>:e.badge?<BrandBadge {...e.badge}/>:null}
                   <span style={{flex:1,textAlign:'left'}}>{e.label.replace(/^On /,'')}</span>
                 </div>
@@ -603,7 +603,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
             <div style={{display:'flex',flexDirection:'column',gap:2}}>
               {ACTION_CATALOG.map(a=>(
                 <div key={a.type} onClick={()=>addActionNode(a.type)} style={paletteItem(false)}
-                  onMouseEnter={ev=>ev.currentTarget.style.background='#f0eeff'} onMouseLeave={ev=>ev.currentTarget.style.background='transparent'}>
+                  onMouseEnter={ev=>ev.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={ev=>ev.currentTarget.style.background='transparent'}>
                   <a.Icon size={15} style={{color:C.sub,flexShrink:0}}/>
                   <span style={{flex:1,textAlign:'left'}}>{a.label}</span>
                 </div>
@@ -613,14 +613,14 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
 
           {/* Lead Condition */}
           <SidebarSection title="Lead Condition" subtitle="If…">
-            <div onClick={()=>addConditionNode('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <div onClick={()=>addConditionNode('lead')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
               <GitBranch size={16}/> If Else
             </div>
           </SidebarSection>
 
           {/* Event Condition */}
           <SidebarSection title="Event Condition" subtitle="If…">
-            <div onClick={()=>addConditionNode('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='#f0eeff'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <div onClick={()=>addConditionNode('event')} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:6,cursor:'pointer',fontSize:13,color:C.sub}} onMouseEnter={e=>e.currentTarget.style.background='var(--theme-surface-faint4)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
               <GitBranch size={16}/> If Else
             </div>
           </SidebarSection>
@@ -640,7 +640,7 @@ function FlowchartEditor({kind,initial,users,templates,hooks,n8nWfs,onClose,onSa
       {!sidebarOpen&&<button onClick={()=>setSidebarOpen(true)} style={{position:'absolute',left:10,bottom:10,zIndex:10,width:28,height:28,borderRadius:'50%',border:'none',background:C.indigo,color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>}
 
       {/* CANVAS */}
-      <div ref={canvasRef} style={{flex:1,position:'relative',overflow:'auto',background:'#faf9fe',backgroundImage:'radial-gradient(circle,#ece9f7 1px,transparent 1px)',backgroundSize:'18px 18px'}}>
+      <div ref={canvasRef} style={{flex:1,position:'relative',overflow:'auto',background:'#faf9fe',backgroundImage:'radial-gradient(circle,var(--theme-surface-tint) 1px,transparent 1px)',backgroundSize:'18px 18px'}}>
         <div style={{transform:`scale(${zoom})`,transformOrigin:'top center',minHeight:900,minWidth:900,position:'relative',padding:20}}>
           {(()=>{
             // Layout is recomputed from current node heights every render, so a node
@@ -822,9 +822,9 @@ function SidebarSection({title,subtitle,children,accent}){
 
 /* ─── FLOW NODE ───────────────────────────────────────────────────────────── */
 function FlowNode({node,pos,selected,menuOpen,onClick,onMenu,onDelete}){
-  const colors={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
-  const tagBg={event:'#ede9fe',action:'#eef2ff',condition:'#e0f2fe'};
-  const tagFg={event:'#4338ca',action:C.indigo,condition:'#0e7490'};
+  const colors={event:'var(--theme-primary-deep)',action:C.indigo,condition:'#0e7490'};
+  const tagBg={event:'var(--theme-surface-tint2)',action:'#eef2ff',condition:'#e0f2fe'};
+  const tagFg={event:'var(--theme-primary-deep)',action:C.indigo,condition:'#0e7490'};
   const tagLabels={event:'EVENT',action:'ACTION',condition:'CONDITION'};
   const header=colors[node.type]||C.indigo;
   const ac=ACTION_CATALOG.find(a=>a.type===node.actionType);
@@ -841,7 +841,7 @@ function FlowNode({node,pos,selected,menuOpen,onClick,onMenu,onDelete}){
         overflow:'visible',
       }}>
         {/* tag pill inside top-left */}
-        <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid #f1eef9`}}>
+        <div style={{padding:'12px 14px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,borderBottom:`1px solid var(--theme-surface-tint)`}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{background:tagBg[node.type],color:tagFg[node.type],padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',flexShrink:0}}>{tagLabels[node.type]}</span>
             <span style={{fontSize:13.5,fontWeight:700,color:C.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{node.label}</span>
@@ -873,14 +873,14 @@ function ExecutionsTable({executions,hasId}){
   const statusColors={success:['#d1fae5',C.green],failed:['#fee2e2',C.red],pending:['#e0e7ff','#4f46e5'],cancelled:['#f3f4f6',C.sub]};
   return(
   <div style={{...card,overflow:'hidden'}}>
-    <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1fr',padding:'12px 18px',background:'#f9f8ff',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+    <div style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1fr',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
       <span>Lead</span><span>Status</span><span>Duration</span><span>When</span>
     </div>
     {executions.length===0?<div style={{padding:36,textAlign:'center',color:C.sub}}>No executions found</div>
     :executions.map((ex,i)=>{
       const[bg,fg]=statusColors[ex.status]||statusColors.pending;
       return(
-      <div key={ex._id} style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1fr',padding:'12px 18px',alignItems:'center',borderBottom:i<executions.length-1?'1px solid #f0eef8':'none',fontSize:13}}>
+      <div key={ex._id} style={{display:'grid',gridTemplateColumns:'1.5fr 1fr 1fr 1fr',padding:'12px 18px',alignItems:'center',borderBottom:i<executions.length-1?'1px solid var(--theme-surface-faint5)':'none',fontSize:13}}>
         <span style={{color:C.ink,fontWeight:600}}>{ex.lead?.name||'—'}</span>
         <span><span style={{background:bg,color:fg,padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:600,textTransform:'capitalize'}}>{ex.status}</span></span>
         <span style={{color:C.sub}}>{ex.durationMs?`${ex.durationMs}ms`:'—'}</span>

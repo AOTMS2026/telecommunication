@@ -438,11 +438,18 @@ router.put('/:id', protect, async (req, res) => {
       }).catch(() => {});
     }
     // Generic "Lead Field Change" — fires for any other edited field
+    const SPECIFIC_FIELD_EVENTS = ['name','phone','email','alternatePhone','courseInterest','location','budget','nextFollowUpDate','demoScheduledDate'];
     const otherFields = Object.keys(body).filter(k => !['assignedTo', 'rating', 'status'].includes(k));
     for (const field of otherFields) {
       fireEvent('lead.field_changed', {
         lead: updated, user: req.user, changes: { field, to: body[field] },
       }).catch(() => {});
+      // Also fire field-specific event if it's a tracked field
+      if (SPECIFIC_FIELD_EVENTS.includes(field)) {
+        fireEvent(`lead.field_changed.${field}`, {
+          lead: updated, user: req.user, changes: { field, to: body[field] },
+        }).catch(() => {});
+      }
     }
 
     // Handle reassignment

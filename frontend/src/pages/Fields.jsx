@@ -36,24 +36,24 @@ function AddFieldModal({ onClose, onSaved }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,15,40,0.4)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
       <div style={{ background: '#fff', borderRadius: 14, width: 440, padding: 24 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-          <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1f1f3d', margin: 0 }}>Add a new Field</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: 0 }}>Add a new Field</h3>
           <span onClick={onClose} style={{ cursor: 'pointer', color: '#888' }}>✕</span>
         </div>
         <label style={{ fontSize: 12.5, fontWeight: 600, color: '#444' }}>Field name</label>
-        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Branch Code" style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 12px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }} />
+        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Branch Code" style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 12px', border: '1px solid var(--theme-border-tint2)', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }} />
         <label style={{ fontSize: 12.5, fontWeight: 600, color: '#444' }}>Type</label>
-        <select value={type} onChange={e => setType(e.target.value)} style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 8px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13.5 }}>
+        <select value={type} onChange={e => setType(e.target.value)} style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 8px', border: '1px solid var(--theme-border-tint2)', borderRadius: 8, fontSize: 13.5 }}>
           {Object.keys(TYPE_ICON).map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
         {type === 'dropdown' && (
           <>
             <label style={{ fontSize: 12.5, fontWeight: 600, color: '#444' }}>Options (comma separated)</label>
-            <input value={optionsText} onChange={e => setOptionsText(e.target.value)} placeholder="Option 1, Option 2" style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 12px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }} />
+            <input value={optionsText} onChange={e => setOptionsText(e.target.value)} placeholder="Option 1, Option 2" style={{ width: '100%', marginTop: 6, marginBottom: 14, padding: '9px 12px', border: '1px solid var(--theme-border-tint2)', borderRadius: 8, fontSize: 13.5, boxSizing: 'border-box' }} />
           </>
         )}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #e0ddf0', background: '#fff', color: '#444', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={!name.trim() || saving} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? '#c9bdf5' : '#7c5cf0', color: '#fff', fontWeight: 600, cursor: !name.trim() ? 'default' : 'pointer' }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid var(--theme-border-tint2)', background: '#fff', color: '#444', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={save} disabled={!name.trim() || saving} style={{ padding: '9px 20px', borderRadius: 8, border: 'none', background: !name.trim() ? 'var(--theme-primary-pale)' : 'var(--theme-primary-mid)', color: '#fff', fontWeight: 600, cursor: !name.trim() ? 'default' : 'pointer' }}>
             {saving ? 'Saving...' : 'Add Field'}
           </button>
         </div>
@@ -110,19 +110,19 @@ export default function Fields() {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1f1f3d', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f1f3d" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--theme-text-strongest2)" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Fields Settings
         </h2>
-        <button onClick={() => setShowAdd(true)} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={() => setShowAdd(true)} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: 'var(--theme-primary-mid)', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>
           + Add a new Field
         </button>
       </div>
 
-      <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Lead Id <span style={{ color: '#7c5cf0', cursor: 'pointer' }}>Learn more</span></p>
+      <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Lead Id <span style={{ color: 'var(--theme-primary-mid)', cursor: 'pointer' }}>Learn more</span></p>
 
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-        <span style={{ color: '#7c5cf0', fontSize: 20 }}>📱</span>
+        <span style={{ color: 'var(--theme-primary-mid)', fontSize: 20 }}>📱</span>
         <div>
           <div style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>Phone</div>
           <div style={{ fontSize: 12.5, color: '#aaa' }}>+91 9999999999</div>
@@ -142,8 +142,8 @@ export default function Fields() {
       <div style={{ fontSize: 12, fontWeight: 700, color: '#999', letterSpacing: '0.05em', margin: '22px 0 10px' }}>OTHER FIELDS</div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ flex: 1, padding: '9px 14px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13.5 }} />
-        <select value={view} onChange={e => setView(e.target.value)} style={{ padding: '9px 14px', border: '1px solid #e0ddf0', borderRadius: 8, fontSize: 13.5 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..." style={{ flex: 1, padding: '9px 14px', border: '1px solid var(--theme-border-tint2)', borderRadius: 8, fontSize: 13.5 }} />
+        <select value={view} onChange={e => setView(e.target.value)} style={{ padding: '9px 14px', border: '1px solid var(--theme-border-tint2)', borderRadius: 8, fontSize: 13.5 }}>
           <option>Active Fields</option>
           <option>Hidden Fields</option>
           <option>All</option>
@@ -153,7 +153,7 @@ export default function Fields() {
       <p style={{ fontSize: 12.5, color: '#999', marginBottom: 10 }}>{fields.length} results found</p>
 
       <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 10, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr', padding: '12px 18px', fontSize: 12.5, fontWeight: 700, color: '#666', background: '#fafafd' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr', padding: '12px 18px', fontSize: 12.5, fontWeight: 700, color: '#666', background: 'var(--theme-surface-faint)' }}>
           <span>Field Name</span><span>Type</span><span>Created On</span><span>Last Modified</span><span>Actions</span>
         </div>
         {loading ? (
@@ -161,24 +161,24 @@ export default function Fields() {
         ) : error ? (
           <div style={{ padding: 40, textAlign: 'center' }}>
             <p style={{ color: '#e53e3e', marginBottom: 14, fontSize: 13.5 }}>{error}</p>
-            <button onClick={load} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: '#7c5cf0', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
+            <button onClick={load} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: 'var(--theme-primary-mid)', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Retry</button>
           </div>
         ) : fields.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>No fields found.</div>
         ) : (
           fields.map(f => (
-            <div key={f._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr', padding: '12px 18px', fontSize: 13.5, borderTop: '1px solid #f4f3fa', alignItems: 'center' }}>
+            <div key={f._id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr', padding: '12px 18px', fontSize: 13.5, borderTop: '1px solid var(--theme-surface-faint)', alignItems: 'center' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, color: '#333' }}>
                 <span style={{ color: '#888' }}>{TYPE_ICON[f.type] || 'T'}</span>
                 {editingId === f._id ? (
-                  <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => saveEdit(f)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(f); if (e.key === 'Escape') setEditingId(null); }} style={{ border: '1px solid #d8d4f0', borderRadius: 6, padding: '4px 8px', fontSize: 13 }} />
+                  <input autoFocus value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => saveEdit(f)} onKeyDown={e => { if (e.key === 'Enter') saveEdit(f); if (e.key === 'Escape') setEditingId(null); }} style={{ border: '1px solid var(--theme-primary-pale2)', borderRadius: 6, padding: '4px 8px', fontSize: 13 }} />
                 ) : f.name}
               </span>
               <span style={{ color: '#888', textTransform: 'capitalize' }}>{f.type}</span>
               <span style={{ color: '#888' }}>{timeAgo(f.createdAt)}</span>
               <span style={{ color: '#888' }}>{timeAgo(f.updatedAt)}</span>
               <div style={{ display: 'flex', gap: 14 }}>
-                <span onClick={() => { setEditingId(f._id); setEditName(f.name); }} style={{ cursor: 'pointer', color: '#7c5cf0', fontWeight: 600, fontSize: 12.5 }}>✎ Edit</span>
+                <span onClick={() => { setEditingId(f._id); setEditName(f.name); }} style={{ cursor: 'pointer', color: 'var(--theme-primary-mid)', fontWeight: 600, fontSize: 12.5 }}>✎ Edit</span>
                 <span onClick={() => toggleHide(f)} style={{ cursor: 'pointer', color: '#888', fontWeight: 600, fontSize: 12.5 }}>{f.hidden ? '👁 Show' : '🚫 Hide'}</span>
                 {!f.isSystem && <span onClick={() => remove(f)} style={{ cursor: 'pointer', color: '#e53e3e', fontWeight: 600, fontSize: 12.5 }}>🗑</span>}
               </div>

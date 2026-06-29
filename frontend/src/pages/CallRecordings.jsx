@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { recordingsAPI, usersAPI } from '../services/api';
 
-const PURPLE = '#5b3fc7';
-const TEXT_MAIN = '#1a1a2e';
+const PURPLE = 'var(--theme-primary)';
+const TEXT_MAIN = 'var(--theme-text-strongest)';
 const TEXT_MUTED = '#6b7280';
-const BORDER = '#e9e6f8';
-const BG = '#f8f7ff';
+const BORDER = 'var(--theme-border-tint)';
+const BG = 'var(--theme-surface-faint6)';
 
 function fmtSize(bytes) {
   if (!bytes) return '';
@@ -73,7 +73,7 @@ function AudioPlayer({ url, id }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           onClick={seek}
-          style={{ height: 4, background: '#ddd6fe', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
+          style={{ height: 4, background: 'var(--theme-primary-pale2)', borderRadius: 2, cursor: 'pointer', position: 'relative' }}
         >
           <div style={{ height: '100%', width: `${duration ? (progress / duration) * 100 : 0}%`, background: PURPLE, borderRadius: 2, transition: 'width 0.1s' }} />
         </div>
@@ -136,7 +136,7 @@ export default function CallRecordings() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </span>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Call Recordings</h1>
-          <span style={{ fontSize: 12, background: '#ede9fe', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
+          <span style={{ fontSize: 12, background: 'var(--theme-surface-tint2)', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
         </div>
         <button
           onClick={() => load()}
@@ -202,7 +202,7 @@ export default function CallRecordings() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   {isAdmin && r.userName && (
-                    <span style={{ fontSize: 11, background: '#ede9fe', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{r.userName}</span>
+                    <span style={{ fontSize: 11, background: 'var(--theme-surface-tint2)', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{r.userName}</span>
                   )}
                   {r.size > 0 && <span style={{ fontSize: 11, color: TEXT_MUTED }}>{fmtSize(r.size)}</span>}
                   <span style={{ fontSize: 11, color: TEXT_MUTED }}>{fmtDate(r.recordedAt)}</span>

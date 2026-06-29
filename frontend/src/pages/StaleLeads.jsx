@@ -4,14 +4,14 @@ import { reportsAPI, usersAPI, leadsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const TEXT_MAIN = '#2d2d6b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const TEXT_MAIN = 'var(--theme-text-strong)';
 const TEXT_MUTED = '#888';
 const GREEN = '#22a163';
 const RED = '#e53e3e';
 const AMBER = '#d97706';
-const BORDER = '#e5e2f5';
+const BORDER = 'var(--theme-border-tint)';
 
 export default function StaleLeads() {
   const { user } = useAuth();
@@ -77,7 +77,7 @@ export default function StaleLeads() {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>Stale Leads Alert Console</h2>
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
@@ -94,14 +94,14 @@ export default function StaleLeads() {
 
       {/* Overview stats cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 20 }}>🛑</div>
           <div>
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>Leads Stale (Idle 3+ Days)</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.staleLeadsCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff8e6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: AMBER, fontSize: 20 }}>⏰</div>
           <div>
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>Follow-ups Overdue by 24h+</div>
@@ -137,7 +137,7 @@ export default function StaleLeads() {
                       ? Math.round((Date.now() - new Date(lead.lastCalledAt).getTime()) / (24 * 60 * 60 * 1000))
                       : Math.round((Date.now() - new Date(lead.createdAt).getTime()) / (24 * 60 * 60 * 1000));
                     return (
-                      <tr key={lead._id} style={{ borderBottom: '1px solid #faf9ff', height: 50 }}>
+                      <tr key={lead._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 50 }}>
                         <td style={{ padding: '8px 0' }}>
                           <strong style={{ color: TEXT_MAIN }}>{lead.name}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>{lead.phone} • {lead.email || 'No email'}</div>
@@ -159,7 +159,7 @@ export default function StaleLeads() {
                             disabled={updatingId === lead._id}
                             value={lead.assignedTo?._id || ''}
                             onChange={(e) => handleReassign(lead._id, e.target.value)}
-                            style={{ border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN, background: '#fff' }}
+                            style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN, background: '#fff' }}
                           >
                             <option value="">Choose Caller...</option>
                             {callers.map(c => (
@@ -199,7 +199,7 @@ export default function StaleLeads() {
                   {overdueFollowups.map(fu => {
                     const hoursLate = Math.round((Date.now() - new Date(fu.scheduledAt).getTime()) / (60 * 60 * 1000));
                     return (
-                      <tr key={fu._id} style={{ borderBottom: '1px solid #faf9ff', height: 50 }}>
+                      <tr key={fu._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 50 }}>
                         <td style={{ padding: '8px 0' }}>
                           <strong style={{ color: TEXT_MAIN }}>{fu.lead?.name || 'Unknown Lead'}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>Status: {fu.lead?.status}</div>
@@ -221,7 +221,7 @@ export default function StaleLeads() {
                             disabled={updatingId === fu.lead?._id}
                             value={fu.assignedTo?._id || ''}
                             onChange={(e) => handleReassign(fu.lead?._id, e.target.value)}
-                            style={{ border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN, background: '#fff' }}
+                            style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '4px 8px', fontSize: 12, outline: 'none', color: TEXT_MAIN, background: '#fff' }}
                           >
                             <option value="">Choose Caller...</option>
                             {callers.map(c => (
