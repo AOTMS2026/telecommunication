@@ -90,6 +90,8 @@ app.use('/api/billing', apiLimiter, require('./routes/billing'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
+app.set('trust proxy', 1)
+
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);
