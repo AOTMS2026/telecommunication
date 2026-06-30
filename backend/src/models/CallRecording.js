@@ -45,6 +45,13 @@ const callRecordingSchema = new mongoose.Schema(
 
     // When the call actually happened (sent by the app), vs createdAt = upload time
     recordedAt: { type: Date, required: true },
+
+    // Speech-to-text result (via OpenAI Whisper), populated on demand the
+    // first time someone runs a Call IQ agent against this recording, then
+    // cached here so repeat audits don't re-transcribe the same audio.
+    transcript: { type: String, default: '' },
+    transcriptStatus: { type: String, enum: ['none', 'pending', 'done', 'failed'], default: 'none' },
+    transcriptError: { type: String, default: '' },
   },
   { timestamps: true } // adds createdAt, updatedAt
 );

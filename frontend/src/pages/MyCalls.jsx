@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Clock, MessageSquare, MessageCircle, Plus, RefreshCw, Star, Copy, Check, X } from 'lucide-react';
+import { Phone, PhoneOff, Clock, MessageSquare, MessageCircle, Plus, RefreshCw, Star, Copy, Check, X, Sparkles } from 'lucide-react';
 import { leadsAPI, followupsAPI, blocklistAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
+import RunCallIqModal from '../components/RunCallIqModal';
 import { formatDistanceToNow } from 'date-fns';
 
 const STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
@@ -588,6 +589,14 @@ export default function MyCalls() {
                           </div>
                           {a.type === 'call' && a.description && <p className="text-xs text-gray-500 mt-0.5">{a.description}</p>}
                           <p className="text-xs text-gray-400 mt-0.5">{a.performedBy?.name || ''}</p>
+                          {a.type === 'call' && a.description && (
+                            <button
+                              onClick={() => setRunCallIqActivityId(a._id)}
+                              className="mt-1 text-[11px] font-bold text-violet-600 hover:text-violet-800 hover:underline flex items-center gap-1"
+                            >
+                              <Sparkles className="w-3 h-3" /> Run Call IQ
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

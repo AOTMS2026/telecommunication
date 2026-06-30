@@ -2,8 +2,13 @@ const express = require('express');
 const AiAgent = require('../models/AiAgent');
 const CallAudit = require('../models/CallAudit');
 const Lead = require('../models/Lead');
+const CallRecording = require('../models/CallRecording');
+const path = require('path');
 const { protect, authorize } = require('../middleware/auth');
 const { runCallAudit } = require('../services/callIqService');
+const { transcribeAudioFile } = require('../services/transcriptionService');
+
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
 
 const router = express.Router();
 
@@ -24,6 +29,20 @@ const TEMPLATES = [
 ];
 
 router.get('/templates', protect, (req, res) => res.json({ templates: TEMPLATES }));
+
+// Must be registered before GET '/:id' — otherwise Express would match
+// "by-recording" as an :id value and 404/misroute.
+router.get('/by-recording/:recordingId', protect, async (req, res) => {
+  try {
+    const audits = await CallAudit.find({ recording: req.params.recordingId })
+      .populate('agent', 'name')
+      .sort({ createdAt: -1 })
+      .limit(50);
+    res.json({ audits });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 router.get('/', protect, async (req, res) => {
   try {
@@ -76,17 +95,41 @@ router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) =
   }
 });
 
-// Run an agent against a lead's call activity (or a pasted transcript)
+// Run an agent against a lead's call activity, a manual recording, or a pasted transcript
 router.post('/:id/run', protect, async (req, res) => {
   try {
     const agent = await AiAgent.findById(req.params.id);
     if (!agent) return res.status(404).json({ message: 'Agent not found' });
 
-    const { leadId, activityId, transcript: pastedTranscript } = req.body;
+    const { leadId, activityId, recordingId, transcript: pastedTranscript } = req.body;
     let transcript = pastedTranscript || '';
     let lead = null;
+    let recording = null;
 
-    if (leadId) {
+    if (recordingId) {
+      recording = await CallRecording.findById(recordingId);
+      if (!recording) return res.status(404).json({ message: 'Recording not found' });
+
+      if (recording.transcriptStatus === 'done' && recording.transcript) {
+        transcript = recording.transcript;
+      } else {
+        // Auto-transcribe on demand (cached on the recording for next time)
+        try {
+          const absolutePath = path.join(UPLOAD_DIR, recording.storedName);
+          transcript = await transcribeAudioFile(absolutePath, agent.apiKey);
+          recording.transcript = transcript;
+          recording.transcriptStatus = 'done';
+          recording.transcriptError = '';
+          await recording.save();
+        } catch (sttErr) {
+          recording.transcriptStatus = 'failed';
+          recording.transcriptError = sttErr.message || 'Transcription failed';
+          await recording.save();
+          return res.status(500).json({ message: `Could not transcribe recording: ${sttErr.message}` });
+        }
+      }
+      if (recording.lead) lead = await Lead.findById(recording.lead);
+    } else if (leadId) {
       lead = await Lead.findById(leadId);
       if (lead && !transcript) {
         const callActivities = lead.activities.filter(a => a.type === 'call' && a.description);
@@ -110,6 +153,7 @@ router.post('/:id/run', protect, async (req, res) => {
       agent: agent._id,
       lead: lead?._id,
       activityId: activityId || undefined,
+      recording: recording?._id || undefined,
       transcriptSnapshot: transcript.slice(0, 5000),
       result,
       status,
@@ -127,6 +171,7 @@ router.get('/:id/audits', protect, async (req, res) => {
   try {
     const audits = await CallAudit.find({ agent: req.params.id })
       .populate('lead', 'name phone')
+      .populate('recording', 'phone originalName recordedAt')
       .sort({ createdAt: -1 })
       .limit(100);
     res.json({ audits });

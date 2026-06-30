@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Zap } from 'lucide-react';
+import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Zap, Sparkles } from 'lucide-react';
 import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI, leadStagesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../common/StatusBadge';
+import RunCallIqModal from '../RunCallIqModal';
 import { formatDistanceToNow, format } from 'date-fns';
 
 const FALLBACK_STATUSES = ['Fresh', 'Connected', 'Call Not Responding', 'Call Back Later', 'Not interested', 'Demo Scheduled', 'Demo Done', 'Won', 'Lost'];
@@ -63,7 +64,15 @@ function AddNoteModal({ onClose, onSubmit }) {
 }
 
 function LogCallModal({ lead, onClose, onSubmit }) {
-  const [form, setForm] = useState({ callStatus: 'connected', duration: 0, note: '' });
+  const [form, setForm] = useState({ callStatus: 'connected', duration: 0, note: '', transcript: '' });
+
+  const handleSubmit = () => {
+    const combinedNote = form.transcript.trim()
+      ? `${form.note}${form.note ? '\n\n' : ''}Transcript:\n${form.transcript.trim()}`
+      : form.note;
+    onSubmit({ callStatus: form.callStatus, duration: form.duration, note: combinedNote });
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-100">
@@ -89,10 +98,16 @@ function LogCallModal({ lead, onClose, onSubmit }) {
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">Call Summary Note</label>
             <textarea className="input-field w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" rows={3} value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder="Write call feedback notes..." />
           </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 block">
+              Transcript <span className="text-gray-400 font-normal">(optional — enables Call IQ audit)</span>
+            </label>
+            <textarea className="input-field w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" rows={4} value={form.transcript} onChange={e => setForm({ ...form, transcript: e.target.value })} placeholder={"Paste or type the call transcript...\nAgent: Hello...\nCustomer: Hi..."} />
+          </div>
         </div>
         <div className="flex gap-2.5 mt-5">
           <button onClick={onClose} className="btn-secondary flex-1 rounded-xl py-2.5 font-semibold text-sm">Cancel</button>
-          <button onClick={() => onSubmit(form)} className="btn-primary flex-1 rounded-xl py-2.5 font-semibold text-sm justify-center">Save Call Log</button>
+          <button onClick={handleSubmit} className="btn-primary flex-1 rounded-xl py-2.5 font-semibold text-sm justify-center">Save Call Log</button>
         </div>
       </div>
     </div>
@@ -462,6 +477,7 @@ export default function LeadDetailsPage({
   const [isCalling, setIsCalling] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showLogCallModal, setShowLogCallModal] = useState(false);
+  const [runCallIqActivityId, setRunCallIqActivityId] = useState(null);
   const [showInitiateCallModal, setShowInitiateCallModal] = useState(false);
   const [showCallbackModal, setShowCallbackModal] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
@@ -1188,7 +1204,15 @@ export default function LeadDetailsPage({
                         <p className="text-xs text-gray-500 italic mt-1 bg-white border border-orange-100/50 rounded-lg p-2">"{a.description}"</p>
                       )}
                       {!a._followup && a.type === 'call' && a.description && (
-                        <p className="text-xs text-gray-500 italic mt-1.5 bg-white border border-gray-100/50 rounded-lg p-2">"{a.description}"</p>
+                        <>
+                          <p className="text-xs text-gray-500 italic mt-1.5 bg-white border border-gray-100/50 rounded-lg p-2">"{a.description}"</p>
+                          <button
+                            onClick={() => setRunCallIqActivityId(a._id)}
+                            className="mt-1.5 text-[11px] font-bold text-violet-600 hover:text-violet-800 hover:underline flex items-center gap-1"
+                          >
+                            <Sparkles className="w-3 h-3" /> Run Call IQ
+                          </button>
+                        </>
                       )}
                       {!a._followup && a.type === 'api_call' && a.fields?.length > 0 && (
                         <div className="mt-2 bg-white border border-gray-100 rounded-lg overflow-hidden">
@@ -1221,6 +1245,13 @@ export default function LeadDetailsPage({
       {/* Modals */}
       {showNoteModal && <AddNoteModal onClose={() => setShowNoteModal(false)} onSubmit={handleAddNote} />}
       {showLogCallModal && <LogCallModal lead={lead} onClose={() => setShowLogCallModal(false)} onSubmit={handleLogManualCall} />}
+      {runCallIqActivityId && (
+        <RunCallIqModal
+          leadId={lead._id}
+          activityId={runCallIqActivityId}
+          onClose={() => setRunCallIqActivityId(null)}
+        />
+      )}
       {showCallbackModal && lead && <CallbackTimeModal lead={lead} currentUser={user} onClose={() => setShowCallbackModal(false)} onScheduled={handleCallbackScheduled} />}
       {showDemoModal && lead && <ScheduleDemoModal lead={lead} onClose={() => setShowDemoModal(false)} onSave={handleScheduleDemo} />}
       {showInitiateCallModal && (

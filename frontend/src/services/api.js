@@ -144,6 +144,35 @@ export const integrationsAPI = {
   remove: (id) => api.delete(`/integrations/${id}`),
   getLeads: (id, params) => api.get(`/integrations/${id}/leads`, { params }),
   testWebhook: (id) => api.post(`/integrations/${id}/test-webhook`),
+
+  // Facebook
+  getFacebookPages: (id) => api.get(`/integrations/${id}/facebook/pages`),
+  getFacebookForms: (id) => api.get(`/integrations/${id}/facebook/forms`),
+  facebookSubscribe: (id) => api.post(`/integrations/${id}/facebook/subscribe`),
+  facebookSync: (id) => api.post(`/integrations/${id}/facebook/sync`),
+  getFacebookOAuthUrl: () => api.get('/integrations/facebook/oauth/url'),
+
+  // WhatsApp
+  sendWhatsApp: (id, data) => api.post(`/integrations/${id}/whatsapp/send`, data),
+  sendWhatsAppTemplate: (id, data) => api.post(`/integrations/${id}/whatsapp/send-template`, data),
+  getWhatsAppTemplates: (id) => api.get(`/integrations/${id}/whatsapp/templates`),
+
+  // Google OAuth
+  getGoogleOAuthUrl: (type, integrationId) => api.get(`/integrations/google/oauth/url?type=${type}&integrationId=${integrationId}`),
+
+  // Google Sheets
+  importFromSheet: (id) => api.post(`/integrations/${id}/sheets/import`),
+  listSheets: (id) => api.get(`/integrations/${id}/sheets/list`),
+
+  // Google Meet
+  createMeeting: (id, data) => api.post(`/integrations/${id}/meet/create`, data),
+  listMeetings: (id) => api.get(`/integrations/${id}/meet/list`),
+  deleteMeeting: (id, eventId) => api.delete(`/integrations/${id}/meet/${eventId}`),
+
+  // Knowlarity / CallerDesk / Maqsam
+  getAgents: (id, type) => api.get(`/integrations/${id}/${type}/agents`),
+  getCallLogs: (id, type, params) => api.get(`/integrations/${id}/${type}/call-logs`, { params }),
+  makeCall: (id, type, data) => api.post(`/integrations/${id}/${type}/call`, data),
 };
 
 export const notificationsAPI = {
@@ -224,6 +253,7 @@ export const callIqAPI = {
   delete: (id) => api.delete(`/call-iq-agents/${id}`),
   run: (id, data) => api.post(`/call-iq-agents/${id}/run`, data),
   getAudits: (id) => api.get(`/call-iq-agents/${id}/audits`),
+  getByRecording: (recordingId) => api.get(`/call-iq-agents/by-recording/${recordingId}`),
 };
 
 // ── Workspace Settings ────────────────────────────────────────────────────────
@@ -297,6 +327,7 @@ export const recordingsAPI = {
   getMy: () => api.get('/recordings/my'),
   getAll: (userId) => api.get('/recordings', { params: userId ? { userId } : {} }),
   upload: (formData) => api.post('/recordings', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  transcribe: (id, force) => api.post(`/recordings/${id}/transcribe`, { force: !!force }),
 };
 
 export const billingAPI = {

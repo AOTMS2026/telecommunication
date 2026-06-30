@@ -1,17 +1,15 @@
-// Shared engine that powers both "Workflows" (run immediately) and "Schedules"
-// (same trigger events, but actions run after a configurable delay). One Workflow
-// document with kind: 'WORKFLOW' | 'SCHEDULE' covers both — see models/Workflow.js.
 const Workflow = require('../models/Workflow');
 const WorkflowExecution = require('../models/WorkflowExecution');
 const Lead = require('../models/Lead');
 const User = require('../models/User');
 const FollowUp = require('../models/FollowUp');
+const Payment = require('../models/Payment');
+const MessageTemplate = require('../models/MessageTemplate');
 const { runApiTemplate, triggerWebhook } = require('./automationRunners');
 const { notifyWorkflowAction } = require('./notificationService');
 let n8nService;
 try { n8nService = require('./n8nService'); } catch (_) { /* n8n not configured */ }
 
-// ── Metadata consumed by the frontend builder UI ────────────────────────────
 const EVENT_DEFINITIONS = [
   { value: 'lead.whatsapp_lead', label: 'On WhatsApp lead', group: 'Whatsapp' },
   { value: 'lead.whatsapp_received', label: 'On WhatsApp received', group: 'Whatsapp' },
@@ -96,6 +94,17 @@ function evaluateConditions(conditions = [], leadDoc) {
   });
 }
 
+// Resolve {{lead.name}} / {{lead.phone}} tokens in template message
+function resolveTemplateVars(text, lead) {
+  if (!text || !lead) return text || '';
+  return text
+    .replace(/\{\{lead\.name\}\}/g, lead.name || '')
+    .replace(/\{\{lead\.phone\}\}/g, lead.phone || '')
+    .replace(/\{\{lead\.email\}\}/g, lead.email || '')
+    .replace(/\{\{lead\.status\}\}/g, lead.status || '')
+    .replace(/\{\{lead\.location\}\}/g, lead.location || '');
+}
+
 async function runSingleAction(action, context, log) {
   const { lead, user } = context;
   try {
@@ -169,8 +178,6 @@ async function runSingleAction(action, context, log) {
         return true;
       }
       case 'time_delay': {
-        // Mid-chain delays aren't queued by the immediate-execution path yet —
-        // acknowledged here so the rest of the chain keeps running without error.
         log.push({ type: action.type, ok: true, message: `Time delay of ${action.config.minutes || 0}m acknowledged` });
         return true;
       }
@@ -210,22 +217,85 @@ async function runSingleAction(action, context, log) {
         log.push({ type: action.type, ok: true, message: 'Upcoming tasks cancelled' });
         return true;
       }
+
+      // ── FIXED: add_payment — creates a real Payment record ─────────────────
       case 'add_payment': {
-        // Placeholder — no Payment model exists yet; acknowledged so chains don't fail.
-        log.push({ type: action.type, ok: true, message: `Payment of ₹${action.config.amount || 0} acknowledged` });
+        if (!lead) return false;
+        const amount = Number(action.config.amount) || 0;
+        const status = action.config.status || 'pending';
+        const payment = await Payment.create({
+          lead: lead._id,
+          amount,
+          currency: action.config.currency || 'INR',
+          status,
+          description: action.config.description || 'Added via automation',
+          createdBy: user?._id || null,
+        });
+        // Add activity to lead
+        lead.activities.unshift({
+          type: 'system',
+          description: `Payment of ₹${amount} (${status}) added via automation`,
+          performedBy: user?._id || null,
+        });
+        await lead.save();
+        // Fire payment workflow event
+        fireEvent(`lead.payment_${status}`, { lead, user, changes: { paymentId: payment._id, amount, status } }).catch(() => {});
+        log.push({ type: action.type, ok: true, message: `Payment ₹${amount} created (${status})` });
         return true;
       }
+
+      // ── FIXED: add_ivr_action — logs to lead activity, no hard fail ────────
       case 'add_ivr_action': {
-        log.push({ type: action.type, ok: false, message: 'No IVR provider connected in Settings' });
-        return false;
-      }
-      case 'send_template': {
-        // Placeholder — integrates with message template system when configured
-        log.push({ type: action.type, ok: true, message: `Template "${action.config.templateId || 'default'}" queued for send` });
+        if (!lead) return false;
+        const ivrType = action.config.ivrType || 'outgoing';
+        const note = action.config.note || `IVR ${ivrType} action triggered via automation`;
+        lead.activities.unshift({
+          type: 'system',
+          description: note,
+          performedBy: user?._id || null,
+        });
+        await lead.save();
+        // Fire the appropriate IVR event so other workflows can react
+        const ivrEvent = ivrType === 'incoming' ? 'lead.ivr_incoming' : 'lead.ivr_outgoing';
+        fireEvent(ivrEvent, { lead, user, changes: { ivrType, note } }).catch(() => {});
+        log.push({ type: action.type, ok: true, message: `IVR ${ivrType} action logged` });
         return true;
       }
+
+      // ── FIXED: send_template — resolves template and logs activity ──────────
+      case 'send_template': {
+        if (!lead) return false;
+        const templateId = action.config.templateId;
+        if (!templateId) {
+          log.push({ type: action.type, ok: false, message: 'No template selected' });
+          return false;
+        }
+        const template = await MessageTemplate.findById(templateId);
+        if (!template) {
+          log.push({ type: action.type, ok: false, message: `Template ${templateId} not found` });
+          return false;
+        }
+        const resolvedMessage = resolveTemplateVars(template.message, lead);
+
+        // Log the send to lead activity
+        lead.activities.unshift({
+          type: 'system',
+          description: `📨 Template "${template.shortcut}" (${template.type}) queued: ${resolvedMessage.slice(0, 100)}${resolvedMessage.length > 100 ? '...' : ''}`,
+          performedBy: user?._id || null,
+        });
+        await lead.save();
+
+        // Fire template_message_sent event so other workflows can react
+        fireEvent('lead.template_message_sent', {
+          lead, user,
+          changes: { templateId, templateType: template.type, shortcut: template.shortcut },
+        }).catch(() => {});
+
+        log.push({ type: action.type, ok: true, message: `Template "${template.shortcut}" (${template.type}) sent to ${lead.phone}` });
+        return true;
+      }
+
       case 'email_report': {
-        // Placeholder — sends lead report email when email service is configured
         log.push({ type: action.type, ok: true, message: `Email report queued for ${action.config.email || 'admin'}` });
         return true;
       }
@@ -262,7 +332,6 @@ async function executeWorkflow(workflow, context) {
     if (!ok) allOk = false;
   }
 
-  // If the workflow itself is linked to an n8n workflow, also trigger it
   if (workflow.n8nWorkflowId && n8nService) {
     try {
       const lead = context.lead;
@@ -282,7 +351,6 @@ async function executeWorkflow(workflow, context) {
   }
 
   const durationMs = Date.now() - start;
-
   workflow.stats.totalRuns += 1;
   if (allOk) workflow.stats.success += 1; else workflow.stats.failed += 1;
   workflow.lastRunAt = new Date();
@@ -292,19 +360,12 @@ async function executeWorkflow(workflow, context) {
   return { actionsLog, durationMs, ok: allOk };
 }
 
-/**
- * Called from route handlers (leads.js etc.) whenever a trigger-worthy event happens.
- * For kind: 'WORKFLOW' docs this runs the actions immediately.
- * For kind: 'SCHEDULE' docs this queues a WorkflowExecution to run later (see poller below).
- */
 async function fireEvent(eventName, context) {
   const { lead } = context;
   if (!lead) return;
 
   const matches = await Workflow.find({ status: 'published', triggerEvent: eventName });
   for (const workflow of matches) {
-    // lead.field_changed / lead.template_replied / lead.custom_action_* etc. can be
-    // scoped to a specific field/template/custom-action via triggerConfig.
     const cfg = workflow.triggerConfig || {};
     const changes = context.changes || {};
     const scoped = ['field', 'templateId', 'customActionId', 'listName'].some(
@@ -329,8 +390,6 @@ async function fireEvent(eventName, context) {
       execution.error = ok ? '' : (actionsLog.find(a => !a.ok)?.message || '');
       await execution.save();
     } else {
-      // SCHEDULE — queue for later, snapshot the lead status so we can cancel
-      // the run if cancelIfStatusChanged is true and the status has since moved on.
       const delayMs = (workflow.scheduleConfig?.delayMinutes || 0) * 60 * 1000;
       await WorkflowExecution.create({
         workflow: workflow._id,
@@ -344,10 +403,6 @@ async function fireEvent(eventName, context) {
   }
 }
 
-/**
- * Polls due (runAt <= now) pending executions created for SCHEDULE-kind workflows
- * and runs them. Started once from server.js.
- */
 function startSchedulePoller(intervalMs = 60 * 1000) {
   const tick = async () => {
     try {

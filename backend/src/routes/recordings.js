@@ -9,6 +9,7 @@ const router = express.Router();
 const CallRecording = require('../models/CallRecording');
 const Lead = require('../models/Lead');
 const { protect } = require('../middleware/auth');
+const { transcribeAudioFile } = require('../services/transcriptionService');
 
 // ─── Storage setup ────────────────────────────────────────────────────────
 const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
@@ -218,6 +219,42 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// ─── POST /api/recordings/:id/transcribe — speech-to-text on demand ──────
+// Idempotent: if a transcript already exists, returns it immediately
+// instead of re-calling Whisper (saves cost). Pass { force: true } to
+// re-transcribe anyway.
+router.post('/:id/transcribe', protect, async (req, res) => {
+  try {
+    const rec = await CallRecording.findById(req.params.id);
+    if (!rec) return res.status(404).json({ error: 'Recording not found' });
+
+    if (rec.transcriptStatus === 'done' && rec.transcript && !req.body.force) {
+      return res.json({ success: true, transcript: rec.transcript, cached: true });
+    }
+
+    rec.transcriptStatus = 'pending';
+    await rec.save();
+
+    try {
+      const absolutePath = path.join(UPLOAD_DIR, rec.storedName);
+      const transcript = await transcribeAudioFile(absolutePath, req.body.apiKey);
+      rec.transcript = transcript;
+      rec.transcriptStatus = 'done';
+      rec.transcriptError = '';
+      await rec.save();
+      return res.json({ success: true, transcript, cached: false });
+    } catch (sttErr) {
+      rec.transcriptStatus = 'failed';
+      rec.transcriptError = sttErr.message || 'Transcription failed';
+      await rec.save();
+      return res.status(500).json({ error: rec.transcriptError });
+    }
+  } catch (err) {
+    console.error('transcribe error:', err);
+    return res.status(500).json({ error: 'Failed to transcribe recording' });
+  }
+});
+
 function formatRecording(r) {
   return {
     _id: r._id,
@@ -230,6 +267,9 @@ function formatRecording(r) {
     leadId: r.lead ? r.lead._id : null,
     leadName: r.lead && r.lead.name ? r.lead.name : null,
     leadPhone: r.lead && r.lead.phone ? r.lead.phone : null,
+    transcript: r.transcript || '',
+    transcriptStatus: r.transcriptStatus || 'none',
+    transcriptError: r.transcriptError || '',
   };
 }
 

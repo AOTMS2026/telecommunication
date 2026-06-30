@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { recordingsAPI, usersAPI } from '../services/api';
+import RunCallIqModal from '../components/RunCallIqModal';
 import axios from 'axios';
 
 const PURPLE = 'var(--theme-primary)';
@@ -96,6 +97,7 @@ export default function CallRecordings() {
   const [search, setSearch] = useState('');
   const [rematching, setRematching] = useState(false);
   const [rematchResult, setRematchResult] = useState(null);
+  const [runCallIqRecordingId, setRunCallIqRecordingId] = useState(null);
 
   const load = async (uid = filterUser) => {
     setLoading(true); setError('');
@@ -253,9 +255,35 @@ export default function CallRecordings() {
                 </div>
               </div>
               <AudioPlayer url={r.url} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, gap: 10, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setRunCallIqRecordingId(r._id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--theme-surface-tint2)', color: PURPLE, border: `1px solid var(--theme-border-tint)`, borderRadius: 8, padding: '6px 12px', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.9 4.4L18 9l-4.1 1.6L12 15l-1.9-4.4L6 9l4.1-1.6L12 3z"/><path d="M5 19l.8-1.9L8 16.5l-2.2-.6L5 14l-.8 1.9L2 16.5l2.2.6L5 19z"/></svg>
+                  Run Call IQ
+                </button>
+                {r.transcriptStatus === 'done' && (
+                  <span style={{ fontSize: 11, color: '#059669', fontWeight: 600 }}>✓ Transcribed</span>
+                )}
+                {r.transcriptStatus === 'failed' && (
+                  <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }} title={r.transcriptError}>Transcription failed</span>
+                )}
+              </div>
+              {r.transcript && (
+                <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8, background: BG, borderRadius: 8, padding: '8px 10px', fontStyle: 'italic' }}>
+                  "{r.transcript.slice(0, 220)}{r.transcript.length > 220 ? '…' : ''}"
+                </p>
+              )}
             </div>
           ))}
         </div>
+      )}
+      {runCallIqRecordingId && (
+        <RunCallIqModal
+          recordingId={runCallIqRecordingId}
+          onClose={() => { setRunCallIqRecordingId(null); load(); }}
+        />
       )}
     </div>
   );

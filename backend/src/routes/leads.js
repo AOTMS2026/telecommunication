@@ -24,7 +24,6 @@ router.get('/export', protect, async (req, res) => {
     if (status) query.status = status;
     if (campaign) query.campaign = campaign;
 
-    // Role-based access: callers always restricted to their leads
     if (req.user.role === 'caller') {
       query.assignedTo = req.user._id;
     } else if (filter === 'mine' || filter === 'assigned') {
@@ -44,18 +43,9 @@ router.get('/export', protect, async (req, res) => {
     ];
 
     const rows = leads.map(l => [
-      l.name,
-      l.phone,
-      l.alternatePhone || '',
-      l.email || '',
-      l.status,
-      l.leadSource || '',
-      l.location || '',
-      l.budget || 0,
-      l.rating || 0,
-      l.courseInterest?.name || '',
-      l.campaign?.name || '',
-      l.assignedTo?.name || '',
+      l.name, l.phone, l.alternatePhone || '', l.email || '', l.status,
+      l.leadSource || '', l.location || '', l.budget || 0, l.rating || 0,
+      l.courseInterest?.name || '', l.campaign?.name || '', l.assignedTo?.name || '',
       l.totalCalls || 0,
       l.lastCalledAt ? new Date(l.lastCalledAt).toLocaleString() : '',
       new Date(l.createdAt).toLocaleString()
@@ -64,21 +54,14 @@ router.get('/export', protect, async (req, res) => {
     const csvLines = [headers, ...rows].map(row =>
       row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
     );
-    const csv = csvLines.join('\n');
-
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="leads-${Date.now()}.csv"`);
-    res.send(csv);
+    res.send(csvLines.join('\n'));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// GET /api/leads — get leads with role-based filtering
-// Admin: filter=all (all leads), filter=mine (admin's own leads), filter=assigned (leads assigned to admin)
-//        filter=<userId> (leads of that specific caller)
-// Caller: filter=mine OR filter=assigned => their own assigned leads ONLY
-//         callers NEVER see "all" leads — always scoped to their own
 router.get('/', protect, async (req, res) => {
   try {
     const { status, source, search, campaign, page = 1, limit = 20, filter, dateFilter } = req.query;
@@ -94,16 +77,11 @@ router.get('/', protect, async (req, res) => {
       }
     }
 
-    // Date range filter
     if (dateFilter === 'last_week') {
-      const from = new Date();
-      from.setDate(from.getDate() - 7);
-      from.setHours(0, 0, 0, 0);
+      const from = new Date(); from.setDate(from.getDate() - 7); from.setHours(0, 0, 0, 0);
       query.createdAt = { $gte: from };
     } else if (dateFilter === 'last_month') {
-      const from = new Date();
-      from.setMonth(from.getMonth() - 1);
-      from.setHours(0, 0, 0, 0);
+      const from = new Date(); from.setMonth(from.getMonth() - 1); from.setHours(0, 0, 0, 0);
       query.createdAt = { $gte: from };
     }
 
@@ -133,7 +111,6 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// GET /api/leads/my-calls — today's calls for logged-in caller
 router.get('/my-calls', protect, async (req, res) => {
   try {
     const leads = await Lead.find({ assignedTo: req.user._id })
@@ -148,7 +125,6 @@ router.get('/my-calls', protect, async (req, res) => {
   }
 });
 
-// GET /api/leads/stats — dashboard stats
 router.get('/stats', protect, async (req, res) => {
   try {
     const matchQuery = req.user.role === 'caller' ? { assignedTo: req.user._id } : {};
@@ -166,74 +142,41 @@ router.get('/stats', protect, async (req, res) => {
     ]);
 
     const globalStatusStats = await Lead.aggregate([
-      {
-        $group: {
-          _id: null,
-          fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
-          won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
-          lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
-          active: {
-            $sum: {
-              $cond: [
-                { $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] },
-                1, 0
-              ]
-            }
-          }
-        }
-      }
+      { $group: { _id: null,
+        fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
+        won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
+        lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
+        active: { $sum: { $cond: [{ $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] }, 1, 0] } }
+      }}
     ]);
     const globalCounts = globalStatusStats[0] || { fresh: 0, active: 0, won: 0, lost: 0 };
 
-    // Leads Assigned to Caller — leads where assignedTo is set (not null/unassigned)
     const assignedStatusStats = await Lead.aggregate([
       { $match: { assignedTo: { $ne: null, $exists: true } } },
-      {
-        $group: {
-          _id: null,
-          fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
-          won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
-          lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
-          active: {
-            $sum: {
-              $cond: [
-                { $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] },
-                1, 0
-              ]
-            }
-          }
-        }
-      }
+      { $group: { _id: null,
+        fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
+        won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
+        lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
+        active: { $sum: { $cond: [{ $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] }, 1, 0] } }
+      }}
     ]);
     const assignedCounts = assignedStatusStats[0] || { fresh: 0, active: 0, won: 0, lost: 0 };
 
     const myStatusStats = await Lead.aggregate([
       { $match: { assignedTo: req.user._id } },
-      {
-        $group: {
-          _id: null,
-          fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
-          won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
-          lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
-          active: {
-            $sum: {
-              $cond: [
-                { $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] },
-                1, 0
-              ]
-            }
-          }
-        }
-      }
+      { $group: { _id: null,
+        fresh: { $sum: { $cond: [{ $eq: ['$status', 'Fresh'] }, 1, 0] } },
+        won: { $sum: { $cond: [{ $eq: ['$status', 'Won'] }, 1, 0] } },
+        lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
+        active: { $sum: { $cond: [{ $in: ['$status', ['Connected', 'Call Not Responding', 'Call Back Later', 'Demo Scheduled', 'Demo Done']] }, 1, 0] } }
+      }}
     ]);
     const myCounts = myStatusStats[0] || { fresh: 0, active: 0, won: 0, lost: 0 };
 
     let extraStats = {};
     if (req.user.role === 'caller') {
       const overdueFollowupsCount = await FollowUp.countDocuments({
-        assignedTo: req.user._id,
-        status: 'upcoming',
-        scheduledAt: { $lt: new Date() }
+        assignedTo: req.user._id, status: 'upcoming', scheduledAt: { $lt: new Date() }
       });
 
       const callActivities = await Lead.aggregate([
@@ -251,36 +194,24 @@ router.get('/stats', protect, async (req, res) => {
       const getLocalDateString = (d) => new Date(d.getTime() + tzOffset).toISOString().split('T')[0];
       let checkDate = new Date();
       let checkStr = getLocalDateString(checkDate);
-      if (!dates.includes(checkStr)) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        checkStr = getLocalDateString(checkDate);
-      }
+      if (!dates.includes(checkStr)) { checkDate.setDate(checkDate.getDate() - 1); checkStr = getLocalDateString(checkDate); }
       if (dates.includes(checkStr)) {
-        while (dates.includes(checkStr)) {
-          streak++;
-          checkDate.setDate(checkDate.getDate() - 1);
-          checkStr = getLocalDateString(checkDate);
-        }
+        while (dates.includes(checkStr)) { streak++; checkDate.setDate(checkDate.getDate() - 1); checkStr = getLocalDateString(checkDate); }
       }
 
       const startOfWeek = new Date();
       startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
       startOfWeek.setHours(0, 0, 0, 0);
       const weeklyWins = await Lead.countDocuments({
-        assignedTo: req.user._id,
-        status: { $in: ['Won', 'Demo Scheduled'] },
-        updatedAt: { $gte: startOfWeek }
+        assignedTo: req.user._id, status: { $in: ['Won', 'Demo Scheduled'] }, updatedAt: { $gte: startOfWeek }
       });
 
       const upcomingDemos = await Lead.find({
-        assignedTo: req.user._id,
-        status: 'Demo Scheduled',
-        demoScheduledDate: { $gte: todayStart }
+        assignedTo: req.user._id, status: 'Demo Scheduled', demoScheduledDate: { $gte: todayStart }
       }).select('name phone demoScheduledDate preferredCourses');
 
       const activeLeads = await Lead.find({
-        assignedTo: req.user._id,
-        status: { $nin: ['Won', 'Lost', 'Not interested'] }
+        assignedTo: req.user._id, status: { $nin: ['Won', 'Lost', 'Not interested'] }
       }).populate('campaign', 'name');
 
       const followups = await FollowUp.find({ assignedTo: req.user._id, status: 'upcoming' });
@@ -289,15 +220,12 @@ router.get('/stats', protect, async (req, res) => {
       followups.forEach(f => {
         if (!f.lead) return;
         const leadId = f.lead.toString();
-        if (!followupMap[leadId] || f.scheduledAt < followupMap[leadId].scheduledAt) {
-          followupMap[leadId] = f;
-        }
+        if (!followupMap[leadId] || f.scheduledAt < followupMap[leadId].scheduledAt) followupMap[leadId] = f;
       });
 
       const startMyDayQueue = activeLeads.map(lead => {
         const f = followupMap[lead._id.toString()];
-        let score = 10;
-        let queueReason = 'General Follow-up';
+        let score = 10; let queueReason = 'General Follow-up';
         if (f) {
           if (f.scheduledAt < todayStart) { score = 1; queueReason = 'Overdue Follow-up'; }
           else if (f.scheduledAt <= todayEnd) { score = 2; queueReason = 'Scheduled for Today'; }
@@ -317,34 +245,15 @@ router.get('/stats', protect, async (req, res) => {
       const myRank = rankIndex !== -1 ? rankIndex + 1 : leaderboard.length + 1;
       const topCallerCalls = leaderboard[0]?.totalCalls || 0;
 
-      extraStats = {
-        overdueFollowupsCount,
-        streak,
-        weeklyWins,
-        upcomingDemos,
-        startMyDayQueue,
-        myRank,
-        totalCallers: leaderboard.length,
-        topCallerCalls,
-      };
+      extraStats = { overdueFollowupsCount, streak, weeklyWins, upcomingDemos, startMyDayQueue, myRank, totalCallers: leaderboard.length, topCallerCalls };
     }
 
     res.json({
-      statusCounts,
-      total,
+      statusCounts, total,
       todayCalls: todayCalls[0] || { count: 0, duration: 0 },
-      fresh: globalCounts.fresh,
-      active: globalCounts.active,
-      won: globalCounts.won,
-      lost: globalCounts.lost,
-      myFresh: myCounts.fresh,
-      myActive: myCounts.active,
-      myWon: myCounts.won,
-      myLost: myCounts.lost,
-      assignedFresh: assignedCounts.fresh,
-      assignedActive: assignedCounts.active,
-      assignedWon: assignedCounts.won,
-      assignedLost: assignedCounts.lost,
+      fresh: globalCounts.fresh, active: globalCounts.active, won: globalCounts.won, lost: globalCounts.lost,
+      myFresh: myCounts.fresh, myActive: myCounts.active, myWon: myCounts.won, myLost: myCounts.lost,
+      assignedFresh: assignedCounts.fresh, assignedActive: assignedCounts.active, assignedWon: assignedCounts.won, assignedLost: assignedCounts.lost,
       ...extraStats
     });
   } catch (err) {
@@ -352,7 +261,6 @@ router.get('/stats', protect, async (req, res) => {
   }
 });
 
-// POST /api/leads — create lead
 router.post('/', protect, async (req, res) => {
   try {
     const body = { ...req.body };
@@ -361,27 +269,22 @@ router.post('/', protect, async (req, res) => {
     if (!body.assignedTo || body.assignedTo === '') body.assignedTo = undefined;
     if (Array.isArray(body.courseInterest)) body.courseInterest = body.courseInterest[0] || undefined;
     const assignedToId = body.assignedTo || req.user._id;
-    const lead = await Lead.create({
-      ...body,
-      assignedTo: assignedToId,
-    });
+    const lead = await Lead.create({ ...body, assignedTo: assignedToId });
     await lead.populate([
       { path: 'assignedTo', select: 'name email avatar' },
       { path: 'campaign', select: 'name' },
       { path: 'courseInterest' }
     ]);
-    // Notify assigned caller (if not the creator themselves)
     notifyNewLeadCreated({ lead, assignedToId, performedByUser: req.user }).catch(() => {});
-    // Fire automation events for lead creation
     fireEvent('lead.created', { lead, user: req.user, changes: { source: 'manual' } }).catch(() => {});
     fireEvent('lead.manual_created', { lead, user: req.user, changes: { source: 'manual' } }).catch(() => {});
+    broadcastWebhooks('lead.created', { lead: { id: lead._id, name: lead.name, phone: lead.phone, source: 'manual' } }).catch(() => {});
     res.status(201).json({ lead });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// GET /api/leads/:id
 router.get('/:id', protect, async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id)
@@ -396,22 +299,17 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// PUT /api/leads/:id
 router.put('/:id', protect, async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
-
     if (req.user.role === 'caller' && lead.assignedTo?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only update leads assigned to you' });
     }
 
     const body = { ...req.body };
-    if (Array.isArray(body.courseInterest)) {
-      body.courseInterest = body.courseInterest[0] || undefined;
-    }
+    if (Array.isArray(body.courseInterest)) body.courseInterest = body.courseInterest[0] || undefined;
 
-    // Snapshot for automation trigger detection
     const before = {
       assignedTo: lead.assignedTo?.toString(),
       rating: lead.rating,
@@ -423,12 +321,15 @@ router.put('/:id', protect, async (req, res) => {
       .populate('campaign', 'name')
       .populate('courseInterest');
 
-    // ── Fire automation events based on what actually changed ──────────────────
     const newAssigneeId = updated.assignedTo?._id?.toString();
     if ('assignedTo' in body && newAssigneeId !== before.assignedTo) {
       fireEvent('lead.assignee_changed', {
         lead: updated, user: req.user,
         changes: { field: 'assignedTo', from: before.assignedTo, to: newAssigneeId },
+      }).catch(() => {});
+      broadcastWebhooks('lead.assignee_changed', {
+        lead: { id: updated._id, name: updated.name, phone: updated.phone },
+        changes: { from: before.assignedTo, to: newAssigneeId },
       }).catch(() => {});
     }
     if ('rating' in body && Number(body.rating) !== Number(before.rating)) {
@@ -437,47 +338,30 @@ router.put('/:id', protect, async (req, res) => {
         changes: { field: 'rating', from: before.rating, to: updated.rating },
       }).catch(() => {});
     }
-    // Generic "Lead Field Change" — fires for any other edited field
+
     const SPECIFIC_FIELD_EVENTS = ['name','phone','email','alternatePhone','courseInterest','location','budget','nextFollowUpDate','demoScheduledDate'];
     const otherFields = Object.keys(body).filter(k => !['assignedTo', 'rating', 'status'].includes(k));
     for (const field of otherFields) {
-      fireEvent('lead.field_changed', {
-        lead: updated, user: req.user, changes: { field, to: body[field] },
-      }).catch(() => {});
-      // Also fire field-specific event if it's a tracked field
+      fireEvent('lead.field_changed', { lead: updated, user: req.user, changes: { field, to: body[field] } }).catch(() => {});
       if (SPECIFIC_FIELD_EVENTS.includes(field)) {
-        fireEvent(`lead.field_changed.${field}`, {
-          lead: updated, user: req.user, changes: { field, to: body[field] },
-        }).catch(() => {});
+        fireEvent(`lead.field_changed.${field}`, { lead: updated, user: req.user, changes: { field, to: body[field] } }).catch(() => {});
       }
     }
 
-    // Handle reassignment
     const prevAssignedTo = lead.assignedTo?.toString();
     const newAssignedTo = req.body.assignedTo;
-
     if (newAssignedTo) {
-      await FollowUp.updateMany(
-        { lead: lead._id, status: 'upcoming' },
-        { assignedTo: newAssignedTo }
-      );
-      // Notify new assignee if different from actor
+      await FollowUp.updateMany({ lead: lead._id, status: 'upcoming' }, { assignedTo: newAssignedTo });
       if (newAssignedTo !== req.user._id.toString() && newAssignedTo !== prevAssignedTo) {
         notifyLeadAssigned({ lead: updated, assignedToId: newAssignedTo, performedByUser: req.user }).catch(() => {});
       }
     }
 
-    // Notify existing assignee of general update (if admin edited their lead)
     const currentAssignee = updated.assignedTo?._id?.toString();
     if (currentAssignee && currentAssignee !== req.user._id.toString()) {
       const changedFields = Object.keys(req.body).filter(k => !['assignedTo', 'campaign'].includes(k));
       if (changedFields.length > 0) {
-        notifyLeadUpdated({
-          lead: updated,
-          assignedToId: currentAssignee,
-          performedByUser: req.user,
-          changedFields: changedFields.slice(0, 4),
-        }).catch(() => {});
+        notifyLeadUpdated({ lead: updated, assignedToId: currentAssignee, performedByUser: req.user, changedFields: changedFields.slice(0, 4) }).catch(() => {});
       }
     }
 
@@ -487,7 +371,6 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-// POST /api/leads/:id/call — log a call
 router.post('/:id/call', protect, async (req, res) => {
   try {
     const { duration, callStatus, note } = req.body;
@@ -512,12 +395,13 @@ router.post('/:id/call', protect, async (req, res) => {
     await lead.save();
     await lead.populate('activities.performedBy', 'name avatar');
 
-    // Fire workflow events for call activities
-    const ctx = { lead, user: req.user, changes: { duration: duration||0, callStatus } };
+    const ctx = { lead, user: req.user, changes: { duration: duration || 0, callStatus } };
     if (callStatus === 'connected' || callStatus === 'answered') {
       fireEvent('lead.call_outgoing_ended', ctx).catch(() => {});
+      broadcastWebhooks('lead.call_outgoing_ended', { lead: { id: lead._id, name: lead.name, phone: lead.phone }, changes: { duration, callStatus } }).catch(() => {});
     } else if (callStatus === 'no_answer' || callStatus === 'missed') {
       fireEvent('lead.call_missed', ctx).catch(() => {});
+      broadcastWebhooks('lead.call_missed', { lead: { id: lead._id, name: lead.name, phone: lead.phone } }).catch(() => {});
     }
     if (duration > 0) {
       fireEvent('lead.call_recording_completed', ctx).catch(() => {});
@@ -529,26 +413,21 @@ router.post('/:id/call', protect, async (req, res) => {
   }
 });
 
-// POST /api/leads/:id/note
 router.post('/:id/note', protect, async (req, res) => {
   try {
     const { note, type } = req.body;
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     const noteType = type || 'note';
-    lead.activities.unshift({
-      type: noteType,
-      description: note,
-      performedBy: req.user._id,
-    });
+    lead.activities.unshift({ type: noteType, description: note, performedBy: req.user._id });
     await lead.save();
     await lead.populate('activities.performedBy', 'name avatar');
 
-    // Fire note workflow events
     const noteCtx = { lead, user: req.user, changes: { type: noteType, note } };
     fireEvent('lead.note_added', noteCtx).catch(() => {});
     if (noteType === 'note') fireEvent('lead.user_note', noteCtx).catch(() => {});
     else if (noteType === 'system') fireEvent('lead.system_note', noteCtx).catch(() => {});
+    broadcastWebhooks('lead.note_added', { lead: { id: lead._id, name: lead.name }, changes: { type: noteType } }).catch(() => {});
 
     res.json({ lead });
   } catch (err) {
@@ -556,7 +435,6 @@ router.post('/:id/note', protect, async (req, res) => {
   }
 });
 
-// PUT /api/leads/:id/status
 router.put('/:id/status', protect, async (req, res) => {
   try {
     const { status, demoScheduledDate } = req.body;
@@ -565,16 +443,9 @@ router.put('/:id/status', protect, async (req, res) => {
     const prevStatus = lead.status;
     lead.status = status;
 
-    // Whenever a lead is marked "Demo Scheduled", make sure demoScheduledDate is set.
-    // Without this, the lead never appears in dashboard/report widgets that filter
-    // on demoScheduledDate (e.g. "Demos Scheduled This Week"), even though the
-    // status itself was updated correctly.
     if (status === 'Demo Scheduled') {
-      if (demoScheduledDate) {
-        lead.demoScheduledDate = new Date(demoScheduledDate);
-      } else if (!lead.demoScheduledDate) {
-        lead.demoScheduledDate = new Date();
-      }
+      if (demoScheduledDate) lead.demoScheduledDate = new Date(demoScheduledDate);
+      else if (!lead.demoScheduledDate) lead.demoScheduledDate = new Date();
     }
 
     lead.activities.unshift({
@@ -583,25 +454,13 @@ router.put('/:id/status', protect, async (req, res) => {
       performedBy: req.user._id,
     });
     await lead.save();
-    // Notify the assigned caller
+
     if (lead.assignedTo) {
-      notifyLeadStatusChanged({
-        lead,
-        prevStatus,
-        newStatus: status,
-        assignedToId: lead.assignedTo._id,
-        performedByUser: req.user,
-      }).catch(() => {});
+      notifyLeadStatusChanged({ lead, prevStatus, newStatus: status, assignedToId: lead.assignedTo._id, performedByUser: req.user }).catch(() => {});
     }
-    // Fire automation: Workflows + Schedules subscribed to Lead Status Change
     if (prevStatus !== status) {
-      fireEvent('lead.status_changed', {
-        lead, user: req.user, changes: { field: 'status', from: prevStatus, to: status },
-      }).catch(() => {});
-      broadcastWebhooks('lead.status_changed', {
-        lead: { id: lead._id, name: lead.name, phone: lead.phone, status },
-        changes: { from: prevStatus, to: status },
-      }).catch(() => {});
+      fireEvent('lead.status_changed', { lead, user: req.user, changes: { field: 'status', from: prevStatus, to: status } }).catch(() => {});
+      broadcastWebhooks('lead.status_changed', { lead: { id: lead._id, name: lead.name, phone: lead.phone, status }, changes: { from: prevStatus, to: status } }).catch(() => {});
     }
     res.json({ lead });
   } catch (err) {
@@ -609,16 +468,13 @@ router.put('/:id/status', protect, async (req, res) => {
   }
 });
 
-// DELETE /api/leads/:id
 router.delete('/:id', protect, authorize('caller', 'manager', 'admin'), async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
-
     if (req.user.role === 'caller' && lead.assignedTo?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only delete leads assigned to you' });
     }
-
     await Lead.findByIdAndDelete(req.params.id);
     res.json({ message: 'Lead deleted' });
   } catch (err) {
@@ -626,7 +482,6 @@ router.delete('/:id', protect, authorize('caller', 'manager', 'admin'), async (r
   }
 });
 
-// POST /api/leads/:id/initiate-call
 router.post('/:id/initiate-call', protect, async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id).populate('assignedTo', 'name email fcmToken');
@@ -657,8 +512,6 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
       performedBy: req.user._id,
     });
     await lead.save();
-
-    // Also create in-app notification
     notifyCallInitiated({ lead, callerId: caller._id, performedByUser: req.user }).catch(() => {});
 
     res.json({
@@ -675,34 +528,23 @@ router.post('/:id/initiate-call', protect, async (req, res) => {
   }
 });
 
-// POST /api/leads/transfer — transfer leads from one caller to another
-// Body: { fromCallerId, toCallerId, leadIds? (optional array; if omitted, transfers ALL leads of fromCaller) }
 router.post('/transfer', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const { fromCallerId, toCallerId, leadIds } = req.body;
-
-    if (!fromCallerId || !toCallerId) {
-      return res.status(400).json({ message: 'fromCallerId and toCallerId are required' });
-    }
-    if (fromCallerId === toCallerId) {
-      return res.status(400).json({ message: 'Source and destination callers must be different' });
-    }
+    if (!fromCallerId || !toCallerId) return res.status(400).json({ message: 'fromCallerId and toCallerId are required' });
+    if (fromCallerId === toCallerId) return res.status(400).json({ message: 'Source and destination callers must be different' });
 
     const [fromCaller, toCaller] = await Promise.all([
       User.findById(fromCallerId).select('name role'),
       User.findById(toCallerId).select('name role'),
     ]);
-
     if (!fromCaller) return res.status(404).json({ message: 'Source caller not found' });
     if (!toCaller) return res.status(404).json({ message: 'Destination caller not found' });
 
     const query = { assignedTo: fromCallerId };
-    if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) {
-      query._id = { $in: leadIds };
-    }
+    if (leadIds && Array.isArray(leadIds) && leadIds.length > 0) query._id = { $in: leadIds };
 
     const result = await Lead.updateMany(query, { $set: { assignedTo: toCallerId } });
-
     res.json({
       message: `${result.modifiedCount} lead(s) transferred from ${fromCaller.name} to ${toCaller.name}`,
       modifiedCount: result.modifiedCount,
@@ -714,7 +556,6 @@ router.post('/transfer', protect, authorize('manager', 'admin'), async (req, res
   }
 });
 
-// GET /api/leads/by-caller/:callerId — get leads assigned to a specific caller (admin/admin only)
 router.get('/by-caller/:callerId', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const leads = await Lead.find({ assignedTo: req.params.callerId })

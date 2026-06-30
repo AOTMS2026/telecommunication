@@ -10,6 +10,7 @@ const connectDB = require('./config/db');
 const { initFCM } = require('./services/fcm');
 const http = require('node:http');
 require('./models/ImportHistory');
+require('./models/Payment');
 const { WebSocketServer } = require('ws');
 const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
 const { startSchedulePoller } = require('./services/workflowEngine');
@@ -87,6 +88,9 @@ app.use('/api/custom-actions', apiLimiter, require('./routes/customActions'));
 app.use('/api/workspace-preferences', apiLimiter, require('./routes/workspacePreferences'));
 app.use('/api/permission-templates', apiLimiter, require('./routes/permissionTemplates'));
 app.use('/api/billing', apiLimiter, require('./routes/billing'));
+
+// Public API — authenticated via access tokens (atms_...), not JWT
+app.use('/api/public', apiLimiter, require('./routes/publicApi'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
