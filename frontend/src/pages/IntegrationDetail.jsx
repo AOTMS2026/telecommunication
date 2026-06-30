@@ -108,8 +108,8 @@ export default function IntegrationDetail() {
       setFieldMapping(intg.fieldMapping || { name: 'name', phone: 'phone', email: 'email', location: 'location' });
       setDefaultCampaign(intg.defaultCampaign?._id || '');
       setDefaultAssignedTo(intg.defaultAssignedTo?._id || '');
-      setCampaigns(campRes.data || []);
-      setUsers(usersRes.data || []);
+      setCampaigns(campRes.data?.campaigns || []);
+      setUsers(usersRes.data?.users || []);
       const leadsRes = await integrationsAPI.getLeads(id);
       setLeads(leadsRes.data.leads || []);
       setLeadsTotal(leadsRes.data.total || 0);
@@ -120,11 +120,11 @@ export default function IntegrationDetail() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (extra = {}) => {
     setSaving(true);
     try {
-      await integrationsAPI.update(id, { config, fieldMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null });
-      alert('Saved successfully');
+      await integrationsAPI.update(id, { config, fieldMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null, ...extra });
+      if (!extra.status) alert('Saved successfully');
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
@@ -226,7 +226,7 @@ export default function IntegrationDetail() {
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 24 }}>
             {[
               { label: 'Total Leads Imported', value: integration.totalLeadsImported },
-              { label: 'Status', value: integration.status === 'active' ? '✓ Active' : 'Inactive' },
+              { label: 'Status', value: integration.status === 'active' ? '✓ Active' : integration.status === 'pending' ? 'Pending setup' : 'Inactive' },
               { label: 'Last Lead', value: integration.lastLeadAt ? new Date(integration.lastLeadAt).toLocaleDateString() : 'Never' },
               { label: 'Default Campaign', value: integration.defaultCampaign?.name || 'None' },
             ].map(stat => (
@@ -539,7 +539,7 @@ export default function IntegrationDetail() {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
               <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} style={{ ...s.btnGhost, opacity: step === 0 ? 0.5 : 1 }}>Back</button>
               <button onClick={() => {
-                if (step === 4) { handleSave(); setStep(5); }
+                if (step === 4) { handleSave({ status: 'active' }); setStep(5); }
                 else setStep(s => s + 1);
               }} style={s.btnPrimary}>
                 {step === 4 ? (saving ? 'Saving...' : 'Save & Finish') : 'Next'}

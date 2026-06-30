@@ -9,6 +9,8 @@ const mcpConnectionSchema = new mongoose.Schema({
   requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   requestedAt: { type: Date, default: Date.now },
+  notifiedEmail: { type: String, default: '' },
+  emailSent: { type: Boolean, default: false },
   approvedAt: { type: Date },
   lastUsedAt: { type: Date },
 }, { timestamps: true });

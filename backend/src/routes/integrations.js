@@ -52,9 +52,14 @@ router.get('/', protect, async (req, res) => {
       .populate('defaultAssignedTo', 'name')
       .populate('createdBy', 'name')
       .lean();
-    const activeTypes = active.map(i => i.type);
-    const available = AVAILABLE_INTEGRATIONS.filter(i => !activeTypes.includes(i.type));
-    res.json({ active, available });
+    const pending = await Integration.find({ status: 'pending' })
+      .populate('defaultCampaign', 'name')
+      .populate('defaultAssignedTo', 'name')
+      .populate('createdBy', 'name')
+      .lean();
+    const takenTypes = [...active, ...pending].map(i => i.type);
+    const available = AVAILABLE_INTEGRATIONS.filter(i => !takenTypes.includes(i.type));
+    res.json({ active, pending, available });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -79,12 +84,12 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
     const { type, config, fieldMapping, defaultCampaign, defaultAssignedTo } = req.body;
     const catalog = AVAILABLE_INTEGRATIONS.find(i => i.type === type);
     if (!catalog) return res.status(400).json({ message: 'Unknown integration type' });
-    const existing = await Integration.findOne({ type, status: 'active' });
-    if (existing) return res.status(400).json({ message: 'Integration already active' });
+    const existing = await Integration.findOne({ type, status: { $in: ['active', 'pending'] } });
+    if (existing) return res.status(400).json({ message: 'Integration already added. Finish configuring it from the integrations list.' });
     const webhookKey = crypto.randomBytes(24).toString('hex');
     const integration = await Integration.create({
       type, name: catalog.name, description: catalog.description,
-      status: 'active', webhookKey,
+      status: 'pending', webhookKey,
       config: config || {},
       fieldMapping: fieldMapping || { name: 'name', phone: 'phone', email: 'email', location: 'location' },
       defaultCampaign: defaultCampaign || null,

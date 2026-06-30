@@ -138,6 +138,7 @@ export const bulkImportAPI = {
 
 export const integrationsAPI = {
   getAll: () => api.get('/integrations'),
+  getCatalog: () => api.get('/integrations/catalog'),
   getOne: (id) => api.get(`/integrations/${id}`),
   create: (data) => api.post('/integrations', data),
   update: (id, data) => api.put(`/integrations/${id}`, data),

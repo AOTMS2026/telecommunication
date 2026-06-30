@@ -27,10 +27,9 @@ const IntegrationLogo = ({ type, name, size = 36 }) => {
 
 export default function Integrations() {
   const navigate = useNavigate();
-  const [data, setData] = useState({ active: [], available: [] });
+  const [data, setData] = useState({ active: [], pending: [], available: [] });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activating, setActivating] = useState(null);
 
   const fetchIntegrations = async () => {
     try {
@@ -46,16 +45,10 @@ export default function Integrations() {
 
   useEffect(() => { fetchIntegrations(); }, []);
 
-  const handleActivate = async (type) => {
-    setActivating(type);
-    try {
-      await integrationsAPI.create({ type });
-      await fetchIntegrations();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to activate');
-    } finally {
-      setActivating(null);
-    }
+  const handleActivate = (integration) => {
+    // Don't activate immediately — open the setup page (Overview + Configuration)
+    // so the user can review and configure it first, same as TeleCRM's flow.
+    navigate(`/integrations/setup/${integration.type}`, { state: integration });
   };
 
   const filteredAvailable = data.available.filter(i =>
@@ -134,6 +127,48 @@ export default function Integrations() {
         </section>
       )}
 
+      {/* Pending Setup */}
+      {data.pending && data.pending.length > 0 && (
+        <section style={{ marginBottom: 32 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+            Pending Setup ({data.pending.length})
+          </h3>
+          <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 140px', padding: '10px 20px', borderBottom: '1px solid var(--theme-surface-faint5)', background: 'var(--theme-surface-faint2)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>INTEGRATIONS</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STATUS</span>
+              <span></span>
+            </div>
+            {data.pending.map((integration, idx) => (
+              <div key={integration._id} style={{
+                display: 'grid', gridTemplateColumns: '1fr 160px 140px',
+                padding: '14px 20px', alignItems: 'center',
+                borderBottom: idx < data.pending.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <IntegrationLogo type={integration.type} name={integration.name} />
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--theme-text-strongest)' }}>{integration.name}</div>
+                </div>
+                <div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#fef3c7', color: '#b45309', borderRadius: 20, padding: '4px 12px', fontSize: 13, fontWeight: 500 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
+                    Pending
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => navigate(`/integrations/${integration._id}`)}
+                    style={{ padding: '6px 16px', borderRadius: 20, border: '1.5px solid var(--theme-primary-alt)', background: '#fff', color: 'var(--theme-primary-alt)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Continue setup
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Available Integrations */}
       <section>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
@@ -159,16 +194,14 @@ export default function Integrations() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleActivate(integration.type)}
-                  disabled={activating === integration.type}
+                  onClick={() => handleActivate(integration)}
                   style={{
                     padding: '6px 18px', borderRadius: 20, border: '1.5px solid var(--theme-primary-alt)',
                     background: '#fff', color: 'var(--theme-primary-alt)', fontWeight: 600, fontSize: 13,
-                    cursor: activating === integration.type ? 'wait' : 'pointer',
-                    opacity: activating === integration.type ? 0.7 : 1
+                    cursor: 'pointer'
                   }}
                 >
-                  {activating === integration.type ? 'Activating...' : 'Activate now'}
+                  Activate now
                 </button>
               </div>
             ))
