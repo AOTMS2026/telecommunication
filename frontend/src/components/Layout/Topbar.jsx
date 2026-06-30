@@ -54,6 +54,7 @@ export default function Topbar() {
         time: formatNotifTime(n.createdAt),
         read: n.read,
         leadId: n.lead?._id || n.lead,
+        data: n.data || {},
       }));
       setNotifications(dbNotifs);
       setUnreadCount(res.data.unreadCount || 0);
@@ -148,6 +149,26 @@ export default function Topbar() {
     } catch (e) {}
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  // Decide which module a notification should open when clicked
+  const notifTarget = (n) => {
+    const taskTypes = ['task_created', 'task_assigned', 'task_edited', 'task_overdue'];
+    if (taskTypes.includes(n.type)) {
+      const tab = n.data?.taskType === 'todo' ? 'Todo' : 'Call Followups';
+      return `/tasks?tab=${encodeURIComponent(tab)}`;
+    }
+    if (n.type === 'callback_due') {
+      return n.leadId ? `/leads/${n.leadId}` : '/tasks?tab=Call Followups';
+    }
+    if (n.type === 'workflow_action') {
+      return n.leadId ? `/leads/${n.leadId}` : '/workflows';
+    }
+    if (n.leadId) {
+      // lead_assigned, lead_status_changed, lead_updated, new_lead, call_initiated, etc.
+      return `/leads/${n.leadId}`;
+    }
+    return null;
   };
 
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -392,13 +413,15 @@ export default function Topbar() {
             <div
               onClick={() => { setShowNotifications(prev => !prev); setShowProfile(false); }}
               style={{
-                width: 30, height: 30, border: `1px solid ${showNotifications ? '#fff' : 'rgba(255,255,255,0.35)'}`,
+                width: 30, height: 30, border: `1px solid ${showNotifications ? '#fff' : 'rgba(255,255,255,0.55)'}`,
                 borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', position: 'relative',
                 background: showNotifications ? 'rgba(255,255,255,0.25)' : 'transparent',
                 transition: 'all 0.15s'
               }}
+              onMouseEnter={e => { if (!showNotifications) { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = '#fff'; } }}
+              onMouseLeave={e => { if (!showNotifications) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'; } }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showNotifications ? '#fff' : 'rgba(255,255,255,0.9)'} strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -464,7 +487,8 @@ export default function Topbar() {
                         key={n.id}
                         onClick={() => {
                           markRead(n.id);
-                          if (n.leadId) navigate(`/leads/${n.leadId}`);
+                          const target = notifTarget(n);
+                          if (target) navigate(target);
                           setShowNotifications(false);
                         }}
                         style={{
