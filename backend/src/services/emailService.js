@@ -134,4 +134,21 @@ async function sendBulkEmails({ recipients, subject, body, bodyFormat = 'text', 
   return results;
 }
 
-module.exports = { sendBulkEmails, applyPlaceholders, textToHtml, buildBrandedEmailHtml, renderBodyContent };
+/**
+ * Sends a single plain notification email (not a bulk campaign) — used for
+ * transactional notices like "MCP access requested" etc.
+ */
+async function sendNotificationEmail({ to, subject, bodyHtml, fromEmail, fromName }) {
+  const client = getClient();
+  const from = fromName ? `${fromName} <${fromEmail || process.env.RESEND_FROM_EMAIL}>` : (fromEmail || process.env.RESEND_FROM_EMAIL);
+  const { data, error } = await client.emails.send({
+    from,
+    to,
+    subject,
+    html: buildBrandedEmailHtml(bodyHtml),
+  });
+  if (error) throw new Error(error.message || 'Failed to send notification email');
+  return data;
+}
+
+module.exports = { sendBulkEmails, sendNotificationEmail, applyPlaceholders, textToHtml, buildBrandedEmailHtml, renderBodyContent };
