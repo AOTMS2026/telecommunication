@@ -23,9 +23,14 @@ and code-mixed phrases that occur naturally in real Telugu phone
 conversations (its training data includes that kind of real-world speech).
 If you later need solid *pure* English support too, see the note at the
 bottom of this file.
+
+EXOTEL MIGRATION: audio decoding changed from mu-law (G.711, what Twilio
+Media Streams sent) to raw Linear PCM16 (what Exotel's AgentStream sends).
+See _pcm16_to_float32() below — this is now a direct decode, no codec
+expansion step. server.py's silence/VAD check was also updated to match
+(PCM16 silence ~= 0x0000, not mu-law's 0xFF).
 """
 
-import audioop
 import os
 import numpy as np
 
@@ -56,12 +61,19 @@ else:
     _model = None
 
 
-def _mulaw_to_pcm16(mulaw_bytes: bytes) -> np.ndarray:
-    pcm16 = audioop.ulaw2lin(mulaw_bytes, 2)
-    return np.frombuffer(pcm16, dtype=np.int16).astype(np.float32) / 32768.0
+def _pcm16_to_float32(pcm16_bytes: bytes) -> np.ndarray:
+    """
+    EXOTEL: Exotel's AgentStream sends audio as raw Linear PCM, 16-bit,
+    mono, little-endian (NOT mu-law like Twilio did) — see
+    https://support.exotel.com/.../working-with-the-stream-and-voicebot-applet
+    ("Media in the payloads are sent in raw/slin (16-bit, 8kHz, mono PCM
+    little-endian), encoded in base64"). So this is now a direct decode —
+    no mu-law expansion step is needed or correct anymore.
+    """
+    return np.frombuffer(pcm16_bytes, dtype="<i2").astype(np.float32) / 32768.0
 
 
-def transcribe_segment(mulaw_bytes: bytes, language_hint: str | None = None) -> str:
+def transcribe_segment(pcm16_bytes: bytes, language_hint: str | None = None) -> str:
     """
     `language_hint` is accepted for compatibility with server.py's call site
     but is intentionally NOT used to switch models — per the brief, every
@@ -73,9 +85,9 @@ def transcribe_segment(mulaw_bytes: bytes, language_hint: str | None = None) -> 
         # No real audio decoding happens in dev mode — just prove the pipeline
         # moves data end-to-end. Replace this string while testing if you want
         # to manually drive a specific conversation branch.
-        return "అవును, నాకు ఇంట్రెస్ట్ ఉంది, మరింత వివరాలు చెప్పండి." if mulaw_bytes else ""
+        return "అవును, నాకు ఇంట్రెస్ట్ ఉంది, మరింత వివరాలు చెప్పండి." if pcm16_bytes else ""
 
-    audio = _mulaw_to_pcm16(mulaw_bytes)
+    audio = _pcm16_to_float32(pcm16_bytes)
     if audio.size == 0:
         return ""
 

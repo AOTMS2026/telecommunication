@@ -11,8 +11,8 @@ const { initFCM } = require('./services/fcm');
 const http = require('node:http');
 require('./models/ImportHistory');
 require('./models/Payment');
-const { WebSocketServer } = require('ws');
-const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
+// const { WebSocketServer } = require('ws');
+// const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
 const { startSchedulePoller } = require('./services/workflowEngine');
 const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
 const campaignEngine = require('./services/aiCaller/campaignEngine');
@@ -120,8 +120,8 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 // ── WebSocket server for Twilio ConversationRelay (deprecated, kept for rollback)
-const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
-wss.on('connection', (ws) => handleConversationRelay(ws));
+// const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
+// wss.on('connection', (ws) => handleConversationRelay(ws));
 
 server.listen(PORT, () => {
   console.log(`🚀 AOTMS Server running on port ${PORT}`);

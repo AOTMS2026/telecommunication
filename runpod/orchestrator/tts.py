@@ -19,6 +19,14 @@ Trade-off: this depends on Microsoft's Edge TTS service being reachable from
 the RunPod pod (just needs outbound internet, which pods have) — it is not
 running on your own GPU, so there is no GPU cost for this layer at all,
 unlike the original plan.
+
+EXOTEL MIGRATION: output codec changed from mu-law 8kHz (what Twilio's
+Media Streams played back) to raw Linear PCM16 8kHz (what Exotel's
+AgentStream plays back — see Exotel docs: "audio out should be PCM or PCMU
+in ~100ms frames, multiples of 320 bytes"). synthesize_to_pcm16() below
+returns raw PCM16 bytes; server.py is responsible for chunking that into
+320-byte-aligned ~100ms frames before sending, since Exotel's chunking rule
+applies to what goes over the WebSocket, not to this function's output.
 """
 
 import audioop
@@ -41,11 +49,16 @@ if not LOCAL_DEV:
     from pydub import AudioSegment
 
 
-def _resample_to_8k_mulaw(pcm_bytes: bytes, src_rate: int, channels: int = 1) -> bytes:
+def _resample_to_8k_pcm16(pcm_bytes: bytes, src_rate: int, channels: int = 1) -> bytes:
+    """
+    EXOTEL: resamples/downmixes to 8kHz mono PCM16 and returns it AS-IS
+    (no mu-law encoding) — Exotel's AgentStream expects raw Linear PCM16
+    for playback, not mu-law.
+    """
     if channels == 2:
         pcm_bytes = audioop.tomono(pcm_bytes, 2, 0.5, 0.5)
     pcm16, _ = audioop.ratecv(pcm_bytes, 2, 1, src_rate, 8000, None)
-    return audioop.lin2ulaw(pcm16, 2)
+    return pcm16
 
 
 async def _synthesize_async(text: str, voice: str) -> bytes:
@@ -57,16 +70,24 @@ async def _synthesize_async(text: str, voice: str) -> bytes:
     return bytes(mp3_bytes)
 
 
-def synthesize_to_mulaw(text: str, language: str | None = None) -> bytes:
+def synthesize_to_pcm16(text: str, language: str | None = None) -> bytes:
     """
     `language` selects which Telugu/English Edge TTS voice to use. Defaults
     to Telugu, matching the current customer base (see promptBuilder.js /
     Lead.js, which now default every lead's language to 'Telugu').
+
+    Returns raw 8kHz mono PCM16 bytes (little-endian) — NOT chunked yet.
+    server.py's send_tts() is responsible for splitting this into
+    320-byte-aligned ~100ms frames before sending to Exotel, and for
+    padding the final partial frame to a 320-byte multiple (Exotel pads
+    with silence under the hood, but a short last frame can also trigger
+    an extra 20ms wait per Exotel's docs — not harmful, just noted here).
     """
     if LOCAL_DEV:
-        # ~200ms of mu-law silence (0xFF) — enough to round-trip through
+        # ~200ms of PCM16 silence (0x0000) — enough to round-trip through
         # server.py's base64/WebSocket framing without a network call.
-        return bytes([0xFF]) * 1600
+        # 8000 Hz * 0.2s * 2 bytes/sample = 3200 bytes.
+        return bytes(3200)
 
     if not text.strip():
         return b""
@@ -76,8 +97,8 @@ def synthesize_to_mulaw(text: str, language: str | None = None) -> bytes:
     mp3_bytes = asyncio.run(_synthesize_async(text, voice))
 
     # Edge TTS returns MP3 — decode to raw PCM via pydub (uses ffmpeg, already
-    # installed in the Dockerfile), then resample/encode to mu-law 8kHz for Twilio.
+    # installed in the Dockerfile), then resample to 8kHz mono PCM16 for Exotel.
     audio = AudioSegment.from_file(io.BytesIO(mp3_bytes), format="mp3")
     pcm_bytes = audio.raw_data
 
-    return _resample_to_8k_mulaw(pcm_bytes, audio.frame_rate, channels=audio.channels)
+    return _resample_to_8k_pcm16(pcm_bytes, audio.frame_rate, channels=audio.channels)
