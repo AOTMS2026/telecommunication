@@ -164,16 +164,16 @@ export default function Topbar() {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
     );
     if (type === 'lead_updated') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
     );
     if (type === 'call_initiated') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
     );
     if (type === 'followup') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
     );
     if (type === 'task_created') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     );
     return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -184,10 +184,10 @@ export default function Topbar() {
     if (type === 'callback_due') return '#fff0f0';
     if (type === 'lead_assigned' || type === 'new_lead') return '#e8f8f0';
     if (type === 'lead_status_changed') return '#fff8e6';
-    if (type === 'lead_updated') return 'var(--theme-surface-tint)';
+    if (type === 'lead_updated') return '#f0ecff';
     if (type === 'call_initiated') return '#e0f7fa';
-    if (type === 'followup') return 'var(--theme-surface-tint)';
-    if (type === 'task_created') return 'var(--theme-surface-tint)';
+    if (type === 'followup') return '#f0ecff';
+    if (type === 'task_created') return '#f0ecff';
     if (type === 'campaign') return '#fff8e6';
     return '#f3f4f6';
   };
@@ -197,7 +197,7 @@ export default function Topbar() {
     if (type === 'lead_assigned' || type === 'new_lead') return '#166534';
     if (type === 'lead_status_changed') return '#92400e';
     if (type === 'call_initiated') return '#155e75';
-    return 'var(--theme-text-strong)';
+    return '#2d2d6b';
   };
 
   const roleLabel = user?.role
@@ -266,8 +266,8 @@ export default function Topbar() {
     <>
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 48,
-        background: 'linear-gradient(90deg, var(--theme-primary) 0%, var(--theme-primary-light) 60%, var(--theme-primary-mid) 100%)',
-        borderBottom: '1px solid var(--theme-primary-dark)',
+        background: 'linear-gradient(90deg, #0284c7 0%, #0ea5e9 60%, #f97316 100%)',
+        borderBottom: '1px solid #0369a1',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px 0 10px', zIndex: 100
       }}>
@@ -292,10 +292,7 @@ export default function Topbar() {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="2" strokeLinecap="round">
-              <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff' }}>Academy Of Tech Masters</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', letterSpacing: 0.2 }}>AOTMS GLOBAL PVT. LTD</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -327,8 +324,8 @@ export default function Topbar() {
                   style={{
                     position: 'absolute', top: 36, left: 0,
                     width: 220, background: '#fff',
-                    border: '1px solid var(--theme-border-tint)', borderRadius: 12,
-                    boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb), 0.14)',
+                    border: '1px solid #e5e2f5', borderRadius: 12,
+                    boxShadow: '0 8px 32px rgba(91,63,199,0.14)',
                     zIndex: 200, overflow: 'hidden',
                     animation: 'fadeSlideDown 0.15s ease',
                     padding: '6px 0'
@@ -336,8 +333,8 @@ export default function Topbar() {
                 >
                   <style>{`@keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
                   {workspaceSettingsGroups.map((group, gi) => (
-                    <div key={group.label} style={{ borderTop: gi > 0 ? '1px solid var(--theme-surface-tint)' : 'none', padding: '6px 0' }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-primary-soft)', letterSpacing: '0.05em', padding: '4px 16px' }}>
+                    <div key={group.label} style={{ borderTop: gi > 0 ? '1px solid #f0ecff' : 'none', padding: '6px 0' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#a3a0c0', letterSpacing: '0.05em', padding: '4px 16px' }}>
                         {group.label}
                       </div>
                       {group.items.map(item => (
@@ -347,10 +344,10 @@ export default function Topbar() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10,
                             padding: '8px 16px', cursor: 'pointer',
-                            color: 'var(--theme-text-strong)', fontSize: 13, fontWeight: 500,
+                            color: '#2d2d6b', fontSize: 13, fontWeight: 500,
                             transition: 'background 0.1s'
                           }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint8)'}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <span style={{ color: '#888', display: 'flex' }}>{item.icon}</span>
@@ -431,8 +428,8 @@ export default function Topbar() {
                 style={{
                   position: 'absolute', top: 36, right: -8,
                   width: 320, background: '#fff',
-                  border: '1px solid var(--theme-border-tint)', borderRadius: 12,
-                  boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb), 0.12)',
+                  border: '1px solid #e5e2f5', borderRadius: 12,
+                  boxShadow: '0 8px 32px rgba(91,63,199,0.12)',
                   zIndex: 200, overflow: 'hidden',
                   animation: 'fadeSlideDown 0.15s ease'
                 }}
@@ -440,16 +437,16 @@ export default function Topbar() {
                 <style>{`@keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '12px 16px', borderBottom: '1px solid var(--theme-surface-tint)'
+                  padding: '12px 16px', borderBottom: '1px solid #f0ecff'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--theme-text-strong)' }}>Notifications</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2d2d6b' }}>Notifications</span>
                     {unreadCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: 'var(--theme-primary)', borderRadius: 10, padding: '1px 6px' }}>{unreadCount}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#5b3fc7', borderRadius: 10, padding: '1px 6px' }}>{unreadCount}</span>
                     )}
                   </div>
                   {unreadCount > 0 && (
-                    <button onClick={markAllRead} style={{ fontSize: 11, color: 'var(--theme-primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+                    <button onClick={markAllRead} style={{ fontSize: 11, color: '#5b3fc7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                       Mark all read
                     </button>
                   )}
@@ -472,12 +469,12 @@ export default function Topbar() {
                         }}
                         style={{
                           display: 'flex', gap: 12, padding: '12px 16px',
-                          borderBottom: '1px solid var(--theme-surface-faint2)',
-                          background: n.read ? '#fff' : (n.type === 'callback_due' ? '#fff5f5' : 'var(--theme-surface-faint)'),
+                          borderBottom: '1px solid #f9f8ff',
+                          background: n.read ? '#fff' : (n.type === 'callback_due' ? '#fff5f5' : '#faf9ff'),
                           cursor: 'pointer', transition: 'background 0.1s'
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint8)'}
-                        onMouseLeave={e => e.currentTarget.style.background = n.read ? '#fff' : (n.type === 'callback_due' ? '#fff5f5' : 'var(--theme-surface-faint)')}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = n.read ? '#fff' : (n.type === 'callback_due' ? '#fff5f5' : '#faf9ff')}
                       >
                         <div style={{
                           width: 32, height: 32, borderRadius: 8,
@@ -495,17 +492,17 @@ export default function Topbar() {
                           <div style={{ fontSize: 11, color: '#666', lineHeight: 1.4 }}>{n.message}</div>
                         </div>
                         {!n.read && (
-                          <div style={{ width: 7, height: 7, background: n.type === 'callback_due' ? '#e53e3e' : (n.type === 'call_initiated' ? '#0891b2' : 'var(--theme-primary)'), borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
+                          <div style={{ width: 7, height: 7, background: n.type === 'callback_due' ? '#e53e3e' : (n.type === 'call_initiated' ? '#0891b2' : '#5b3fc7'), borderRadius: '50%', flexShrink: 0, marginTop: 4 }} />
                         )}
                       </div>
                     ))
                   )}
                 </div>
 
-                <div style={{ padding: '10px 16px', borderTop: '1px solid var(--theme-surface-tint)', textAlign: 'center' }}>
+                <div style={{ padding: '10px 16px', borderTop: '1px solid #f0ecff', textAlign: 'center' }}>
                   <button
                     onClick={() => { navigate('/tasks?tab=Call+Followups'); setShowNotifications(false); }}
-                    style={{ fontSize: 12, color: 'var(--theme-primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                    style={{ fontSize: 12, color: '#5b3fc7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
                   >
                     View all follow-up calls
                   </button>
@@ -520,11 +517,11 @@ export default function Topbar() {
               onClick={() => { setShowProfile(prev => !prev); setShowNotifications(false); }}
               style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: showProfile ? 'var(--theme-primary-dark)' : 'var(--theme-primary)',
+                background: showProfile ? '#ea6d0e' : '#f97316',
                 color: '#fff', fontSize: 11, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: showProfile ? '0 0 0 3px var(--theme-primary-pale2)' : 'none',
+                boxShadow: showProfile ? '0 0 0 3px #e0d9ff' : 'none',
                 transition: 'all 0.15s'
               }}
             >
@@ -537,22 +534,22 @@ export default function Topbar() {
                 style={{
                   position: 'absolute', top: 38, right: 0,
                   width: 240, background: '#fff',
-                  border: '1px solid var(--theme-border-tint)', borderRadius: 14,
-                  boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb), 0.14)',
+                  border: '1px solid #e5e2f5', borderRadius: 14,
+                  boxShadow: '0 8px 32px rgba(91,63,199,0.14)',
                   zIndex: 200, overflow: 'hidden',
                   animation: 'fadeSlideDown 0.15s ease'
                 }}
               >
-                <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--theme-surface-tint)' }}>
+                <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #f0ecff' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--theme-text-strong)' }}>{user?.name || 'User'}</span>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--theme-primary)', background: 'var(--theme-surface-tint)', borderRadius: 20, padding: '2px 8px' }}>Pro</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#2d2d6b' }}>{user?.name || 'User'}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#5b3fc7', background: '#f0ecff', borderRadius: 20, padding: '2px 8px' }}>Pro</span>
                   </div>
                   <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 500, color: '#666', background: '#f3f4f6', borderRadius: 20, padding: '2px 10px', marginBottom: 6 }}>
                     {roleLabel}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--theme-primary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2">
+                  <div style={{ fontSize: 11, color: '#5b3fc7', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                       <polyline points="22,6 12,13 2,6"/>
                     </svg>
@@ -567,11 +564,11 @@ export default function Topbar() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '9px 16px', cursor: 'pointer',
-                        color: item.danger ? '#e53e3e' : 'var(--theme-text-strong)',
+                        color: item.danger ? '#e53e3e' : '#2d2d6b',
                         fontSize: 13, fontWeight: 500,
                         transition: 'background 0.1s'
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fff5f5' : 'var(--theme-surface-faint8)'}
+                      onMouseEnter={e => e.currentTarget.style.background = item.danger ? '#fff5f5' : '#f5f3ff'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
                       <span style={{ color: item.danger ? '#e53e3e' : '#888', display: 'flex' }}>{item.icon}</span>

@@ -55,9 +55,12 @@ function AudioPlayer({ url }) {
       <audio
         ref={audioRef}
         src={url}
+        preload="metadata"
         onTimeUpdate={() => setProgress(audioRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
+        onLoadedMetadata={() => { const d = audioRef.current?.duration; if (d && isFinite(d)) setDuration(d); }}
+        onDurationChange={() => { const d = audioRef.current?.duration; if (d && isFinite(d)) setDuration(d); }}
         onEnded={() => { setPlaying(false); setProgress(0); }}
+        onError={() => setError(true)}
       />
       <button
         onClick={toggle}
@@ -153,6 +156,9 @@ export default function CallRecordings() {
           </span>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Call Recordings</h1>
           <span style={{ fontSize: 12, background: '#ede9fe', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
+          {unlinkedCount > 0 && (
+            <span style={{ fontSize: 12, background: '#fef3c7', color: '#d97706', borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{unlinkedCount} unlinked</span>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {isAdmin && unlinkedCount > 0 && (

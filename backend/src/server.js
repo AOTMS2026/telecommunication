@@ -68,7 +68,21 @@ app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/recordings', apiLimiter, require('./routes/recordings'));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ── Audio streaming with proper Range support and CORS headers ────────────────
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin === '*' ? '*' : allowedOrigin);
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    if (/\.(m4a|mp3|wav|amr|3gp|3gpp|aac|ogg)$/i.test(filePath)) {
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
 
 app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
 app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
@@ -94,6 +108,8 @@ app.use('/api/public', apiLimiter, require('./routes/publicApi'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
+app.set('trust proxy', 1)
+
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -107,35 +123,27 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
 wss.on('connection', (ws) => handleConversationRelay(ws));
 
-// ── AI Telecaller background engines ─────────────────────────────────────────
-// FIX: startPoller() moved INSIDE server.listen so it runs on Render production.
-// Previously it was outside the if-block which caused it to start before the
-// server was ready on Render, and the VERCEL check wrongly blocked it.
-
 server.listen(PORT, () => {
   console.log(`🚀 AOTMS Server running on port ${PORT}`);
   startSchedulePoller(60 * 1000);
   startOverdueTaskChecker(5 * 60 * 1000);
 
-  // Start AI campaign engine AFTER server is listening
   campaignEngine.startPoller();
   callbackEngine.startPoller();
   console.log('[server] AI campaign engine and callback engine started');
 });
 
-// FIX: Keep-alive self-ping every 10 minutes to prevent Render free tier sleep.
-// This keeps the campaignEngine poller running continuously.
+// Keep-alive self-ping every 10 minutes
 const SELF_URL = process.env.PUBLIC_BASE_URL;
 if (SELF_URL) {
   setInterval(() => {
     http.get(`${SELF_URL.replace('https', 'http')}/api/health`, (res) => {
       console.log('[keep-alive] ping:', res.statusCode);
     }).on('error', () => {
-      // Use https for Render
       const https = require('https');
       https.get(`${SELF_URL}/api/health`, () => {}).on('error', () => {});
     });
-  }, 10 * 60 * 1000); // every 10 minutes
+  }, 10 * 60 * 1000);
 }
 
 module.exports = app;
