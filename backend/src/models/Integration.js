@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const integrationSchema = new mongoose.Schema({
   name: { type: String, required: true }, // e.g. 'Facebook', 'JustDial', 'IndiaMart'
   type: { type: String, required: true }, // 'facebook', 'justdial', 'indiamart', 'google_sheets', 'webhook', etc.
-  status: { type: String, enum: ['active', 'inactive'], default: 'inactive' },
+  status: { type: String, enum: ['active', 'inactive', 'pending'], default: 'pending' },
   description: { type: String, default: '' },
   logoUrl: { type: String, default: '' },
   // Webhook key for receiving leads

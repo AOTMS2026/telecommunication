@@ -203,15 +203,15 @@ const styles = `
 
   /* Divider */
   .lw-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0 12px; animation: fadeInUp 0.5s ease 0.55s both; }
-  .lw-divider-line { flex: 1; height: 1px; background: #ede9f8; }
+  .lw-divider-line { flex: 1; height: 1px; background: var(--theme-border-tint); }
   .lw-divider-text { font-size: 11px; color: var(--theme-primary-pale); font-weight: 500; white-space: nowrap; }
 
   /* Demo box */
-  .lw-demo { background: var(--theme-surface-faint); border: 1px solid #ede9f8; border-radius: 11px; padding: 14px 16px; animation: fadeInUp 0.5s ease 0.6s both; }
+  .lw-demo { background: var(--theme-surface-faint); border: 1px solid var(--theme-border-tint); border-radius: 11px; padding: 14px 16px; animation: fadeInUp 0.5s ease 0.6s both; }
   .lw-demo-title { font-size: 10.5px; font-weight: 700; color: var(--theme-primary-soft); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 9px; }
   .lw-demo-row { font-size: 12.5px; color: var(--theme-text-strong); display: flex; align-items: center; gap: 6px; padding: 3px 0; flex-wrap: wrap; }
   .lw-demo-role { font-weight: 700; color: ${PURPLE}; min-width: 44px; }
-  .lw-demo-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px; color: var(--theme-primary-soft); background: #ede9f8; padding: 2px 7px; border-radius: 5px; }
+  .lw-demo-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11.5px; color: var(--theme-primary-soft); background: var(--theme-border-tint); padding: 2px 7px; border-radius: 5px; }
 
   .lw-footer { margin-top: 20px; text-align: center; font-size: 11px; color: var(--theme-primary-pale); animation: fadeInUp 0.5s ease 0.7s both; }
 `;

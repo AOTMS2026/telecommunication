@@ -459,7 +459,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
             <>
               <div />
               {(sendResult || sendError) ? (
-                <button onClick={onClose} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: PURPLE, color: '#fff', cursor: 'pointer' }}>Done</button>
+                <button onClick={onClose} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--btn-gradient)', color: '#fff', cursor: 'pointer' }}>Done</button>
               ) : (
                 <button disabled style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--theme-border-tint)', color: '#aaa', cursor: 'not-allowed' }}>Sending...</button>
               )}
@@ -488,7 +488,7 @@ export default function EmailCampaignWizard({ onClose, initialData }) {
                 </button>
               )}
               {step === 3 && (
-                <button onClick={handleSend} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: PURPLE, color: '#fff', cursor: 'pointer' }}>
+                <button onClick={handleSend} style={{ padding: '10px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--btn-gradient)', color: '#fff', cursor: 'pointer' }}>
                   Send to {previewData?.totalStudents || 0} Students
                 </button>
               )}

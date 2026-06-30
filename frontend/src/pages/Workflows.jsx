@@ -16,7 +16,7 @@ import {
 /* ─── palette ─────────────────────────────────────────────────────────────── */
 const C={indigo:'var(--theme-primary-alt)',purple:'var(--theme-primary-deep)',indigoBg:'var(--theme-surface-faint4)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',red:'#dc2626',amber:'#b45309',line:'var(--theme-primary-pale)'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
-const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
+const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:'var(--btn-gradient)',color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
 const inp={width:'100%',padding:'9px 12px',border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:'none',boxSizing:'border-box'};
 const lbl={fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5,display:'block'};
@@ -225,7 +225,7 @@ export default function Workflows({kind='WORKFLOW'}){
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink,display:'flex',alignItems:'center',gap:8}}>{title}<RefreshCw size={16} style={{color:C.sub,cursor:'pointer'}} onClick={load}/></h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>{isSchedule?'Automatically keep in touch with your leads':'To execute complex automations with ease'} <span style={{color:C.indigo,fontWeight:600,textDecoration:'underline',cursor:'pointer'}}>Learn More</span></p>
       </div>
-      <button style={btnP} onClick={()=>setShowEventModal(true)}>{isSchedule?'Create New Schedule':'Create Workflow'} +</button>
+      <button style={btnP} onClick={()=>setShowEventModal(true)}>+ {isSchedule?'Create New Schedule':'Create Workflow'}</button>
     </div>
 
     {/* stat cards */}

@@ -3,7 +3,7 @@ import { webhooksAPI, workflowsAPI } from '../services/api';
 
 const C={indigo:'var(--theme-primary-alt)',border:'var(--theme-border-tint)',ink:'var(--theme-text-strongest)',sub:'#6b7280',green:'#059669',red:'#dc2626'};
 const card={background:'#fff',border:`1px solid ${C.border}`,borderRadius:12};
-const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:C.indigo,color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
+const btnP={padding:'8px 18px',borderRadius:8,border:'none',background:'var(--btn-gradient)',color:'#fff',fontWeight:600,fontSize:14,cursor:'pointer'};
 const btnG={padding:'7px 14px',borderRadius:8,border:`1.5px solid ${C.border}`,background:'#fff',color:C.ink,fontWeight:600,fontSize:13,cursor:'pointer'};
 const inp={width:'100%',padding:'9px 12px',border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,outline:'none',boxSizing:'border-box'};
 const lbl={fontSize:12,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em',marginBottom:5,display:'block'};
@@ -36,7 +36,7 @@ export default function Webhooks(){
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>Webhook Management</h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>Manage inbound & outbound webhooks and connect to external systems</p>
       </div>
-      <button style={btnP} onClick={()=>setEditing({name:'',url:'',events:[],status:'active',config:{},fieldMappings:[]})}>Create new webhook +</button>
+      <button style={btnP} onClick={()=>setEditing({name:'',url:'',events:[],status:'active',config:{},fieldMappings:[]})}>+ Create new webhook</button>
     </div>
 
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>

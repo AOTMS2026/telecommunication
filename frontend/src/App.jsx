@@ -22,6 +22,7 @@ import BulkImport from './pages/BulkImport';
 import TeamOperations from './pages/TeamOperations';
 import LeadProfile from './pages/LeadProfile';
 import Integrations from './pages/Integrations';
+import IntegrationSetup from './pages/IntegrationSetup';
 import IntegrationDetail from './pages/IntegrationDetail';
 import Workflows from './pages/Workflows';
 import Schedules from './pages/Schedules';
@@ -91,6 +92,7 @@ export default function App() {
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="team-operations" element={<TeamOperations />} />
             <Route path="integrations" element={<Integrations />} />
+            <Route path="integrations/setup/:type" element={<IntegrationSetup />} />
             <Route path="integrations/:id" element={<IntegrationDetail />} />
             <Route path="workflows" element={<Workflows />} />
             <Route path="schedules" element={<Schedules />} />

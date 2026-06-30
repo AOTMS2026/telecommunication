@@ -155,7 +155,7 @@ export default function CallRecordings() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
           </span>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Call Recordings</h1>
-          <span style={{ fontSize: 12, background: '#ede9fe', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
+          <span style={{ fontSize: 12, background: 'var(--theme-surface-tint)', color: PURPLE, borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{recordings.length}</span>
           {unlinkedCount > 0 && (
             <span style={{ fontSize: 12, background: '#fef3c7', color: '#d97706', borderRadius: 20, padding: '2px 10px', fontWeight: 600 }}>{unlinkedCount} unlinked</span>
           )}
@@ -173,7 +173,7 @@ export default function CallRecordings() {
           )}
           <button
             onClick={() => load()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             Refresh
@@ -222,7 +222,7 @@ export default function CallRecordings() {
       ) : error ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
           <div style={{ color: '#dc2626', fontSize: 14, marginBottom: 12 }}>{error}</div>
-          <button onClick={() => load()} style={{ background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}>Retry</button>
+          <button onClick={() => load()} style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600 }}>Retry</button>
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 80, color: TEXT_MUTED }}>

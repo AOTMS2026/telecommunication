@@ -10,7 +10,7 @@ const P = 'var(--theme-primary)';
 const P_LIGHT = 'var(--theme-surface-tint)';
 const TEXT = 'var(--theme-text-strongest)';
 const MUTED = '#888';
-const BORDER = '#ede9f8';
+const BORDER = 'var(--theme-border-tint)';
 
 const STATUS_COLORS = {
   Fresh: 'var(--theme-primary-alt)',

@@ -138,6 +138,7 @@ export const bulkImportAPI = {
 
 export const integrationsAPI = {
   getAll: () => api.get('/integrations'),
+  getCatalog: () => api.get('/integrations/catalog'),
   getOne: (id) => api.get(`/integrations/${id}`),
   create: (data) => api.post('/integrations', data),
   update: (id, data) => api.put(`/integrations/${id}`, data),
@@ -240,6 +241,7 @@ export const accessTokensAPI = {
 export const mcpAPI = {
   status: () => api.get('/mcp/status'),
   requestAccess: (provider) => api.post('/mcp/request-access', { provider }),
+  connect: (id) => api.post(`/mcp/${id}/connect`),
   approve: (id) => api.patch(`/mcp/${id}/approve`),
   revoke: (id) => api.patch(`/mcp/${id}/revoke`),
 };

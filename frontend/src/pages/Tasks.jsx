@@ -4,9 +4,9 @@ import { followupsAPI, leadsAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatISTDateTime } from '../utils/dateFormat';
 
-const PURPLE = '#5b3fc7';
-const PURPLE_LIGHT = '#f0ecff';
-const TEXT_MAIN = '#2d2d6b';
+const PURPLE = 'var(--theme-primary)';
+const PURPLE_LIGHT = 'var(--theme-surface-tint)';
+const TEXT_MAIN = 'var(--theme-text-strongest)';
 const TEXT_MUTED = '#888';
 
 const STATUS_COLORS = {
@@ -57,7 +57,7 @@ function EditModal({ task, onClose, onSaved }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(var(--theme-primary-rgb),0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Edit Follow-up</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
@@ -76,7 +76,7 @@ function EditModal({ task, onClose, onSaved }) {
               value={form.note}
               onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
               rows={3}
-              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           <div>
@@ -89,7 +89,7 @@ function EditModal({ task, onClose, onSaved }) {
                   const timePart = form.scheduledAt ? form.scheduledAt.slice(11, 16) : '09:00';
                   setForm(f => ({ ...f, scheduledAt: e.target.value + 'T' + timePart }));
                 }}
-                style={{ flex: 1, border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ flex: 1, border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
               <input
                 type="time"
@@ -98,7 +98,7 @@ function EditModal({ task, onClose, onSaved }) {
                   const datePart = form.scheduledAt ? form.scheduledAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
                   setForm(f => ({ ...f, scheduledAt: datePart + 'T' + e.target.value }));
                 }}
-                style={{ width: 110, border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: 110, border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -108,7 +108,7 @@ function EditModal({ task, onClose, onSaved }) {
               <select
                 value={form.priority}
                 onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+                style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
               >
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
@@ -121,11 +121,11 @@ function EditModal({ task, onClose, onSaved }) {
         {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 10 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid var(--theme-border-tint)', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
           <button
             onClick={handleSave}
             disabled={saving}
-            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: 'var(--btn-gradient)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -174,7 +174,7 @@ function UploadModal({ onClose, onImported }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24, boxShadow: '0 8px 40px rgba(var(--theme-primary-rgb),0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Upload Tasks</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
@@ -186,7 +186,7 @@ function UploadModal({ onClose, onImported }) {
         <div
           onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${file ? PURPLE : '#e5e2f5'}`, borderRadius: 12,
+            border: `2px dashed ${file ? PURPLE : 'var(--theme-border-tint)'}`, borderRadius: 12,
             padding: '24px 16px', textAlign: 'center', cursor: 'pointer',
             background: file ? PURPLE_LIGHT : '#faf9ff', transition: 'all 0.15s'
           }}
@@ -217,14 +217,14 @@ function UploadModal({ onClose, onImported }) {
         )}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid var(--theme-border-tint)', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>
             {result ? 'Close' : 'Cancel'}
           </button>
           {!result && (
             <button
               onClick={handleUpload}
               disabled={uploading || !file}
-              style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (uploading || !file) ? 0.6 : 1 }}
+              style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: 'var(--btn-gradient)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (uploading || !file) ? 0.6 : 1 }}
             >
               {uploading ? 'Uploading...' : 'Upload'}
             </button>
@@ -321,7 +321,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(var(--theme-primary-rgb),0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>
             Add {isCallFollowup ? 'Call Follow-up' : 'Task'}
@@ -350,10 +350,10 @@ function AddTaskModal({ type, onClose, onCreated }) {
                     value={leadQuery}
                     onChange={e => setLeadQuery(e.target.value)}
                     placeholder="Search lead by name or phone..."
-                    style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
                   />
                   {leadQuery.trim().length >= 2 && (
-                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, marginTop: 4, maxHeight: 160, overflowY: 'auto', background: '#fff', boxShadow: '0 4px 16px rgba(91,63,199,0.1)' }}>
+                    <div style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 10, marginTop: 4, maxHeight: 160, overflowY: 'auto', background: '#fff', boxShadow: '0 4px 16px rgba(var(--theme-primary-rgb),0.1)' }}>
                       {searching ? (
                         <div style={{ padding: 10, fontSize: 12, color: TEXT_MUTED }}>Searching...</div>
                       ) : leadResults.length === 0 ? (
@@ -388,7 +388,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
               onChange={e => setNote(e.target.value)}
               rows={3}
               placeholder={isCallFollowup ? 'What should this call be about?' : 'What needs to be done?'}
-              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+              style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -402,7 +402,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
                   const timePart = scheduledAt ? scheduledAt.slice(11, 16) : '09:00';
                   setScheduledAt(e.target.value + 'T' + timePart);
                 }}
-                style={{ flex: 1, border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ flex: 1, border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
               <input
                 type="time"
@@ -411,7 +411,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
                   const datePart = scheduledAt ? scheduledAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
                   setScheduledAt(datePart + 'T' + e.target.value);
                 }}
-                style={{ width: 110, border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: 110, border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -421,7 +421,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
             <select
               value={priority}
               onChange={e => setPriority(e.target.value)}
-              style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+              style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
             >
               <option value="high">High</option>
               <option value="medium">Medium</option>
@@ -436,7 +436,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
                 <select
                   value={assignedTo}
                   onChange={e => setAssignedTo(e.target.value)}
-                  style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
                 >
                   {users.map(u => (
                     <option key={u._id} value={u._id}>
@@ -450,7 +450,7 @@ function AddTaskModal({ type, onClose, onCreated }) {
                 <select
                   value={assignedBy}
                   onChange={e => setAssignedBy(e.target.value)}
-                  style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+                  style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
                 >
                   {users.map(u => (
                     <option key={u._id} value={u._id}>
@@ -466,11 +466,11 @@ function AddTaskModal({ type, onClose, onCreated }) {
         {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 10 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #e5e2f5', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid var(--theme-border-tint)', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
           <button
             onClick={handleCreate}
             disabled={saving}
-            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: 'var(--btn-gradient)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
           >
             {saving ? 'Creating...' : 'Create Task'}
           </button>
@@ -656,7 +656,7 @@ export default function Tasks() {
           onClick={() => setDescriptionPopup(null)}
         >
           <div
-            style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}
+            style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 8px 40px rgba(var(--theme-primary-rgb),0.18)' }}
             onClick={e => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -716,9 +716,9 @@ export default function Tasks() {
           title="Refresh"
           style={{
             width: 30, height: 30, borderRadius: '50%',
-            border: '1.5px solid #e5e2f5', background: '#fff', color: PURPLE,
+            border: '1.5px solid var(--theme-border-tint)', background: '#fff', color: PURPLE,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, boxShadow: '0 1px 4px rgba(91,63,199,0.1)'
+            flexShrink: 0, boxShadow: '0 1px 4px rgba(var(--theme-primary-rgb),0.1)'
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5">
@@ -728,7 +728,7 @@ export default function Tasks() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderBottom: '2px solid #e5e2f5', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderBottom: '2px solid var(--theme-border-tint)', marginBottom: 20 }}>
         {['Call Followups', 'Todo'].map(tab => (
           <button
             key={tab}
@@ -759,7 +759,7 @@ export default function Tasks() {
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 11px', borderRadius: 6, border: 'none',
-              background: forFilter === 'Me' ? PURPLE : '#f3f1fb',
+              background: forFilter === 'Me' ? 'var(--btn-gradient)' : 'var(--theme-surface-tint)',
               color: forFilter === 'Me' ? '#fff' : TEXT_MAIN,
               fontSize: 12, fontWeight: 600, cursor: 'pointer'
             }}
@@ -775,8 +775,8 @@ export default function Tasks() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '5px 11px', borderRadius: 6,
-                border: forFilter === 'Team' ? 'none' : '1px solid #e5e2f5',
-                background: forFilter === 'Team' ? PURPLE : '#f3f1fb',
+                border: forFilter === 'Team' ? 'none' : '1px solid var(--theme-border-tint)',
+                background: forFilter === 'Team' ? 'var(--btn-gradient)' : 'var(--theme-surface-tint)',
                 color: forFilter === 'Team' ? '#fff' : TEXT_MAIN,
                 fontSize: 12, fontWeight: 600, cursor: 'pointer'
               }}
@@ -793,8 +793,8 @@ export default function Tasks() {
             {showTeamDrop && (
               <div style={{
                 position: 'absolute', top: '110%', left: 0, zIndex: 300,
-                background: '#fff', border: '1px solid #e5e2f5', borderRadius: 10,
-                boxShadow: '0 8px 24px rgba(91,63,199,0.13)', minWidth: 180, padding: '6px 0'
+                background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 10,
+                boxShadow: '0 8px 24px rgba(var(--theme-primary-rgb),0.13)', minWidth: 180, padding: '6px 0'
               }}>
                 <div
                   onClick={() => { setTeamMemberFilter(''); setShowTeamDrop(false); }}
@@ -810,7 +810,7 @@ export default function Tasks() {
                     onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
                     onMouseLeave={e => e.currentTarget.style.background = teamMemberFilter === u._id ? '#f5f3ff' : 'transparent'}
                   >
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#f0ecff', color: PURPLE, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--theme-surface-tint)', color: PURPLE, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {u.name.slice(0,2).toUpperCase()}
                     </div>
                     {u.name}
@@ -821,14 +821,14 @@ export default function Tasks() {
           </div>
         </div>
 
-        <div style={{ width: 1, height: 20, background: '#e5e2f5' }} />
+        <div style={{ width: 1, height: 20, background: 'var(--theme-border-tint)' }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Due:</span>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            border: `1px solid ${dueFilter ? PURPLE : '#e5e2f5'}`, borderRadius: 6,
-            background: dueFilter ? '#f0ecff' : '#fff', padding: '5px 10px', cursor: 'pointer',
+            border: `1px solid ${dueFilter ? PURPLE : 'var(--theme-border-tint)'}`, borderRadius: 6,
+            background: dueFilter ? 'var(--theme-surface-tint)' : '#fff', padding: '5px 10px', cursor: 'pointer',
           }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
@@ -854,15 +854,15 @@ export default function Tasks() {
           </div>
         </div>
 
-        <div style={{ width: 1, height: 20, background: '#e5e2f5' }} />
+        <div style={{ width: 1, height: 20, background: 'var(--theme-border-tint)' }} />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Status:</span>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            border: `1px solid ${statusFilter.length < 4 ? PURPLE : '#e5e2f5'}`,
+            border: `1px solid ${statusFilter.length < 4 ? PURPLE : 'var(--theme-border-tint)'}`,
             borderRadius: 6,
-            background: statusFilter.length < 4 ? '#f0ecff' : '#fff',
+            background: statusFilter.length < 4 ? 'var(--theme-surface-tint)' : '#fff',
             padding: '5px 10px', cursor: 'pointer',
           }}>
             <select
@@ -895,7 +895,7 @@ export default function Tasks() {
             onClick={() => setShowAdditional(p => !p)}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
-              border: `1.5px solid ${(showAdditional || priorityFilter) ? PURPLE : '#e5e2f5'}`,
+              border: `1.5px solid ${(showAdditional || priorityFilter) ? PURPLE : 'var(--theme-border-tint)'}`,
               borderRadius: 6, padding: '5px 11px',
               background: (showAdditional || priorityFilter) ? PURPLE_LIGHT : '#fff',
               color: (showAdditional || priorityFilter) ? PURPLE : TEXT_MAIN,
@@ -914,8 +914,8 @@ export default function Tasks() {
           {showAdditional && (
             <div style={{
               position: 'absolute', top: '110%', left: 0, zIndex: 200,
-              background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12,
-              boxShadow: '0 8px 24px rgba(91,63,199,0.12)', padding: 16, minWidth: 220
+              background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12,
+              boxShadow: '0 8px 24px rgba(var(--theme-primary-rgb),0.12)', padding: 16, minWidth: 220
             }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>Filter by Priority</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -957,7 +957,7 @@ export default function Tasks() {
           onClick={() => setShowAddModal(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            background: PURPLE, border: 'none', borderRadius: 7, cursor: 'pointer',
+            background: 'var(--btn-gradient)', border: 'none', borderRadius: 7, cursor: 'pointer',
             fontSize: 12, color: '#fff', fontWeight: 600, padding: '6px 12px'
           }}
           title="Create new task"
@@ -1010,10 +1010,10 @@ export default function Tasks() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #f0ecff' }}>
+            <tr style={{ borderBottom: '1px solid var(--theme-surface-tint)' }}>
               {[
                 ...(activeTab === 'Call Followups' ? [{ label: 'Lead', field: 'lead' }] : []),
                 { label: 'Description', field: 'description' },
@@ -1031,7 +1031,7 @@ export default function Tasks() {
                     padding: '11px 16px', textAlign: 'left',
                     fontSize: 12, fontWeight: 600,
                     color: sortField === col.field ? PURPLE : TEXT_MUTED,
-                    background: col.highlight ? '#f3f1fb' : 'transparent',
+                    background: col.highlight ? 'var(--theme-surface-tint)' : 'transparent',
                     cursor: col.field ? 'pointer' : 'default',
                     userSelect: 'none', whiteSpace: 'nowrap'
                   }}
@@ -1181,9 +1181,9 @@ export default function Tasks() {
                       <button
                         title="Edit"
                         onClick={() => setEditingTask(task)}
-                        style={{ background: 'none', border: '1px solid #e5e2f5', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                        style={{ background: 'none', border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = PURPLE}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e2f5'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--theme-border-tint)'}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
