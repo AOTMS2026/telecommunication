@@ -601,7 +601,7 @@ export default function Dashboard() {
               {startMyDayQueue.length > 0 && (
                 <button 
                   onClick={() => setActiveQueueIndex(0)} 
-                  style={{ background: PURPLE, color: '#fff', border: 'none', padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
                   🚀 Run Queue
                 </button>
@@ -805,7 +805,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => { reportsAPI.adminAnalysis().then(r => setAdminStats(r.data)).catch(e => console.warn(e)); }}
-            style={{ marginTop: 8, background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ marginTop: 8, background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >Retry Analytics</button>
         </div>
       );
@@ -1233,7 +1233,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => { reportsAPI.adminAnalysis().then(r => setAdminStats(r.data)).catch(e => console.warn(e)); }}
-            style={{ marginTop: 8, background: PURPLE, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ marginTop: 8, background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >Retry Analytics</button>
         </div>
       );
@@ -1767,7 +1767,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 12 }}>
           <button 
             onClick={refresh}
-            style={{ background: PURPLE, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(91, 63, 199, 0.2)' }}
+            style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(91, 63, 199, 0.2)' }}
           >
             Retry Fetching
           </button>
@@ -1818,7 +1818,7 @@ export default function Dashboard() {
           )}
           <button
             onClick={() => navigate('/leads/new')}
-            style={{ background: PURPLE, color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             + Add New Lead
           </button>
@@ -2053,7 +2053,7 @@ export default function Dashboard() {
                       <button 
                         onClick={handleSaveCall}
                         disabled={savingCall}
-                        style={{ flex: 2, background: PURPLE, color: '#fff', border: 'none', padding: '10px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                        style={{ flex: 2, background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '10px', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                       >
                         {savingCall ? 'Saving...' : (activeQueueIndex < stats.startMyDayQueue.length - 1 ? 'Save & Next ➡️' : 'Save & Finish 🎉')}
                       </button>

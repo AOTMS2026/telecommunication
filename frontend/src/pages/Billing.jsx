@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { billingAPI } from '../services/api';
 
-const BLUE = '#0284c7'; const BLUE_L = '#e0f2fe'; const ORANGE = '#f97316';
-const TEXT = '#1e293b'; const MUTED = '#64748b'; const BORDER = '#bae6fd';
+const BLUE = 'var(--theme-primary)'; const BLUE_L = 'var(--theme-surface-tint)'; const ORANGE = '#f97316';
+const TEXT = '#1e293b'; const MUTED = '#64748b'; const BORDER = 'var(--theme-border-tint)';
 
 const STATUS_COLORS = {
   Successful: { bg:'#dcfce7', color:'#16a34a' },

@@ -207,7 +207,7 @@ function DatePickerModal({ onClose, onApply, initial }) {
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '9px 0', border: '1px solid var(--theme-border-tint)', borderRadius: 8, cursor: 'pointer', background: '#fff', fontSize: 13, color: TEXT_MUTED }}>Cancel</button>
-          <button onClick={() => onApply(from, to)} style={{ flex: 1, padding: '9px 0', border: 'none', borderRadius: 8, cursor: 'pointer', background: PURPLE, color: '#fff', fontSize: 13, fontWeight: 700 }}>Apply</button>
+          <button onClick={() => onApply(from, to)} style={{ flex: 1, padding: '9px 0', border: 'none', borderRadius: 8, cursor: 'pointer', background: 'var(--btn-gradient)', color: '#fff', fontSize: 13, fontWeight: 700 }}>Apply</button>
         </div>
       </div>
     </div>

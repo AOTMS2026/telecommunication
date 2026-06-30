@@ -12,9 +12,9 @@ const TEXT_MUTED = '#94a3b8';
 const TEXT_SUB = '#64748b';
 const SURFACE = '#ffffff';
 const BG = 'var(--theme-surface-faint)';
-const BORDER = '#e8e4fb';
+const BORDER = 'var(--theme-border-tint)';
 const GRADIENT = 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-light) 100%)';
-const GRADIENT_SUBTLE = 'linear-gradient(135deg, var(--theme-surface-tint2) 0%, #f0f4ff 100%)';
+const GRADIENT_SUBTLE = 'linear-gradient(135deg, var(--theme-surface-tint2) 0%, var(--theme-surface-faint) 100%)';
 
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -25,21 +25,21 @@ const globalStyles = `
   .campaign-row:hover { background: linear-gradient(90deg, var(--theme-surface-faint8) 0%, var(--theme-surface-faint6) 100%) !important; transform: translateX(2px); box-shadow: inset 3px 0 0 var(--theme-primary); }
 
   .action-btn { transition: all 0.15s ease; }
-  .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,71,255,0.2); }
+  .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(var(--theme-primary-rgb),0.2); }
 
   .create-btn { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); position: relative; overflow: hidden; }
   .create-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%); pointer-events: none; }
-  .create-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(108,71,255,0.4) !important; }
+  .create-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(var(--theme-primary-rgb),0.4) !important; }
   .create-btn:active { transform: translateY(0); }
 
   .filter-pill { transition: all 0.15s ease; }
-  .filter-pill:hover { border-color: var(--theme-primary) !important; box-shadow: 0 2px 8px rgba(108,71,255,0.12); }
+  .filter-pill:hover { border-color: var(--theme-primary) !important; box-shadow: 0 2px 8px rgba(var(--theme-primary-rgb),0.12); }
 
   .search-box { transition: all 0.15s ease; }
-  .search-box:focus-within { border-color: var(--theme-primary) !important; box-shadow: 0 0 0 3px rgba(108,71,255,0.1) !important; }
+  .search-box:focus-within { border-color: var(--theme-primary) !important; box-shadow: 0 0 0 3px rgba(var(--theme-primary-rgb),0.1) !important; }
 
   .stat-card { transition: all 0.2s ease; }
-  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(108,71,255,0.15) !important; }
+  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(var(--theme-primary-rgb),0.15) !important; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
   .spin { animation: spin 0.8s linear infinite; }
@@ -47,7 +47,7 @@ const globalStyles = `
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .fade-in { animation: fadeIn 0.3s ease forwards; }
 
-  .progress-glow circle:last-child { filter: drop-shadow(0 0 4px rgba(108,71,255,0.5)); }
+  .progress-glow circle:last-child { filter: drop-shadow(0 0 4px rgba(var(--theme-primary-rgb),0.5)); }
 
   .table-header th { letter-spacing: 0.05em; }
 `;
@@ -112,7 +112,7 @@ function TransferLeadsModal({ onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,10,40,0.55)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(6px)' }}>
-      <div className="fade-in" style={{ background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(108,71,255,0.2), 0 0 0 1px rgba(108,71,255,0.08)', width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      <div className="fade-in" style={{ background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(var(--theme-primary-rgb),0.2), 0 0 0 1px rgba(var(--theme-primary-rgb),0.08)', width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
         {/* Accent bar */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: GRADIENT, borderRadius: '20px 20px 0 0' }} />
 
@@ -272,7 +272,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,10,40,0.55)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, backdropFilter: 'blur(6px)' }}>
-      <div className="fade-in" style={{ background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(108,71,255,0.2), 0 0 0 1px rgba(108,71,255,0.08)', width: '100%', maxWidth: 460, padding: 32, position: 'relative' }}>
+      <div className="fade-in" style={{ background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(var(--theme-primary-rgb),0.2), 0 0 0 1px rgba(var(--theme-primary-rgb),0.08)', width: '100%', maxWidth: 460, padding: 32, position: 'relative' }}>
         {/* Modal accent bar */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: GRADIENT, borderRadius: '20px 20px 0 0' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
@@ -294,7 +294,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
               required
               style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: TEXT_MAIN, background: '#fafafa', transition: 'all 0.15s' }}
-              onFocus={e => { e.target.style.borderColor = PURPLE; e.target.style.boxShadow = '0 0 0 3px rgba(108,71,255,0.1)'; }}
+              onFocus={e => { e.target.style.borderColor = PURPLE; e.target.style.boxShadow = '0 0 0 3px rgba(var(--theme-primary-rgb),0.1)'; }}
               onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.boxShadow = 'none'; }}
             />
           </div>
@@ -306,7 +306,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${BORDER}`, borderRadius: 10, fontSize: 13, outline: 'none', resize: 'none', boxSizing: 'border-box', color: TEXT_MAIN, background: '#fafafa', transition: 'all 0.15s' }}
-              onFocus={e => { e.target.style.borderColor = PURPLE; e.target.style.boxShadow = '0 0 0 3px rgba(108,71,255,0.1)'; }}
+              onFocus={e => { e.target.style.borderColor = PURPLE; e.target.style.boxShadow = '0 0 0 3px rgba(var(--theme-primary-rgb),0.1)'; }}
               onBlur={e => { e.target.style.borderColor = BORDER; e.target.style.boxShadow = 'none'; }}
             />
           </div>
@@ -315,7 +315,7 @@ function CreateCampaignModal({ onClose, onSuccess }) {
               onMouseEnter={e => { e.currentTarget.style.borderColor = PURPLE_MID; e.currentTarget.style.color = PURPLE; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.color = TEXT_SUB; }}
             >Cancel</button>
-            <button type="submit" disabled={saving} className="create-btn" style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer', background: GRADIENT, color: '#fff', fontWeight: 700, boxShadow: '0 4px 16px rgba(108,71,255,0.3)' }}>
+            <button type="submit" disabled={saving} className="create-btn" style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer', background: GRADIENT, color: '#fff', fontWeight: 700, boxShadow: '0 4px 16px rgba(var(--theme-primary-rgb),0.3)' }}>
               {saving ? 'Creating...' : '+ Create Campaign'}
             </button>
           </div>
@@ -422,7 +422,7 @@ function FilterDropdown({ label, options, value, onChange, icon }) {
           borderRadius: 10, padding: '7px 13px', cursor: 'pointer',
           fontSize: 12, color: active ? PURPLE : TEXT_SUB,
           fontWeight: active ? 700 : 500, whiteSpace: 'nowrap',
-          boxShadow: active ? '0 0 0 3px rgba(108,71,255,0.08)' : 'none',
+          boxShadow: active ? '0 0 0 3px rgba(var(--theme-primary-rgb),0.08)' : 'none',
         }}
       >
         {icon && <span style={{ opacity: 0.7 }}>{icon}</span>}
@@ -436,7 +436,7 @@ function FilterDropdown({ label, options, value, onChange, icon }) {
         <div className="fade-in" style={{
           position: 'absolute', top: '110%', left: 0, zIndex: 300,
           background: '#fff', border: `1.5px solid ${BORDER}`, borderRadius: 14,
-          boxShadow: '0 12px 40px rgba(108,71,255,0.15)', padding: 8, minWidth: 200
+          boxShadow: '0 12px 40px rgba(var(--theme-primary-rgb),0.15)', padding: 8, minWidth: 200
         }}>
           <div
             onClick={() => { onChange(''); setOpen(false); }}
@@ -591,7 +591,7 @@ export default function Campaigns() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(108,71,255,0.3)' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(var(--theme-primary-rgb),0.3)' }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                 <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
               </svg>
@@ -625,7 +625,7 @@ export default function Campaigns() {
           <button
             className="create-btn"
             onClick={() => setShowCreate(true)}
-            style={{ background: GRADIENT, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 4px 20px rgba(108,71,255,0.35)' }}
+            style={{ background: GRADIENT, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7, boxShadow: '0 4px 20px rgba(var(--theme-primary-rgb),0.35)' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Create New
@@ -655,7 +655,7 @@ export default function Campaigns() {
             color: '#059669', bg: '#d1fae5', suffix: '%'
           },
         ].map((stat, i) => (
-          <div key={i} className="stat-card" style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(108,71,255,0.04)' }}>
+          <div key={i} className="stat-card" style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 16, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14, boxShadow: '0 2px 8px rgba(var(--theme-primary-rgb),0.04)' }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: stat.bg, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {stat.icon}
             </div>
@@ -750,7 +750,7 @@ export default function Campaigns() {
       )}
 
       {/* ── Table ── */}
-      <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 24px rgba(108,71,255,0.06)' }}>
+      <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 24px rgba(var(--theme-primary-rgb),0.06)' }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: 140, gap: 12 }}>
             <div className="spin" style={{ width: 30, height: 30, border: `3px solid ${PURPLE_LIGHT}`, borderTopColor: PURPLE, borderRadius: '50%' }} />
