@@ -241,6 +241,7 @@ export const accessTokensAPI = {
 export const mcpAPI = {
   status: () => api.get('/mcp/status'),
   requestAccess: (provider) => api.post('/mcp/request-access', { provider }),
+  connect: (id) => api.post(`/mcp/${id}/connect`),
   approve: (id) => api.patch(`/mcp/${id}/approve`),
   revoke: (id) => api.patch(`/mcp/${id}/revoke`),
 };
