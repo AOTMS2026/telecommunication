@@ -37,7 +37,7 @@ function StatCard({ icon: Icon, label, value, sub, color }) {
     indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', ring: 'ring-indigo-100' },
     green: { bg: 'bg-emerald-50', text: 'text-emerald-600', ring: 'ring-emerald-100' },
     orange: { bg: 'bg-orange-50', text: 'text-orange-600', ring: 'ring-orange-100' },
-    purple: { bg: 'bg-purple-50', text: 'text-purple-600', ring: 'ring-purple-100' },
+    purple: { bg: 'bg-[var(--theme-surface-faint)]', text: 'text-[var(--theme-primary)]', ring: 'ring-[var(--theme-surface-tint2)]' },
   };
   const c = colors[color] || colors.indigo;
   return (
@@ -89,14 +89,15 @@ function LeaderboardTab() {
       <div className="flex items-center gap-2 flex-wrap">
         {['day', 'week', 'month', 'year'].map(p => (
           <button key={p} onClick={() => setPeriod(p)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-colors ${period === p ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            style={period === p ? { background: 'var(--btn-gradient)' } : undefined}
+            className={`px-4 py-1.5 text-xs font-semibold rounded-xl transition-all ${period === p ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
             {p.toUpperCase()}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">No calls recorded for this period</div>
       ) : (
@@ -124,8 +125,8 @@ function LeaderboardTab() {
             </div>
             <div className="divide-y divide-gray-50">
               {data.map((c, i) => (
-                <div key={c._id || i} className="flex items-center gap-4 px-5 py-3 hover:bg-purple-50/30 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                <div key={c._id || i} className="flex items-center gap-4 px-5 py-3 hover:bg-[var(--theme-surface-faint)]/30 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-[var(--theme-surface-faint)] text-[var(--theme-primary-dark)] flex items-center justify-center text-sm font-bold flex-shrink-0">
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -133,7 +134,7 @@ function LeaderboardTab() {
                     <div className="text-xs text-gray-400">{c.calls} calls · {fmtD(c.duration)}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-purple-700">{c.calls}</div>
+                    <div className="text-sm font-bold text-[var(--theme-primary-dark)]">{c.calls}</div>
                     <div className="text-xs text-gray-400">calls</div>
                   </div>
                   {c.sales > 0 && (
@@ -146,7 +147,7 @@ function LeaderboardTab() {
                   <div className="w-24 hidden md:block">
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-purple-500 rounded-full"
+                        className="h-full bg-[var(--theme-primary)] rounded-full"
                         style={{ width: `${Math.min(100, (c.calls / (data[0]?.calls || 1)) * 100)}%` }}
                       />
                     </div>
@@ -223,7 +224,7 @@ function LeadViewCharts({ summary }) {
             <Download className="w-3.5 h-3.5" />
             Export chart as CSV
           </button>
-          <button onClick={handleExportChart} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors">
+          <button onClick={handleExportChart} style={{ background: 'var(--btn-gradient)' }} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white rounded-xl hover:brightness-105 transition-all">
             Download
           </button>
         </div>
@@ -236,7 +237,7 @@ function LeadViewCharts({ summary }) {
             <button
               key={tab}
               onClick={() => setChartTab(tab)}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${chartTab === tab ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${chartTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
               {tab}
             </button>
@@ -249,7 +250,7 @@ function LeadViewCharts({ summary }) {
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Assignee</span>
           <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-[var(--theme-primary-light)]">
             <option value="">All Assignees</option>
             {assignees.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
           </select>
@@ -257,7 +258,7 @@ function LeadViewCharts({ summary }) {
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-500">Status</span>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-purple-400">
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 text-gray-600 focus:outline-none focus:border-[var(--theme-primary-light)]">
             <option value="">All</option>
             {['Fresh','Connected','Call Not Responding','Call Back Later','Not interested','Demo Scheduled','Demo Done','Won','Lost','Blocked'].map(s => (
               <option key={s} value={s}>{s}</option>
@@ -268,10 +269,10 @@ function LeadViewCharts({ summary }) {
           <Calendar className="w-3.5 h-3.5 text-gray-400" />
           <span className="text-xs text-gray-500">Creation Date</span>
           <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({...p, start: e.target.value}))}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:border-purple-400" />
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:border-[var(--theme-primary-light)]" />
           <span className="text-xs text-gray-400">–</span>
           <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({...p, end: e.target.value}))}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:border-purple-400" />
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:border-[var(--theme-primary-light)]" />
         </div>
         <div className="ml-auto flex items-center gap-2">
           <select value={chartType} onChange={e => setChartType(e.target.value)}
@@ -289,7 +290,7 @@ function LeadViewCharts({ summary }) {
       <div className="p-5">
         {loading ? (
           <div className="flex justify-center items-center h-56">
-            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex items-center justify-center h-56 text-gray-300 text-sm">No data available</div>
@@ -356,7 +357,7 @@ function LeadViewCharts({ summary }) {
 
             {/* View X leads button */}
             <div className="flex justify-end mt-4">
-              <button className="px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-xl hover:bg-purple-700 transition-colors">
+              <button style={{ background: 'var(--btn-gradient)' }} className="px-4 py-2 text-white text-xs font-semibold rounded-xl hover:brightness-105 transition-all">
                 View {total.toLocaleString()} leads
               </button>
             </div>
@@ -452,8 +453,8 @@ export default function Reports() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center">
-            <BarChart2 className="w-5 h-5 text-purple-600" />
+          <div className="w-9 h-9 bg-[var(--theme-surface-faint)] rounded-xl flex items-center justify-center">
+            <BarChart2 className="w-5 h-5 text-[var(--theme-primary)]" />
           </div>
           <div>
             <h2 className="font-bold text-gray-900">Reports & Analytics</h2>
@@ -471,7 +472,7 @@ export default function Reports() {
         <div className="flex gap-0 overflow-x-auto">
           {REPORT_TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab ? 'border-purple-600 text-purple-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+              className={`px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
               {tab}
             </button>
           ))}
@@ -553,9 +554,9 @@ export default function Reports() {
                 { name: 'Leaderboard', onClick: handleExportLeaderboard, icon: BarChart2 }
               ].map(r => (
                 <button key={r.name} onClick={r.onClick}
-                  className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-all group">
-                  <Download className="w-4 h-4 text-gray-400 group-hover:text-purple-600" />
-                  <span className="text-sm text-gray-600 group-hover:text-purple-700">{r.name}</span>
+                  className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl hover:bg-[var(--theme-surface-faint)] hover:border-[var(--theme-primary)] transition-all group">
+                  <Download className="w-4 h-4 text-gray-400 group-hover:text-[var(--theme-primary)]" />
+                  <span className="text-sm text-gray-600 group-hover:text-[var(--theme-primary-dark)]">{r.name}</span>
                 </button>
               ))}
             </div>
@@ -579,7 +580,7 @@ export default function Reports() {
             </thead>
             <tbody>
               {tasksLoading ? (
-                <tr><td colSpan={7} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
               ) : tasksData.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">No tasks found.</td></tr>
               ) : (
@@ -628,7 +629,7 @@ export default function Reports() {
             </thead>
             <tbody>
               {callsLoading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={5} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
               ) : callsList.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400 text-sm">No call summaries available.</td></tr>
               ) : (
@@ -661,7 +662,7 @@ export default function Reports() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800">Bulk Upload Tasks</h3>
-            <label className="flex items-center gap-2 px-4 py-2 text-xs font-medium bg-purple-600 text-white rounded-xl cursor-pointer hover:bg-purple-700 transition-colors">
+            <label style={{ background: 'var(--btn-gradient)' }} className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-white rounded-xl cursor-pointer hover:brightness-105 transition-all">
               <Download className="w-3.5 h-3.5" />
               Upload Excel / CSV
               <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={async (e) => {

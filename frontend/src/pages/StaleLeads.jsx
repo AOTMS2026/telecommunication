@@ -86,7 +86,7 @@ export default function StaleLeads() {
         </div>
         <button
           onClick={() => { setLoading(true); fetchData(); }}
-          style={{ background: PURPLE, color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
           Refresh Console
         </button>

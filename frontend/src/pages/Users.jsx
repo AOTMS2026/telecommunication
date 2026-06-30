@@ -152,7 +152,7 @@ export default function Users() {
   };
 
   const btnPrimary = {
-    background: PURPLE, color: WHITE, border: 'none', padding: '10px 16px',
+    background: 'var(--btn-gradient)', color: WHITE, border: 'none', padding: '10px 16px',
     borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
     transition: 'background 0.15s'
   };

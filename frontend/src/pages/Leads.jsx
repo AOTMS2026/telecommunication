@@ -28,7 +28,7 @@ function StatCard({ icon: Icon, label, value, color }) {
     indigo: 'bg-indigo-50 text-indigo-600',
     green: 'bg-emerald-50 text-emerald-600',
     yellow: 'bg-yellow-50 text-yellow-600',
-    purple: 'bg-purple-50 text-purple-600',
+    purple: 'bg-[var(--theme-surface-faint)] text-[var(--theme-primary)]',
   };
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3 shadow-sm hover:shadow-md transition-shadow">
@@ -212,7 +212,7 @@ export default function Leads() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCharts(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-all ${showCharts ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-all ${showCharts ? 'bg-[var(--theme-primary)] text-white border-[var(--theme-primary)]' : 'bg-white text-gray-600 border-gray-200 hover:border-[var(--theme-primary-pale)]'}`}
           >
             <BarChart2 className="w-4 h-4" />
             Charts
@@ -224,14 +224,15 @@ export default function Leads() {
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowAddMenu(v => !v)}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-all shadow-sm"
+              style={{ background: 'var(--btn-gradient)' }}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all shadow-sm hover:brightness-105"
             >
               <Plus className="w-4 h-4" />
               Add Lead
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             {showAddMenu && (
-              <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 10, boxShadow: '0 8px 24px rgba(99,102,241,0.13)', minWidth: 200, zIndex: 300, overflow: 'hidden' }}
+              <div style={{ position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 10, boxShadow: '0 8px 24px rgba(var(--theme-primary-rgb),0.13)', minWidth: 200, zIndex: 300, overflow: 'hidden' }}
                 onMouseLeave={() => setShowAddMenu(false)}>
                 <div style={{ padding: '6px 14px', fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em', borderBottom: '1px solid var(--theme-surface-faint5)' }}>Add Leads</div>
                 {[
@@ -265,7 +266,7 @@ export default function Leads() {
             </div>
             {statsLoading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="w-7 h-7 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : statusStats.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-gray-300 text-sm">No data available</div>
@@ -295,7 +296,7 @@ export default function Leads() {
             </div>
             {statsLoading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="w-7 h-7 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : statusStats.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-gray-300 text-sm">No data available</div>
@@ -346,9 +347,10 @@ export default function Leads() {
                 onClick={() => setFilter(opt.key)}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all text-left ${
                   filter === opt.key
-                    ? 'bg-purple-600 text-white shadow-sm'
+                    ? 'text-white shadow-sm'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
+                style={filter === opt.key ? { background: 'var(--btn-gradient)' } : undefined}
               >
                 <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${filter === opt.key ? 'bg-white' : 'bg-gray-300'}`} />
                 {opt.label}
@@ -365,10 +367,10 @@ export default function Leads() {
                       key={c._id}
                       onClick={() => { setFilter(c._id); }}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-all text-left ${
-                        filter === c._id ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'
+                        filter === c._id ? 'bg-[var(--theme-surface-faint)] text-[var(--theme-primary-dark)]' : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-[var(--theme-surface-tint2)] text-[var(--theme-primary-dark)] flex items-center justify-center text-xs font-bold flex-shrink-0">
                         {c.name[0].toUpperCase()}
                       </div>
                       <span className="truncate">{c.name}</span>
@@ -390,14 +392,14 @@ export default function Leads() {
                   placeholder="Search leads..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 bg-gray-50"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--theme-primary-light)] focus:ring-2 focus:ring-[var(--theme-surface-tint2)] bg-gray-50"
                 />
               </div>
 
               <select
                 value={status}
                 onChange={e => setStatus(e.target.value)}
-                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:border-purple-400 text-gray-600"
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:border-[var(--theme-primary-light)] text-gray-600"
               >
                 {statuses.map(s => <option key={s}>{s}</option>)}
               </select>
@@ -405,7 +407,7 @@ export default function Leads() {
               <select
                 value={source}
                 onChange={e => setSource(e.target.value)}
-                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:border-purple-400 text-gray-600"
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:outline-none focus:border-[var(--theme-primary-light)] text-gray-600"
               >
                 {SOURCES.map(s => <option key={s}>{s}</option>)}
               </select>
@@ -440,7 +442,7 @@ export default function Leads() {
                   {loading ? (
                     <tr>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-16 text-center">
-                        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                         <div className="text-sm text-gray-400">Loading leads...</div>
                       </td>
                     </tr>
@@ -451,7 +453,7 @@ export default function Leads() {
                           <Users className="w-10 h-10 mx-auto" />
                         </div>
                         <div className="text-sm text-gray-400">No leads found</div>
-                        <button onClick={() => navigate('/leads/new')} className="mt-3 text-xs text-purple-600 hover:underline">
+                        <button onClick={() => navigate('/leads/new')} className="mt-3 text-xs text-[var(--theme-primary)] hover:underline">
                           + Add your first lead
                         </button>
                       </td>
@@ -461,7 +463,7 @@ export default function Leads() {
                       <tr
                         key={lead._id}
                         onClick={() => navigate(`/leads/${lead._id}`)}
-                        className="border-t border-gray-50 hover:bg-purple-50/30 cursor-pointer transition-colors group"
+                        className="border-t border-gray-50 hover:bg-[var(--theme-surface-faint)]/30 cursor-pointer transition-colors group"
                       >
                         <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                           <input
@@ -482,7 +484,7 @@ export default function Leads() {
                               <Star className="w-4 h-4" fill={lead.isStarred ? 'currentColor' : 'none'} />
                             </button>
                             <div>
-                              <div className="font-medium text-purple-700 group-hover:text-purple-800 text-sm">{lead.name}</div>
+                              <div className="font-medium text-[var(--theme-primary-dark)] group-hover:text-[var(--theme-text-strongest)] text-sm">{lead.name}</div>
                               <div className="text-xs text-gray-400">{lead.phone}</div>
                             </div>
                           </div>
@@ -500,7 +502,7 @@ export default function Leads() {
                         <td className="px-4 py-3">
                           {lead.assignedTo ? (
                             <div className="flex items-center gap-1.5">
-                              <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-[var(--theme-surface-tint2)] text-[var(--theme-primary-dark)] flex items-center justify-center text-xs font-bold flex-shrink-0">
                                 {lead.assignedTo.name?.[0]?.toUpperCase() || '?'}
                               </div>
                               <span className="text-sm text-gray-600 truncate max-w-24">{lead.assignedTo.name}</span>
@@ -562,7 +564,7 @@ export default function Leads() {
                     <button
                       key={p}
                       onClick={() => setPage(p)}
-                      className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${p === page ? 'bg-purple-600 text-white' : 'text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
+                      className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${p === page ? 'bg-[var(--theme-primary)] text-white' : 'text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
                     >
                       {p}
                     </button>

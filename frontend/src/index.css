@@ -17,7 +17,11 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply bg-sky-600 hover:bg-sky-700 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
+    @apply text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm;
+    background: var(--btn-gradient);
+  }
+  .btn-primary:hover {
+    filter: brightness(1.06);
   }
   .btn-secondary {
     @apply bg-white hover:bg-sky-50 text-sky-700 font-medium px-4 py-2 rounded-lg border border-sky-200 transition-all duration-150 flex items-center gap-2 text-sm;
@@ -79,11 +83,29 @@ body {
 .stat-card {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  background: var(--theme-gradient-soft, linear-gradient(135deg, #e0f7ff 0%, #f0fbff 100%)) !important;
+  border-image: linear-gradient(135deg, var(--theme-primary-light, #38bdf8), var(--theme-primary-mid, #3b82f6)) 1 !important;
 }
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px -3px rgba(2, 132, 199, 0.10), 0 4px 6px -2px rgba(2, 132, 199, 0.05);
   border-color: #bae6fd !important;
+}
+
+/* Gradient styling for cards and key surfaces (visual only) */
+.card {
+  background: linear-gradient(160deg, #ffffff 0%, var(--theme-surface-faint, #f0fbff) 100%) !important;
+  border-image: linear-gradient(135deg, var(--theme-primary-light, #38bdf8), var(--theme-primary-mid, #3b82f6)) 1 !important;
+}
+
+button.btn-primary,
+.btn-primary {
+  background: var(--theme-gradient, linear-gradient(135deg, #0891b2 0%, #38bdf8 60%, #3b82f6 100%)) !important;
+  border: none !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--theme-primary-light, #38bdf8), var(--theme-primary-mid, #3b82f6));
 }
 
 .animate-fade-in { animation: fadeIn 0.2s ease-in-out; }

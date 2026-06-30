@@ -130,7 +130,7 @@ export default function EmailRichEditor({ initialHtml, onChange, resetSignal, mi
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddLink(); } }}
             style={{ flex: 1, padding: '6px 10px', border: `1.5px solid ${BORDER}`, borderRadius: 6, fontSize: 12.5, outline: 'none' }}
           />
-          <button onClick={handleAddLink} style={{ padding: '6px 14px', background: PURPLE, color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add</button>
+          <button onClick={handleAddLink} style={{ padding: '6px 14px', background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Add</button>
         </div>
       )}
 
