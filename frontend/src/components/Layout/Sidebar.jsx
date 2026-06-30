@@ -2,15 +2,15 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-const ACTIVE_BG = 'var(--theme-surface-tint)';
-const ACTIVE_COLOR = 'var(--theme-text-strong)';
-const ACTIVE_ICON = 'var(--theme-primary)';
-const HOVER_BG = 'var(--theme-surface-faint)';
+const ACTIVE_BG = '#e0f2fe';
+const ACTIVE_COLOR = '#0369a1';
+const ACTIVE_ICON = '#0284c7';
+const HOVER_BG = '#f0f9ff';
 const TEXT = '#374151';
 const ICON_COLOR = '#6b7280';
 const SECTION_COLOR = '#94a3b8';
-const ACCENT = 'var(--theme-primary)';
-const BORDER_COLOR = 'var(--theme-border-tint)';
+const ACCENT = '#5b3fc7';
+const BORDER_COLOR = '#e0f0ff';
 const COLLAPSED_W = 48;
 const EXPANDED_W = 210;
 

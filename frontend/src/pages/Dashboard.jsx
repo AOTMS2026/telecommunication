@@ -5,28 +5,28 @@ import { useAuth } from '../context/AuthContext';
 import StatusBadge from '../components/common/StatusBadge';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
-const PURPLE = 'var(--theme-primary)';
-const PURPLE_LIGHT = 'var(--theme-surface-tint)';
-const TEXT_MAIN = 'var(--theme-text-strong)';
+const PURPLE = '#5b3fc7';
+const PURPLE_LIGHT = '#f0ecff';
+const TEXT_MAIN = '#2d2d6b';
 const TEXT_MUTED = '#888';
 const GREEN = '#22a163';
 const RED = '#e53e3e';
 const AMBER = '#d97706';
-const COLORS = [PURPLE, 'var(--theme-primary-accent2)', '#ec4899', '#f59e0b', GREEN, RED, '#3b82f6', 'var(--theme-primary-soft)'];
+const COLORS = [PURPLE, '#8b5cf6', '#ec4899', '#f59e0b', GREEN, RED, '#3b82f6', '#a78bfa'];
 const STATUS_COLORS = {
   'Fresh':               '#3B82F6',
   'Connected':           '#10B981',
   'Call Not Responding': '#EA580C',
   'Call Back Later':     '#F59E0B',
   'Not interested':      '#EF4444',
-  'Demo Scheduled':      'var(--theme-primary-accent2)',
+  'Demo Scheduled':      '#8B5CF6',
   'Demo Done':           '#14B8A6',
   'Won':                 '#16A34A',
   'Lost':                '#DC2626',
   'Wrong Number':        '#DC2626',
   'Blocked':             '#111827',
 };
-const BORDER = 'var(--theme-border-tint)';
+const BORDER = '#e5e2f5';
 
 function fmtDuration(sec) {
   if (!sec) return '0s';
@@ -37,7 +37,7 @@ function fmtDuration(sec) {
 }
 
 const StatCard = ({ icon, label, value, sub, bg, iconColor }) => (
-  <div className="stat-card" style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+  <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
     <div style={{ width: 48, height: 48, borderRadius: 12, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <span style={{ color: iconColor, display: 'flex' }}>{icon}</span>
     </div>
@@ -106,8 +106,8 @@ function FiltersTable({ leadsStats }) {
   const filtered = filterRows.filter(r => r.label.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden', marginBottom: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '1px solid var(--theme-surface-faint3)' }}>
+    <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, overflow: 'hidden', marginBottom: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '1px solid #f3f1fb' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MAIN} strokeWidth="2">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -119,7 +119,7 @@ function FiltersTable({ leadsStats }) {
           <span style={{ fontSize: 11, color: TEXT_MUTED }}>Created on</span>
           <div
             onClick={() => setShowCalendar(p => !p)}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: TEXT_MAIN, fontWeight: 600, border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', background: showCalendar ? 'var(--theme-surface-tint)' : '#fff' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: TEXT_MAIN, fontWeight: 600, border: '1px solid #e5e2f5', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', background: showCalendar ? '#f0ecff' : '#fff' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             {dateLabel}
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -127,8 +127,8 @@ function FiltersTable({ leadsStats }) {
           {showCalendar && (
             <div style={{
               position: 'absolute', top: '110%', right: 0, zIndex: 200,
-              background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12,
-              boxShadow: '0 8px 24px rgba(var(--theme-primary-rgb), 0.12)', padding: 16, minWidth: 260
+              background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12,
+              boxShadow: '0 8px 24px rgba(91,63,199,0.12)', padding: 16, minWidth: 260
             }}>
               {/* Month navigation */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -160,7 +160,7 @@ function FiltersTable({ leadsStats }) {
                       onClick={() => { setSelectedDate(thisDate); setShowCalendar(false); }}
                       style={{
                         textAlign: 'center', fontSize: 12, padding: '5px 2px', borderRadius: 6, cursor: 'pointer',
-                        background: isSelected ? PURPLE : isToday ? 'var(--theme-surface-tint)' : 'transparent',
+                        background: isSelected ? PURPLE : isToday ? '#f0ecff' : 'transparent',
                         color: isSelected ? '#fff' : isToday ? PURPLE : TEXT_MAIN,
                         fontWeight: isSelected || isToday ? 700 : 400,
                       }}
@@ -191,7 +191,7 @@ function FiltersTable({ leadsStats }) {
       </div>
 
       <div style={{ padding: '0 18px 12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--theme-surface-faint6)', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8f7ff', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 12px' }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
@@ -206,7 +206,7 @@ function FiltersTable({ leadsStats }) {
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid var(--theme-surface-tint)', background: 'var(--theme-surface-faint)' }}>
+          <tr style={{ borderBottom: '1px solid #f0ecff', background: '#faf9ff' }}>
             <th style={{ padding: '8px 18px', textAlign: 'left', fontSize: 12, color: TEXT_MUTED, fontWeight: 600 }}>
               Filters <SortIcon />
             </th>
@@ -219,7 +219,7 @@ function FiltersTable({ leadsStats }) {
         </thead>
         <tbody>
           {filtered.map((row, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--theme-surface-faint2)' }}>
+            <tr key={i} style={{ borderBottom: '1px solid #f9f8ff' }}>
               <td style={{ padding: '12px 18px', fontSize: 13, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 {row.label}
@@ -530,7 +530,7 @@ export default function Dashboard() {
 
         {/* Action shortcut panel */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: PURPLE_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                 <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/><line x1="12" y1="19" x2="16" y2="19"/><line x1="14" y1="17" x2="14" y2="21"/>
@@ -540,7 +540,7 @@ export default function Dashboard() {
               Schedule a Callback
             </button>
           </div>
-          <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: PURPLE_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>
@@ -555,10 +555,10 @@ export default function Dashboard() {
         {/* KPIs row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
           {/* Progress Ring Card */}
-          <div className="stat-card" style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
               <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke="var(--theme-surface-tint)" strokeWidth={strokeWidth} />
+                <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke="#f3f0ff" strokeWidth={strokeWidth} />
                 <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke={PURPLE} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.5s ease' }} />
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.1 }}>
@@ -586,13 +586,13 @@ export default function Dashboard() {
           />
           <StatCard 
             icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 7 22 7 22 12"/></svg>}
-            label="My Team Rank" value={`#${stats?.myRank || 1} of ${stats?.totalCallers || 1}`} sub={`Top dialer: ${stats?.topCallerCalls || 0}`} bg="var(--theme-surface-faint)" iconColor={PURPLE}
+            label="My Team Rank" value={`#${stats?.myRank || 1} of ${stats?.totalCallers || 1}`} sub={`Top dialer: ${stats?.topCallerCalls || 0}`} bg="#fcfbfe" iconColor={PURPLE}
           />
         </div>
 
         {/* Priority calling queue and sidebar */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -626,7 +626,7 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {startMyDayQueue.slice(0, 15).map((item, idx) => (
-                      <tr key={item.lead._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 48 }}>
+                      <tr key={item.lead._id} style={{ borderBottom: '1px solid #faf9ff', height: 48 }}>
                         <td style={{ padding: '8px 0' }}>
                           <div style={{ fontWeight: 600, color: TEXT_MAIN }}>{item.lead.name}</div>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>{item.lead.phone} • {item.lead.campaign?.name || 'Manual'}</div>
@@ -638,7 +638,7 @@ export default function Dashboard() {
                           <span style={{ 
                             fontSize: 11, 
                             fontWeight: 600, 
-                            background: item.score === 1 ? '#fff0f0' : item.score === 2 ? '#fff8e6' : 'var(--theme-surface-tint)', 
+                            background: item.score === 1 ? '#fff0f0' : item.score === 2 ? '#fff8e6' : '#f0ecff', 
                             color: item.score === 1 ? RED : item.score === 2 ? AMBER : PURPLE,
                             padding: '3px 8px',
                             borderRadius: 12
@@ -656,9 +656,9 @@ export default function Dashboard() {
                           </button>
                           <button 
                             onClick={() => navigate('/leads/' + item.lead._id)}
-                            style={{ background: 'var(--theme-surface-tint)', color: PURPLE, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}
+                            style={{ background: '#f3f0ff', color: PURPLE, border: 'none', padding: '6px 12px', borderRadius: 6, fontSize: 11.5, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}
                             onMouseEnter={e => { e.currentTarget.style.background = PURPLE; e.currentTarget.style.color = '#fff'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--theme-surface-tint)'; e.currentTarget.style.color = PURPLE; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#f3f0ff'; e.currentTarget.style.color = PURPLE; }}
                           >
                             📞 Call
                           </button>
@@ -674,7 +674,7 @@ export default function Dashboard() {
           {/* Demos and schedules */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Upcoming Demos with countdowns */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 My Upcoming Demos
@@ -700,7 +700,7 @@ export default function Dashboard() {
                     }
                     
                     return (
-                      <div key={d._id} style={{ border: '1px solid var(--theme-surface-tint)', borderRadius: 8, padding: 12, background: 'var(--theme-surface-faint)' }}>
+                      <div key={d._id} style={{ border: '1px solid #f0ecff', borderRadius: 8, padding: 12, background: '#faf9ff' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <strong style={{ color: TEXT_MAIN, fontSize: 13 }}>{d.name}</strong>
                           <span style={{ fontSize: 10, background: isToday ? '#fff0f0' : '#e8f8f0', color: isToday ? RED : GREEN, padding: '2px 6px', borderRadius: 10, fontWeight: 600 }}>
@@ -725,7 +725,7 @@ export default function Dashboard() {
 
             {/* My Weekly Sparkline Trend */}
             {stats?.trendThisWeek && (
-              <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+              <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
                 <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                   My Weekly Dial Trends
@@ -750,9 +750,9 @@ export default function Dashboard() {
             )}
 
             {/* Stage Distribution */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary-accent2)" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 <span style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 14 }}>My Leads by Stages</span>
               </div>
               {stats?.statusCounts && stats.statusCounts.length > 0 ? (
@@ -801,7 +801,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_MAIN }}>Analytics Temporarily Unavailable</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: 'center', maxWidth: 340 }}>
             The admin analytics API could not be reached (404). Your other dashboard data has loaded successfully.<br/>
-            Please check that the backend <code style={{ background: 'var(--theme-surface-faint3)', padding: '1px 6px', borderRadius: 4 }}>reports/admin-analysis</code> route is running.
+            Please check that the backend <code style={{ background: '#f3f1fb', padding: '1px 6px', borderRadius: 4 }}>reports/admin-analysis</code> route is running.
           </div>
           <button
             onClick={() => { reportsAPI.adminAnalysis().then(r => setAdminStats(r.data)).catch(e => console.warn(e)); }}
@@ -860,7 +860,7 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Caller status */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Callers Activity & Live Status
@@ -886,8 +886,8 @@ export default function Dashboard() {
                         <tr 
                           key={caller.user?._id}
                           onClick={() => openAnalysisModal(caller.user?._id)}
-                          style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 44, cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint)'}
+                          style={{ borderBottom: '1px solid #faf9ff', height: 44, cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={{ display: 'flex', alignItems: 'center', gap: 8, height: 44 }}>
@@ -936,7 +936,7 @@ export default function Dashboard() {
             </div>
 
             {/* Per-Caller Daily Progress Bars */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Per-Caller Daily Dial Targets (Quota: 30 Calls)
@@ -962,7 +962,7 @@ export default function Dashboard() {
             </div>
 
             {/* Overdue Follow-ups with inline reassignment */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 Overdue Follow-ups List & Reassignment
@@ -981,7 +981,7 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {(adminStats?.detailedOverdueFollowups || []).slice(0, 15).map(fu => (
-                        <tr key={fu._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 42 }}>
+                        <tr key={fu._id} style={{ borderBottom: '1px solid #faf9ff', height: 42 }}>
                           <td>
                             <strong style={{ color: TEXT_MAIN }}>{fu.lead?.name || 'Lead'}</strong>
                             <div style={{ fontSize: 11, color: TEXT_MUTED }}>Assigned: {fu.assignedTo?.name || 'Unassigned'}</div>
@@ -994,7 +994,7 @@ export default function Dashboard() {
                               disabled={updatingId === fu.lead?._id}
                               value={fu.assignedTo?._id || ''}
                               onChange={(e) => handleReassignLead(fu.lead?._id, e.target.value)}
-                              style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 6, padding: '3px 6px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                              style={{ border: '1px solid #e5e2f5', borderRadius: 6, padding: '3px 6px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
                             >
                               <option value="">Select Caller...</option>
                               {callers.map(c => (
@@ -1011,7 +1011,7 @@ export default function Dashboard() {
             </div>
 
             {/* Caller workload Allocation table */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Caller Follow-up Workload Allocation (Due Today)
@@ -1030,7 +1030,7 @@ export default function Dashboard() {
                     </thead>
                     <tbody>
                       {workload.map(item => (
-                        <tr key={item.user?._id} style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 38 }}>
+                        <tr key={item.user?._id} style={{ borderBottom: '1px solid #faf9ff', height: 38 }}>
                           <td style={{ padding: '8px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff8e6', color: AMBER, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {item.user?.name?.[0]?.toUpperCase()}
@@ -1054,7 +1054,7 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* In-App Operations Alerts Feed */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 Operations Alerts Panel
@@ -1064,12 +1064,12 @@ export default function Dashboard() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 220, overflowY: 'auto', paddingRight: 4 }}>
                   {(adminStats?.notifications || []).slice(0, 10).map(note => {
-                    let badgeBg = 'var(--theme-surface-tint)', badgeColor = PURPLE;
+                    let badgeBg = '#f0ecff', badgeColor = PURPLE;
                     if (note.type === 'overdue') { badgeBg = '#fff0f0'; badgeColor = RED; }
                     else if (note.type === 'demo') { badgeBg = '#e8f8f0'; badgeColor = GREEN; }
                     else if (note.type === 'idle') { badgeBg = '#fff8e6'; badgeColor = AMBER; }
                     return (
-                      <div key={note.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, background: 'var(--theme-surface-faint)', border: '1px solid var(--theme-surface-tint)', borderRadius: 8, padding: 8, fontSize: 11.5 }}>
+                      <div key={note.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, background: '#faf9ff', border: '1px solid #f0ecff', borderRadius: 8, padding: 8, fontSize: 11.5 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ background: badgeBg, color: badgeColor, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 8, textTransform: 'uppercase' }}>
                             {note.title}
@@ -1087,7 +1087,7 @@ export default function Dashboard() {
             </div>
 
             {/* Scheduled Demos */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Demos Scheduled (This Week)
@@ -1114,7 +1114,7 @@ export default function Dashboard() {
             </div>
 
             {/* Daily call trends bar chart */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Daily Call Volume (Last 7 Days)
@@ -1124,7 +1124,7 @@ export default function Dashboard() {
                   <BarChart data={adminStats.dailyVolume.map(v => ({ name: v._id.slice(5), calls: v.count }))}>
                     <XAxis dataKey="name" stroke={TEXT_MUTED} fontSize={10} tickLine={false} />
                     <YAxis stroke={TEXT_MUTED} fontSize={10} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: 'rgba(var(--theme-primary-rgb), 0.04)' }} />
+                    <Tooltip cursor={{ fill: 'rgba(91, 63, 199, 0.04)' }} />
                     <Bar dataKey="calls" fill={PURPLE} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -1134,7 +1134,7 @@ export default function Dashboard() {
             </div>
 
             {/* Call Outcome Pie Chart */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Global Call Outcomes Breakdown
@@ -1180,7 +1180,7 @@ export default function Dashboard() {
             </div>
 
             {/* Global Recent Activity Feed */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Global Recent Activities Timeline
@@ -1191,7 +1191,7 @@ export default function Dashboard() {
                     <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12.5 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 3 }}>
                         <div style={{ width: 7, height: 7, borderRadius: '50%', background: act.activity.callStatus === 'connected' ? GREEN : RED }} />
-                        {index < adminStats.recentActivities.length - 1 && <div style={{ width: 1, height: 32, background: 'var(--theme-surface-tint)', marginTop: 4 }} />}
+                        {index < adminStats.recentActivities.length - 1 && <div style={{ width: 1, height: 32, background: '#f0ecff', marginTop: 4 }} />}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ color: '#444', lineHeight: 1.4 }}>
@@ -1229,7 +1229,7 @@ export default function Dashboard() {
           <div style={{ fontSize: 15, fontWeight: 700, color: TEXT_MAIN }}>Analytics Temporarily Unavailable</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: 'center', maxWidth: 340 }}>
             The admin analytics API could not be reached (404). Your other dashboard data has loaded successfully.<br/>
-            Please check that the backend <code style={{ background: 'var(--theme-surface-faint3)', padding: '1px 6px', borderRadius: 4 }}>reports/admin-analysis</code> route is running.
+            Please check that the backend <code style={{ background: '#f3f1fb', padding: '1px 6px', borderRadius: 4 }}>reports/admin-analysis</code> route is running.
           </div>
           <button
             onClick={() => { reportsAPI.adminAnalysis().then(r => setAdminStats(r.data)).catch(e => console.warn(e)); }}
@@ -1317,7 +1317,7 @@ export default function Dashboard() {
         </div>
 
         {/* Monthly targets progress block */}
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div>
               <strong style={{ color: TEXT_MAIN, fontSize: 14.5 }}>Team Monthly Goal Targets Progress</strong>
@@ -1332,9 +1332,9 @@ export default function Dashboard() {
             <div style={{ 
               width: `${goalPercentage}%`, 
               height: '100%', 
-              background: `linear-gradient(90deg, ${PURPLE} 0%, var(--theme-primary-accent2) 100%)`, 
+              background: `linear-gradient(90deg, ${PURPLE} 0%, #8b5cf6 100%)`, 
               borderRadius: 6,
-              boxShadow: '0 0 8px rgba(var(--theme-primary-rgb), 0.4)',
+              boxShadow: '0 0 8px rgba(91, 63, 199, 0.4)',
               transition: 'width 0.6s ease' 
             }} />
           </div>
@@ -1344,7 +1344,7 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Conversion funnel visual block */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 Lead Status Conversion Funnel
@@ -1368,7 +1368,7 @@ export default function Dashboard() {
                         <div style={{ width: 130, fontSize: 12.5, fontWeight: 600, color: TEXT_MAIN, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {stage.stage}
                         </div>
-                        <div style={{ flex: 1, height: 26, background: 'var(--theme-surface-faint6)', border: '1px solid var(--theme-surface-tint)', borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, height: 26, background: '#f8f7ff', border: '1px solid #f3f0ff', borderRadius: 4, position: 'relative', overflow: 'hidden' }}>
                           <div style={{ 
                             width: `${Math.max(3, stagePct)}%`, 
                             height: '100%', 
@@ -1395,7 +1395,7 @@ export default function Dashboard() {
             </div>
 
             {/* Campaign Performance Table */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Campaign Performance Analytics (Click Row to Drill Down)
@@ -1423,8 +1423,8 @@ export default function Dashboard() {
                           <tr 
                             key={c._id || 'unassigned'} 
                             onClick={() => c._id && navigate('/campaigns/' + c._id)}
-                            style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 38, cursor: c._id ? 'pointer' : 'default' }}
-                            onMouseEnter={e => c._id && (e.currentTarget.style.background = 'var(--theme-surface-faint)')}
+                            style={{ borderBottom: '1px solid #faf9ff', height: 38, cursor: c._id ? 'pointer' : 'default' }}
+                            onMouseEnter={e => c._id && (e.currentTarget.style.background = '#faf9ff')}
                             onMouseLeave={e => c._id && (e.currentTarget.style.background = 'transparent')}
                           >
                             <td style={{ padding: '8px 0', fontWeight: 600, color: c._id ? PURPLE : TEXT_MAIN }}>
@@ -1432,7 +1432,7 @@ export default function Dashboard() {
                             </td>
                             <td style={{ textAlign: 'center', color: TEXT_MAIN }}>{c.totalLeads}</td>
                             <td style={{ textAlign: 'center', color: '#555' }}>
-                              <span style={{ background: 'var(--theme-surface-faint3)', color: PURPLE, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
+                              <span style={{ background: '#f3f1fb', color: PURPLE, padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
                                 {callPct}%
                               </span>
                             </td>
@@ -1449,7 +1449,7 @@ export default function Dashboard() {
             </div>
 
             {/* Global Recent Activity Feed */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Global Recent Activities Timeline
@@ -1460,7 +1460,7 @@ export default function Dashboard() {
                     <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12.5 }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 3 }}>
                         <div style={{ width: 7, height: 7, borderRadius: '50%', background: act.activity.callStatus === 'connected' ? GREEN : RED }} />
-                        {index < adminStats.recentActivities.length - 1 && <div style={{ width: 1, height: 32, background: 'var(--theme-surface-tint)', marginTop: 4 }} />}
+                        {index < adminStats.recentActivities.length - 1 && <div style={{ width: 1, height: 32, background: '#f0ecff', marginTop: 4 }} />}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ color: '#444', lineHeight: 1.4 }}>
@@ -1485,12 +1485,12 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Leaderboard widget with switch tabs */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justify: 'space-between', marginBottom: 16 }}>
                 <strong style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🏆 Productivity Leaderboard
                 </strong>
-                <div style={{ display: 'flex', background: 'var(--theme-surface-faint3)', padding: 2, borderRadius: 6 }}>
+                <div style={{ display: 'flex', background: '#f3f1fb', padding: 2, borderRadius: 6 }}>
                   <button 
                     onClick={() => setLeaderboardTab('callers')}
                     style={{ border: 'none', background: leaderboardTab === 'callers' ? '#fff' : 'transparent', color: leaderboardTab === 'callers' ? PURPLE : TEXT_MUTED, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4, cursor: 'pointer', transition: 'all 0.15s' }}
@@ -1528,8 +1528,8 @@ export default function Dashboard() {
                         <tr 
                           key={c._id} 
                           onClick={() => openAnalysisModal(c.user?._id)}
-                          style={{ borderBottom: '1px solid var(--theme-surface-faint)', height: 42, cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--theme-surface-faint)'}
+                          style={{ borderBottom: '1px solid #faf9ff', height: 42, cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#faf9ff'}
                           onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                           <td style={{ display: 'flex', alignItems: 'center', gap: 6, height: 42 }}>
@@ -1551,7 +1551,7 @@ export default function Dashboard() {
             </div>
 
             {/* Daily volume bar chart */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Daily Call Volume (Last 7 Days)
@@ -1561,7 +1561,7 @@ export default function Dashboard() {
                   <BarChart data={adminStats.dailyVolume.map(v => ({ name: v._id.slice(5), calls: v.count }))}>
                     <XAxis dataKey="name" stroke={TEXT_MUTED} fontSize={10} tickLine={false} />
                     <YAxis stroke={TEXT_MUTED} fontSize={10} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: 'rgba(var(--theme-primary-rgb), 0.04)' }} />
+                    <Tooltip cursor={{ fill: 'rgba(91, 63, 199, 0.04)' }} />
                     <Bar dataKey="calls" fill={PURPLE} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -1571,7 +1571,7 @@ export default function Dashboard() {
             </div>
 
             {/* Call Outcome Pie Chart */}
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Global Call Outcomes Breakdown
@@ -1618,7 +1618,7 @@ export default function Dashboard() {
           </div>
 
           {/* Peak Calling Hours Heatmap Grid — REMOVED per product decision */}
-          {false && <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20, gridColumn: 'span 2' }}>
+          {false && <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, gridColumn: 'span 2' }}>
             <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>🔥</span> Peak Calling Hours Connect Rate Heatmap (Asia/Kolkata)
             </div>
@@ -1647,10 +1647,10 @@ export default function Dashboard() {
                           let cellBg = '#f1f0f6';
                           let cellColor = '#888';
                           if (total > 0) {
-                            if (connectRate >= 60) { cellBg = 'var(--theme-primary-deepest)'; cellColor = '#fff'; }
-                            else if (connectRate >= 40) { cellBg = 'var(--theme-primary-deep)'; cellColor = '#fff'; }
-                            else if (connectRate >= 20) { cellBg = 'var(--theme-primary-soft)'; cellColor = '#fff'; }
-                            else { cellBg = 'var(--theme-primary-pale2)'; cellColor = TEXT_MAIN; }
+                            if (connectRate >= 60) { cellBg = '#4c1d95'; cellColor = '#fff'; }
+                            else if (connectRate >= 40) { cellBg = '#6d28d9'; cellColor = '#fff'; }
+                            else if (connectRate >= 20) { cellBg = '#a78bfa'; cellColor = '#fff'; }
+                            else { cellBg = '#ddd6fe'; cellColor = TEXT_MAIN; }
                           }
                           
                           return (
@@ -1681,17 +1681,17 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: TEXT_MUTED, marginTop: 4, justifyContent: 'flex-end' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#f1f0f6', borderRadius: 2 }} /> No Calls</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: 'var(--theme-primary-pale2)', borderRadius: 2 }} /> &lt;20%</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: 'var(--theme-primary-soft)', borderRadius: 2 }} /> 20-40%</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: 'var(--theme-primary-deep)', borderRadius: 2 }} /> 40-60%</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: 'var(--theme-primary-deepest)', borderRadius: 2 }} /> &gt;60%</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#ddd6fe', borderRadius: 2 }} /> &lt;20%</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#a78bfa', borderRadius: 2 }} /> 20-40%</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#6d28d9', borderRadius: 2 }} /> 40-60%</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 10, height: 10, background: '#4c1d95', borderRadius: 2 }} /> &gt;60%</div>
               </div>
             </div>
           </div>}
 
           {/* Leads by Location and Source Charts */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, gridColumn: 'span 2' }}>
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>📍</span> Leads by Top Locations
               </div>
@@ -1705,7 +1705,7 @@ export default function Dashboard() {
                         <span style={{ width: 100, fontSize: 12, fontWeight: 600, color: TEXT_MAIN, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {loc._id || 'Unknown'}
                         </span>
-                        <div style={{ flex: 1, height: 16, background: 'var(--theme-surface-faint6)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, height: 16, background: '#f8f7ff', borderRadius: 4, overflow: 'hidden' }}>
                           <div style={{ width: `${pct}%`, height: '100%', background: COLORS[idx % COLORS.length], borderRadius: 4 }} />
                         </div>
                         <span style={{ width: 30, textAlign: 'right', fontSize: 12, fontWeight: 700, color: TEXT_MAIN }}>{loc.count}</span>
@@ -1718,7 +1718,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>🌐</span> Leads by Top Sources
               </div>
@@ -1732,7 +1732,7 @@ export default function Dashboard() {
                         <span style={{ width: 100, fontSize: 12, fontWeight: 600, color: TEXT_MAIN, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {src._id || 'Unknown'}
                         </span>
-                        <div style={{ flex: 1, height: 16, background: 'var(--theme-surface-faint6)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, height: 16, background: '#f8f7ff', borderRadius: 4, overflow: 'hidden' }}>
                           <div style={{ width: `${pct}%`, height: '100%', background: COLORS[(idx + 2) % COLORS.length], borderRadius: 4 }} />
                         </div>
                         <span style={{ width: 30, textAlign: 'right', fontSize: 12, fontWeight: 700, color: TEXT_MAIN }}>{src.count}</span>
@@ -1767,7 +1767,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 12 }}>
           <button 
             onClick={refresh}
-            style={{ background: PURPLE, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(var(--theme-primary-rgb), 0.2)' }}
+            style={{ background: PURPLE, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(91, 63, 199, 0.2)' }}
           >
             Retry Fetching
           </button>
@@ -1785,7 +1785,7 @@ export default function Dashboard() {
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
             {isSuperAdmin ? 'Admin Analytics Desk' : isAdmin ? 'Manager Analytics Desk' : 'Caller Performance Desk'}
@@ -1811,7 +1811,7 @@ export default function Dashboard() {
           {(isAdmin || isSuperAdmin) && (
             <button
               onClick={() => navigate('/users')}
-              style={{ background: 'var(--theme-surface-faint3)', color: PURPLE, border: `1.5px solid ${PURPLE}`, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{ background: '#f3f1fb', color: PURPLE, border: `1.5px solid ${PURPLE}`, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
               Manage Users
             </button>
@@ -1851,7 +1851,7 @@ export default function Dashboard() {
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }}>
             {/* Workspace Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--theme-surface-faint3)', background: 'var(--theme-surface-faint)', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #f3f1fb', background: '#faf9ff', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
               <div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: PURPLE, background: PURPLE_LIGHT, padding: '2px 8px', borderRadius: 10 }}>START MY DAY calling WORKSPACE</span>
                 <h3 style={{ fontSize: 16, fontWeight: 800, color: TEXT_MAIN, marginTop: 4 }}>
@@ -1875,7 +1875,7 @@ export default function Dashboard() {
               ) : workspaceLead ? (
                 <>
                   {/* Left Column: Lead Info and Activity Feed */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRight: '1px solid var(--theme-surface-tint)', paddingRight: 20 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderRight: '1px solid #f0ecff', paddingRight: 20 }}>
                     <div>
                       <h4 style={{ fontSize: 15, fontWeight: 800, color: TEXT_MAIN }}>{workspaceLead.name}</h4>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', fontSize: 12.5, color: TEXT_MUTED, marginTop: 6 }}>
@@ -1884,7 +1884,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: 12, background: 'var(--theme-surface-faint)', fontSize: 12 }}>
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 8, padding: 12, background: '#faf9ff', fontSize: 12 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                         <div>
                           <span style={{ color: TEXT_MUTED }}>Current Status:</span>
@@ -1911,11 +1911,11 @@ export default function Dashboard() {
                     <div>
                       <strong style={{ fontSize: 13, color: TEXT_MAIN, display: 'block', marginBottom: 8 }}>Past Interaction History</strong>
                       {workspaceLead.activities?.length === 0 ? (
-                        <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: 'center', padding: '16px 0', border: '1px dashed var(--theme-border-tint)', borderRadius: 8 }}>No activity history found.</div>
+                        <div style={{ fontSize: 12, color: TEXT_MUTED, textAlign: 'center', padding: '16px 0', border: '1px dashed #e5e2f5', borderRadius: 8 }}>No activity history found.</div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflowY: 'auto', paddingRight: 6 }}>
                           {workspaceLead.activities.map((act, index) => (
-                            <div key={index} style={{ background: 'var(--theme-surface-faint)', border: '1px solid var(--theme-surface-tint)', borderRadius: 8, padding: 8, fontSize: 11.5 }}>
+                            <div key={index} style={{ background: '#faf9ff', border: '1px solid #f0ecff', borderRadius: 8, padding: 8, fontSize: 11.5 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: TEXT_MAIN }}>
                                 <span style={{ textTransform: 'uppercase', fontSize: 10, color: PURPLE }}>{act.type}</span>
                                 <span style={{ fontSize: 10, color: TEXT_MUTED }}>{new Date(act.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
@@ -1937,7 +1937,7 @@ export default function Dashboard() {
                   {/* Right Column: Call Logger Form */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Dialing Workspace Timer */}
-                    <div style={{ background: 'var(--theme-surface-faint6)', border: '1px solid #e8f0fe', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8f0fe', borderRadius: 10, padding: 14, textAlign: 'center' }}>
                       <span style={{ fontSize: 11, color: TEXT_MUTED, textTransform: 'uppercase', fontWeight: 700 }}>Talk Duration Timer</span>
                       <div style={{ fontSize: 32, fontWeight: 900, color: PURPLE, fontFamily: 'monospace', margin: '6px 0' }}>
                         {String(Math.floor(callDuration / 60)).padStart(2, '0')}:{String(callDuration % 60).padStart(2, '0')}
@@ -1951,7 +1951,7 @@ export default function Dashboard() {
                         </button>
                         <button 
                           onClick={() => setCallDuration(0)}
-                          style={{ background: 'var(--theme-surface-faint3)', color: TEXT_MAIN, border: '1px solid var(--theme-border-tint)', padding: '4px 12px', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                          style={{ background: '#f3f1fb', color: TEXT_MAIN, border: '1px solid #e5e2f5', padding: '4px 12px', borderRadius: 4, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                         >
                           Reset
                         </button>
@@ -1965,7 +1965,7 @@ export default function Dashboard() {
                         <select 
                           value={callStatus}
                           onChange={e => setCallStatus(e.target.value)}
-                          style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN }}
+                          style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN }}
                         >
                           <option value="connected">Connected / Talked</option>
                           <option value="no_answer">No Answer / Ringing</option>
@@ -1979,7 +1979,7 @@ export default function Dashboard() {
                         <select 
                           value={newStatus}
                           onChange={e => setNewStatus(e.target.value)}
-                          style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN }}
+                          style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN }}
                         >
                           <option value="Fresh">Fresh</option>
                           <option value="Connected">Connected</option>
@@ -2000,7 +2000,7 @@ export default function Dashboard() {
                             type="datetime-local"
                             value={demoDate}
                             onChange={e => setDemoDate(e.target.value)}
-                            style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                            style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
                           />
                         </div>
                       )}
@@ -2012,18 +2012,18 @@ export default function Dashboard() {
                           value={callNote}
                           onChange={e => setCallNote(e.target.value)}
                           placeholder="Log notes about this call..."
-                          style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN, resize: 'none' }}
+                          style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, outline: 'none', color: TEXT_MAIN, resize: 'none' }}
                         />
                       </div>
 
                       {/* Setup direct callback follow-up */}
-                      <div style={{ borderTop: '1px solid var(--theme-surface-tint)', paddingTop: 10 }}>
+                      <div style={{ borderTop: '1px solid #f0ecff', paddingTop: 10 }}>
                         <label style={{ fontSize: 11.5, fontWeight: 700, color: PURPLE, display: 'block', marginBottom: 4 }}>📅 Schedule Next Callback (Optional)</label>
                         <input 
                           type="datetime-local"
                           value={nextFollowupDate}
                           onChange={e => setNextFollowupDate(e.target.value)}
-                          style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
+                          style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 10px', fontSize: 12, outline: 'none', color: TEXT_MAIN }}
                         />
                         {nextFollowupDate && (
                           <input 
@@ -2031,7 +2031,7 @@ export default function Dashboard() {
                             value={nextFollowupNote}
                             onChange={e => setNextFollowupNote(e.target.value)}
                             placeholder="Follow-up instructions note..."
-                            style={{ width: '100%', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 10px', fontSize: 11.5, outline: 'none', color: TEXT_MAIN, marginTop: 6 }}
+                            style={{ width: '100%', border: '1px solid #e5e2f5', borderRadius: 8, padding: '6px 10px', fontSize: 11.5, outline: 'none', color: TEXT_MAIN, marginTop: 6 }}
                           />
                         )}
                       </div>
@@ -2046,7 +2046,7 @@ export default function Dashboard() {
                             setActiveQueueIndex(null);
                           }
                         }}
-                        style={{ flex: 1, background: 'var(--theme-surface-faint3)', color: TEXT_MAIN, border: '1px solid var(--theme-border-tint)', padding: '10px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
+                        style={{ flex: 1, background: '#f3f1fb', color: TEXT_MAIN, border: '1px solid #e5e2f5', padding: '10px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}
                       >
                         Skip Lead
                       </button>
@@ -2101,7 +2101,7 @@ export default function Dashboard() {
             {/* Modal Header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px', borderBottom: '1px solid var(--theme-surface-faint3)'
+              padding: '20px 24px', borderBottom: '1px solid #f3f1fb'
             }}>
               {modalLoading ? (
                 <div style={{ fontSize: 15, fontWeight: 600, color: TEXT_MAIN }}>Loading Analysis...</div>
@@ -2138,15 +2138,15 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {/* User Stats Overview Row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                    <div style={{ background: 'var(--theme-surface-faint6)', border: '1px solid var(--theme-surface-tint)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Total Calls</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 4 }}>{userAnalysisData.stats.totalCalls}</div>
                     </div>
-                    <div style={{ background: 'var(--theme-surface-faint6)', border: '1px solid var(--theme-surface-tint)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Talk Duration</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 4 }}>{fmtDuration(userAnalysisData.stats.totalDuration)}</div>
                     </div>
-                    <div style={{ background: 'var(--theme-surface-faint6)', border: '1px solid var(--theme-surface-tint)', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Connect Rate</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: GREEN, marginTop: 4 }}>
                         {userAnalysisData.stats.totalCalls > 0 ? Math.round((userAnalysisData.stats.connected / userAnalysisData.stats.totalCalls) * 100) : 0}%
@@ -2157,14 +2157,14 @@ export default function Dashboard() {
                   {/* Double Chart Row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
                     {/* Daily Volume Trends BarChart */}
-                    <div style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: 16 }}>
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN, marginBottom: 12 }}>Daily Call Volume (Last 7 Days)</div>
                       {userAnalysisData.dailyVolume?.length > 0 ? (
                         <ResponsiveContainer width="100%" height={140}>
                           <BarChart data={userAnalysisData.dailyVolume.map(v => ({ name: v._id.slice(5), calls: v.count }))}>
                             <XAxis dataKey="name" stroke={TEXT_MUTED} fontSize={10} tickLine={false} />
                             <YAxis stroke={TEXT_MUTED} fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip cursor={{ fill: 'rgba(var(--theme-primary-rgb), 0.03)' }} />
+                            <Tooltip cursor={{ fill: 'rgba(91, 63, 199, 0.03)' }} />
                             <Bar dataKey="calls" fill={PURPLE} radius={[3, 3, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
@@ -2174,7 +2174,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Outcomes PieChart */}
-                    <div style={{ border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN, marginBottom: 8 }}>Call Outcomes</div>
                       {userAnalysisData.outcomes?.length > 0 ? (
                         <>
@@ -2213,7 +2213,7 @@ export default function Dashboard() {
                           <div key={index} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 12 }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 3 }}>
                               <div style={{ width: 6, height: 6, borderRadius: '50%', background: act.activity.callStatus === 'connected' ? GREEN : RED }} />
-                              {index < userAnalysisData.recentActivities.length - 1 && <div style={{ width: 1, height: 28, background: 'var(--theme-surface-tint)', marginTop: 4 }} />}
+                              {index < userAnalysisData.recentActivities.length - 1 && <div style={{ width: 1, height: 28, background: '#f0ecff', marginTop: 4 }} />}
                             </div>
                             <div style={{ flex: 1 }}>
                               <div style={{ color: '#555' }}>

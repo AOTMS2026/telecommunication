@@ -161,7 +161,7 @@ export default function Topbar() {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22a163" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
     );
     if (type === 'lead_status_changed') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c5cdd" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
     );
     if (type === 'lead_updated') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5b3fc7" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -266,7 +266,7 @@ export default function Topbar() {
     <>
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 48,
-        background: 'linear-gradient(90deg, #0284c7 0%, #0ea5e9 60%, #f97316 100%)',
+        background: 'linear-gradient(135deg, #0099F7 0%, #F57C00 100%)',
         borderBottom: '1px solid #0369a1',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px 0 10px', zIndex: 100
@@ -517,7 +517,7 @@ export default function Topbar() {
               onClick={() => { setShowProfile(prev => !prev); setShowNotifications(false); }}
               style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: showProfile ? '#ea6d0e' : '#f97316',
+                background: showProfile ? '#4a2eb8' : '#5b3fc7',
                 color: '#fff', fontSize: 11, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
