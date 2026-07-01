@@ -1,10 +1,5 @@
 """
 runpod/orchestrator/outcome_client.py
-
-Calls the AOTMS backend's POST /api/ai-caller/outcome once a call ends, handing
-off the full transcript + structured GPT-4.1-mini outcome JSON so
-outcomeService.applyAiCallOutcome() can update the Lead, release the AI lock,
-schedule any callback FollowUp, and write the AiCallOutcome audit record.
 """
 
 import os
@@ -23,7 +18,7 @@ async def post_call_outcome(
     recording_url: str = "",
 ) -> None:
     url = f"{AOTMS_BASE_URL}/api/ai-caller/outcome"
-    headers = {"x-ai-caller-token": SERVICE_TOKEN, "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {SERVICE_TOKEN}", "Content-Type": "application/json"}
     body = {
         "leadId": lead_id,
         "campaignId": campaign_id,
