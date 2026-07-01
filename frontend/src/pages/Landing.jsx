@@ -45,8 +45,8 @@ export default function Landing() {
     <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: '#0f172a', background: '#fff' }}>
       {/* NAVBAR */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #eef2f7' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <img src={logoImg} alt="AOTMS" style={{ height: 34, objectFit: 'contain' }} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <img src={logoImg} alt="AOTMS" style={{ height: 92, objectFit: 'contain' }} />
           <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
             <a onClick={() => scrollTo('features')} style={navLink}>Features</a>
             <a onClick={() => scrollTo('integrations')} style={navLink}>Integrations</a>
