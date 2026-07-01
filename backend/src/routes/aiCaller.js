@@ -49,7 +49,8 @@ const router = express.Router();
 function requireServiceToken(req, res, next) {
   const expected = process.env.AI_CALLER_SERVICE_TOKEN;
   if (!expected) return res.status(500).json({ message: 'AI_CALLER_SERVICE_TOKEN is not configured on the server' });
-  const provided = req.headers['x-ai-caller-token'];
+  const authHeader = req.headers['authorization'] || '';
+  const provided = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
   if (provided !== expected) return res.status(401).json({ message: 'Invalid service token' });
   next();
 }
