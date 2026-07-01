@@ -228,7 +228,7 @@ export default function Sidebar() {
             <>
               <SectionLabel text="Management" />
               <NavItem to="/team-operations" icon={Icons.teamOps}    label="Team Operations" />
-              <NavItem to="/stale-leads"     icon={Icons.staleLeads} label="Stale Leads" />
+              <NavItem to="/stale-leads"     icon={Icons.staleLeads} label="Idle Leads" />
               <NavItem to="/blocklist"       icon={Icons.blocklist}  label="Blocklist" />
               <NavItem to="/users"           icon={Icons.users}      label="Users" />
 
