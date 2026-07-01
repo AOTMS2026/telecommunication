@@ -230,7 +230,7 @@ async def process_speech_segment(ws, session: CallSession, pcm16_bytes: bytes) -
     bot-to-Exotel "Stop" event; closing the socket is what tells Exotel to
     advance to the next applet in the call flow).
     """
-    text = transcribe_segment(pcm16_bytes, language_hint=session.language)
+    text = await transcribe_segment(pcm16_bytes, language_hint=session.language)
     if not text:
         return False
 

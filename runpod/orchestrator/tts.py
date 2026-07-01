@@ -1,103 +1,67 @@
 """
 runpod/orchestrator/tts.py
-
-UPDATED — switched from ai4bharat/indic-parler-tts to Microsoft Edge TTS
-(`edge-tts` package). Reasoning, for the record:
-
-  - indic-parler-tts is a GATED Hugging Face model (needs login + accepted
-    terms + a baked-in access token) — adds setup friction with no benefit.
-  - There's a reported issue on that model's own HF discussion page describing
-    the downloaded checkpoint as missing its audio decoder (works for
-    research/training inspection, not reliably for real inference). Not
-    something to gamble a production telecaller on.
-  - Edge TTS is free, non-gated, ships real Telugu neural voices
-    (te-IN-ShrutiNeural / te-IN-MohanNeural), and is a lightweight cloud call
-    rather than a multi-GB local model — much faster to set up and more
-    predictable to operate than self-hosting a TTS model.
-
-Trade-off: this depends on Microsoft's Edge TTS service being reachable from
-the RunPod pod (just needs outbound internet, which pods have) — it is not
-running on your own GPU, so there is no GPU cost for this layer at all,
-unlike the original plan.
-
-EXOTEL MIGRATION: output codec changed from mu-law 8kHz (what Twilio's
-Media Streams played back) to raw Linear PCM16 8kHz (what Exotel's
-AgentStream plays back — see Exotel docs: "audio out should be PCM or PCMU
-in ~100ms frames, multiples of 320 bytes"). synthesize_to_pcm16() below
-returns raw PCM16 bytes; server.py is responsible for chunking that into
-320-byte-aligned ~100ms frames before sending, since Exotel's chunking rule
-applies to what goes over the WebSocket, not to this function's output.
+ElevenLabs Text-to-Speech. No GPU, no local model.
 """
 
 import audioop
 import io
 import os
 
+import aiohttp
+
 LOCAL_DEV = os.environ.get("LOCAL_DEV") == "1"
 
-# Real Telugu neural voices from Edge TTS. Indexed by AOTMS's lead.language values.
-_VOICES = {
-    "Telugu": "te-IN-ShrutiNeural",
-    "English": "en-IN-NeerjaNeural",
-    "Hinglish": "en-IN-NeerjaNeural",  # closest available — Edge TTS has no dedicated Hinglish voice
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ELEVENLABS_TTS_MODEL = os.environ.get("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5")
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "")
+
+_VOICE_OVERRIDES = {
+    "Telugu": os.environ.get("ELEVENLABS_VOICE_ID_TELUGU", ELEVENLABS_VOICE_ID),
+    "English": os.environ.get("ELEVENLABS_VOICE_ID_ENGLISH", ELEVENLABS_VOICE_ID),
+    "Hinglish": os.environ.get("ELEVENLABS_VOICE_ID_HINGLISH", ELEVENLABS_VOICE_ID),
 }
-_DEFAULT_VOICE = _VOICES["Telugu"]  # matches the Telugu-only customer base
 
 if not LOCAL_DEV:
-    import edge_tts
-    import asyncio
     from pydub import AudioSegment
 
 
 def _resample_to_8k_pcm16(pcm_bytes: bytes, src_rate: int, channels: int = 1) -> bytes:
-    """
-    EXOTEL: resamples/downmixes to 8kHz mono PCM16 and returns it AS-IS
-    (no mu-law encoding) — Exotel's AgentStream expects raw Linear PCM16
-    for playback, not mu-law.
-    """
     if channels == 2:
         pcm_bytes = audioop.tomono(pcm_bytes, 2, 0.5, 0.5)
     pcm16, _ = audioop.ratecv(pcm_bytes, 2, 1, src_rate, 8000, None)
     return pcm16
 
 
-async def _synthesize_async(text: str, voice: str) -> bytes:
-    communicate = edge_tts.Communicate(text, voice)
-    mp3_bytes = bytearray()
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            mp3_bytes.extend(chunk["data"])
-    return bytes(mp3_bytes)
+async def _synthesize_mp3(text: str, voice_id: str) -> bytes:
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"}
+    payload = {"text": text, "model_id": ELEVENLABS_TTS_MODEL}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, json=payload) as resp:
+            if resp.status != 200:
+                body = await resp.text()
+                print(f"[tts] elevenlabs error {resp.status}: {body}")
+                return b""
+            return await resp.read()
 
 
 async def synthesize_to_pcm16(text: str, language: str | None = None) -> bytes:
-    """
-    `language` selects which Telugu/English Edge TTS voice to use. Defaults
-    to Telugu, matching the current customer base (see promptBuilder.js /
-    Lead.js, which now default every lead's language to 'Telugu').
-
-    Returns raw 8kHz mono PCM16 bytes (little-endian) — NOT chunked yet.
-    server.py's send_tts() is responsible for splitting this into
-    320-byte-aligned ~100ms frames before sending to Exotel, and for
-    padding the final partial frame to a 320-byte multiple (Exotel pads
-    with silence under the hood, but a short last frame can also trigger
-    an extra 20ms wait per Exotel's docs — not harmful, just noted here).
-    """
     if LOCAL_DEV:
-        # ~200ms of PCM16 silence (0x0000) — enough to round-trip through
-        # server.py's base64/WebSocket framing without a network call.
-        # 8000 Hz * 0.2s * 2 bytes/sample = 3200 bytes.
         return bytes(3200)
 
     if not text.strip():
         return b""
 
-    voice = _VOICES.get(language, _DEFAULT_VOICE)
+    voice_id = _VOICE_OVERRIDES.get(language, ELEVENLABS_VOICE_ID)
+    if not voice_id:
+        print("[tts] no ELEVENLABS_VOICE_ID configured")
+        return b""
 
-    mp3_bytes = await _synthesize_async(text, voice)
+    mp3_bytes = await _synthesize_mp3(text, voice_id)
+    if not mp3_bytes:
+        return b""
 
-    # Edge TTS returns MP3 — decode to raw PCM via pydub (uses ffmpeg, already
-    # installed in the Dockerfile), then resample to 8kHz mono PCM16 for Exotel.
     audio = AudioSegment.from_file(io.BytesIO(mp3_bytes), format="mp3")
     pcm_bytes = audio.raw_data
 

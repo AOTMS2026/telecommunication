@@ -92,9 +92,9 @@ router.all('/stream-url/:leadId', (req, res) => {
   const leadId = req.params.leadId || '';
   const campaignId = req.query.campaignId || req.body.campaignId || '';
 
-  const runpodWsUrl = process.env.RUNPOD_WS_URL; // e.g. wss://<pod-id>-8080.proxy.runpod.net/media
+  const runpodWsUrl = process.env.ORCHESTRATOR_WS_URL; // e.g. wss://<your-orchestrator-host>/media
   if (!runpodWsUrl) {
-    console.error('[ai-caller] RUNPOD_WS_URL is not configured — cannot resolve stream URL');
+    console.error('[ai-caller] ORCHESTRATOR_WS_URL is not configured — cannot resolve stream URL');
     return res.status(500).json({ message: 'Calling system is temporarily unavailable' });
   }
 

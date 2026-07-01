@@ -71,8 +71,8 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   const exophone = process.env.EXOTEL_EXOPHONE;
   if (!exophone) throw new Error('EXOTEL_EXOPHONE is not configured on the server');
 
-  const runpodWsUrl = process.env.RUNPOD_WS_URL; // e.g. wss://<pod-id>-8080.proxy.runpod.net/media
-  if (!runpodWsUrl) throw new Error('RUNPOD_WS_URL is not configured on the server');
+ const runpodWsUrl = process.env.ORCHESTRATOR_WS_URL; // e.g. wss://<your-orchestrator-host>/media
+ if (!runpodWsUrl) throw new Error('ORCHESTRATOR_WS_URL is not configured on the server');
 
   const toNumber = normalizePhone(lead.phone);
 
