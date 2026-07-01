@@ -1803,7 +1803,7 @@ export default function Dashboard() {
           {isSuperAdmin && (
             <button
               onClick={exportToCSV}
-              style={{ background: '#e8f8f0', color: GREEN, border: `1.5px solid ${GREEN}`, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{ background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
               📊 Export CSV Report
             </button>
@@ -1811,14 +1811,14 @@ export default function Dashboard() {
           {(isAdmin || isSuperAdmin) && (
             <button
               onClick={() => navigate('/users')}
-              style={{ background: '#f3f1fb', color: PURPLE, border: `1.5px solid ${PURPLE}`, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{ background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
             >
               Manage Users
             </button>
           )}
           <button
             onClick={() => navigate('/leads/new')}
-            style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            style={{ background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
             + Add New Lead
           </button>
