@@ -287,8 +287,8 @@ export default function Topbar() {
     <>
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: 48,
-        background: 'linear-gradient(90deg, var(--theme-primary-dark) 0%, var(--theme-primary) 55%, var(--theme-primary-light) 100%)',
-        borderBottom: '1px solid var(--theme-primary-deep)',
+        background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)',
+        borderBottom: '1px solid #38bdf8',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px 0 10px', zIndex: 100
       }}>
