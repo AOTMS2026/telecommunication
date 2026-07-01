@@ -233,7 +233,7 @@ async def process_speech_segment(ws, session: CallSession, pcm16_bytes: bytes) -
 
 
 async def send_tts(ws, session: CallSession, text: str):
-    pcm16_audio = synthesize_to_pcm16(text, language=session.language)
+    pcm16_audio = await synthesize_to_pcm16(text, language=session.language)
     if not pcm16_audio:
         return
 
