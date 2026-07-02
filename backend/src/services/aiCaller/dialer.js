@@ -87,8 +87,7 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
       'statuscallbackevents[]': 'terminal',
     });
 
-    const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/accounts/${accountSid}/calls/connect`;
-    const response = await axios.post(url, params);
+const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/Accounts/${accountSid}/Calls/connect`;    const response = await axios.post(url, params);
     const call = response.data?.call || {};
 
     lead.activities.unshift({
