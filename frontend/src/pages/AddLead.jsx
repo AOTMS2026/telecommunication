@@ -104,7 +104,7 @@ export default function AddLead() {
 
   if (loading) return (
     <div className="flex justify-center items-center h-48">
-      <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 spinner-gradient" />
     </div>
   );
 
@@ -378,7 +378,14 @@ export default function AddLead() {
 
         <div className="flex gap-3">
           <button type="button" onClick={() => navigate('/leads')} className="btn-secondary flex-1">Cancel</button>
-          <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center">
+          <button
+            type="submit"
+            disabled={saving}
+            className="flex-1 justify-center text-white font-medium px-4 py-2 rounded-lg transition-all duration-150 flex items-center gap-2 text-sm"
+            style={{ background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)' }}
+            onMouseEnter={e => e.currentTarget.style.filter = 'brightness(1.06)'}
+            onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+          >
             {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : isEdit ? 'Update Lead' : 'Add Lead'}
           </button>
         </div>

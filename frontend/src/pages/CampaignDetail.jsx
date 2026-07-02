@@ -46,7 +46,7 @@ function Avatar({ name, size = 32, bg = P_LIGHT, color = P }) {
 function Spinner() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 120 }}>
-      <div style={{ width: 28, height: 28, border: `3px solid ${P}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <div className="spinner-gradient" style={{ width: 28, height: 28 }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -218,7 +218,7 @@ function AICallingPanel({ campaignId, campaign, onStatusChange }) {
             >
               {loading ? (
                 <>
-                  <div style={{ width: 12, height: 12, border: '2px solid #854d0e', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  <div className="spinner-gradient" style={{ width: 12, height: 12 }} />
                   Pausing…
                 </>
               ) : (
@@ -244,7 +244,7 @@ function AICallingPanel({ campaignId, campaign, onStatusChange }) {
             >
               {loading ? (
                 <>
-                  <div style={{ width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  <div className="spinner-gradient" style={{ width: 12, height: 12 }} />
                   Starting…
                 </>
               ) : (
@@ -443,7 +443,7 @@ export default function CampaignDetail() {
   if (!campaign) return <div style={{ textAlign: 'center', padding: 48, color: MUTED }}>Campaign not found</div>;
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 48px)', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ─── LEFT PANEL: Student List ─────────────────────────────────────────── */}
       <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

@@ -51,7 +51,7 @@ const styles = `
     width: 52%; flex-shrink: 0; position: relative; overflow: hidden;
     display: flex; flex-direction: column; justify-content: space-between;
     padding: 40px 48px; gap: 18px; perspective: 1400px; margin-right: -1px;
-    background: linear-gradient(145deg, var(--theme-text-strongest) 0%, var(--theme-text-strongest) 28%, var(--theme-primary) 65%, var(--theme-primary-light) 100%);
+    background: linear-gradient(145deg, #ff9d5c 0%, #ffb37c 15%, #4c9fdb 40%, #1e8fd6 100%);
     animation: fadeInLeft 0.65s cubic-bezier(0.22,1,0.36,1) both;
   }
   @media (max-width: 860px) { .lw-left { display: none !important; } .lw-right { width: 100% !important; } }
@@ -72,11 +72,13 @@ const styles = `
 
   .lw-logo-area { position: relative; z-index: 5; animation: fadeInUp 0.6s ease 0.1s both; }
   .lw-logo-img { width: 220px; height: auto; object-fit: contain; display: block; filter: drop-shadow(0 2px 14px rgba(0,0,0,0.25)); }
+  .lw-right-logo-area { display: flex; justify-content: center; margin-top: -44px; margin-bottom: 8px; animation: fadeInUp 0.6s ease 0.1s both; }
+  .lw-right-logo-img { width: 340px; height: auto; object-fit: contain; display: block; }
 
   .lw-headline { position: relative; z-index: 5; animation: fadeInUp 0.6s ease 0.2s both; }
   .lw-headline h2 { font-size: 27px; font-weight: 900; color: #fff; line-height: 1.18; letter-spacing: -0.5px; margin-bottom: 8px; }
   .lw-gradient-text {
-    background: linear-gradient(90deg, var(--theme-primary-pale), var(--theme-primary-pale), var(--theme-primary-soft));
+    background: linear-gradient(90deg, #fff, #ffe8d6, #bae6fd);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   }
   .lw-headline p { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; max-width: 420px; }
@@ -110,7 +112,7 @@ const styles = `
     position: absolute; top: 50%; left: 50%; width: 96px; height: 96px;
     transform: translate(-50%,-50%) translateZ(20px);
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff, var(--theme-primary-light) 45%, var(--theme-primary) 80%);
+    background: radial-gradient(circle at 35% 30%, #fff, #ffb37c 28%, #38bdf8 75%);
     box-shadow: 0 0 50px 10px rgba(216,180,254,0.55), inset -8px -8px 18px rgba(0,0,0,0.18), inset 6px 6px 14px rgba(255,255,255,0.5);
     animation: corePulse 2.6s ease-in-out infinite;
     display: flex; align-items: center; justify-content: center;
@@ -144,11 +146,11 @@ const styles = `
     transform-style: preserve-3d; animation: floatPhone 5s ease-in-out infinite;
   }
   .lw-call-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .lw-call-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--theme-primary-light), var(--theme-primary)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .lw-call-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #ffb37c, #38bdf8); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .lw-call-name { font-size: 11.5px; font-weight: 700; color: #fff; line-height: 1.2; }
   .lw-call-status { font-size: 9.5px; color: rgba(255,255,255,0.6); }
   .lw-wave-row { display: flex; align-items: flex-end; gap: 2.5px; height: 18px; }
-  .lw-wave-bar { width: 3px; border-radius: 2px; background: linear-gradient(180deg, var(--theme-primary-pale), var(--theme-primary-soft)); animation: waveBar 1s ease-in-out infinite; transform-origin: bottom; }
+  .lw-wave-bar { width: 3px; border-radius: 2px; background: linear-gradient(180deg, #ffb37c, #38bdf8); animation: waveBar 1s ease-in-out infinite; transform-origin: bottom; }
 
   /* AI thinking chip */
   .lw-ai-chip {
@@ -225,12 +227,12 @@ const styles = `
   .lw-input {
     width: 100%; padding: 12px 13px 12px 40px;
     border: 1.5px solid var(--theme-surface-tint); border-radius: 10px;
-    font-size: 14px; background: #fafafa; color: var(--theme-text-strongest); outline: none;
+    font-size: 14px; background: #fafafa; color: #000; outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
     font-family: inherit;
   }
   .lw-input:focus { border-color: ${PURPLE}; background: #fff; box-shadow: 0 0 0 4px rgba(var(--theme-primary-rgb), 0.09); }
-  .lw-input::placeholder { color: var(--theme-primary-pale); }
+  .lw-input::placeholder { color: #333; }
   .lw-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--theme-primary-soft); display: flex; align-items: center; padding: 2px; transition: color 0.2s; border-radius: 4px; }
   .lw-eye:hover { color: ${PURPLE}; }
 
@@ -239,7 +241,7 @@ const styles = `
   .lw-forgot:hover { opacity: 0.75; }
 
   .lw-btn {
-    width: 100%; background: linear-gradient(135deg, ${PURPLE_DARK} 0%, ${PURPLE} 50%, ${PURPLE_LIGHT} 100%);
+    width: 100%; background: linear-gradient(135deg, #ffb37c 0%, #0891b2 40%, #38bdf8 100%);
     color: #fff; border: none; padding: 14px; border-radius: 11px;
     font-size: 14.5px; font-weight: 700; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 9px;
@@ -269,6 +271,15 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const cardRef = useRef(null);
+
+  const [callSeconds, setCallSeconds] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCallSeconds((s) => (s >= 300 ? 0 : s + 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const callTime = `${String(Math.floor(callSeconds / 60)).padStart(2, '0')}:${String(callSeconds % 60).padStart(2, '0')}`;
 
   const handleMouseMove = (e) => {
     const card = cardRef.current;
@@ -304,10 +315,6 @@ export default function Login() {
           <div className="lw-bg-circle lw-bg-c1" />
           <div className="lw-bg-circle lw-bg-c2" />
           <div className="lw-bg-circle lw-bg-c3" />
-          <div className="lw-logo-area">
-            <img src={LOGO_URL} alt="AOTMS Global Pvt. Ltd" className="lw-logo-img" />
-          </div>
-
           <div className="lw-headline">
             <h2>
               AI-Powered<br />
@@ -361,7 +368,7 @@ export default function Login() {
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
                 <div>
-                  <div className="lw-call-name">Live Call · 02:41</div>
+                  <div className="lw-call-name">Live Call · {callTime}</div>
                   <div className="lw-call-status">Connected · AI Agent</div>
                 </div>
               </div>
@@ -386,6 +393,10 @@ export default function Login() {
         {/* ── RIGHT PANEL ── */}
         <div className="lw-right" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
           <div className="lw-form-card" ref={cardRef}>
+
+            <div className="lw-right-logo-area">
+              <img src={LOGO_URL} alt="AOTMS Global Pvt. Ltd" className="lw-right-logo-img" />
+            </div>
 
             <div className="lw-portal-badge">
               <div className="lw-portal-dot" />
@@ -454,7 +465,7 @@ export default function Login() {
               </div>
             </form>
 
-            <div className="lw-footer">© 2025 AOTMS · Secure & Encrypted</div>
+            <div className="lw-footer">© 2026 AOTMS · Secure & Encrypted</div>
 
           </div>
         </div>
