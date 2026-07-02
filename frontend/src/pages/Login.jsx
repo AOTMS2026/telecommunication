@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useTheme from '../hooks/useTheme';
 
@@ -330,7 +330,7 @@ export default function Login() {
               <div className="lw-field">
                 <div className="lw-label-row">
                   <label className="lw-label" style={{ margin: 0 }}>Password</label>
-                  <a href="#" className="lw-forgot">Forgot password?</a>
+                  <Link to="/forgot-password" className="lw-forgot">Forgot password?</Link>
                 </div>
                 <div className="lw-input-wrap">
                   <span className="lw-input-icon">
