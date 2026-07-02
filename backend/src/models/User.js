@@ -27,6 +27,11 @@ const userSchema = new mongoose.Schema({
   fcmToken: { type: String, default: '' },
   fcmTokenUpdatedAt: { type: Date },
   permissionTemplate: { type: mongoose.Schema.Types.ObjectId, ref: 'PermissionTemplate' },
+  resetPasswordToken: { type: String, select: false },
+  resetPasswordExpires: { type: Date, select: false },
+  // Forgot / reset password
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpires: { type: Date, select: false },
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

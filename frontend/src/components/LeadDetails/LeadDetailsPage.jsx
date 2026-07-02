@@ -682,7 +682,7 @@ export default function LeadDetailsPage({
     return (
       <div className={embedded ? 'h-full flex items-center justify-center bg-gray-50' : 'min-h-screen flex items-center justify-center bg-gray-50'}>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 spinner-gradient" />
           <p className="text-gray-500 text-sm">Loading lead profile...</p>
         </div>
       </div>

@@ -9,7 +9,7 @@ const HOVER_BG = '#f0f9ff';
 const TEXT = '#374151';
 const ICON_COLOR = '#6b7280';
 const SECTION_COLOR = '#94a3b8';
-const ACCENT = '#5b3fc7';
+const ACCENT = '#ffab5e';
 const BORDER_COLOR = '#e0f0ff';
 const COLLAPSED_W = 48;
 const EXPANDED_W = 210;
@@ -184,7 +184,7 @@ export default function Sidebar() {
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
       style={{
-        position: 'fixed', top: 48, left: 0, bottom: 0,
+        position: 'fixed', top: 64, left: 0, bottom: 0,
         width: isOpen ? EXPANDED_W : COLLAPSED_W,
         zIndex: 99,
         transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',

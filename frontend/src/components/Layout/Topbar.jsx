@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { followupsAPI, notificationsAPI } from '../../services/api';
+import logoImg from '../../assets/aotms-global-logo.png';
 
 // Module-level helper — no hoisting issues
 function formatNotifTime(dateStr) {
@@ -286,38 +287,19 @@ export default function Topbar() {
   return (
     <>
       <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: 48,
-        background: 'linear-gradient(90deg, var(--theme-primary-dark) 0%, var(--theme-primary) 55%, var(--theme-primary-light) 100%)',
-        borderBottom: '1px solid var(--theme-primary-deep)',
+        position: 'fixed', top: 0, left: 0, right: 0, height: 64,
+        background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)',
+        borderBottom: '1px solid #38bdf8',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 16px 0 10px', zIndex: 100
       }}>
-        {/* Left: logo + org name */}
+        {/* Left: logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 34, height: 34, background: '#fff', borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.12)'
-          }}>
-            <img
-              src="/atm-logo.jpeg"
-              alt="ATM"
-              style={{ width: 30, height: 30, objectFit: 'contain' }}
-              onError={e => {
-                const t = e.currentTarget;
-                if (t.src.endsWith('.jpeg')) { t.src = '/atm-logo.jpg'; }
-                else if (t.src.endsWith('.jpg')) { t.src = '/atm-logo.png'; }
-                else if (t.src.endsWith('.png')) { t.src = '/atm-logo.webp'; }
-                else { t.style.display = 'none'; }
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', letterSpacing: 0.2 }}>AOTMS GLOBAL PVT. LTD</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2.5">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </div>
+          <img
+            src={logoImg}
+            alt="AOTMS Global Pvt. Ltd"
+            style={{ height: 50, objectFit: 'contain' }}
+          />
 
           {isAdminLike && (
             <div ref={gearRef} style={{ position: 'relative', marginLeft: 2 }}>
@@ -429,18 +411,13 @@ export default function Topbar() {
               </svg>
               {unreadCount > 0 && (
                 <div style={{
-                  width: unreadCount > 9 ? 14 : 8,
+                  width: 8,
                   height: 8,
                   background: '#e53e3e',
                   borderRadius: '50%',
                   position: 'absolute', top: 3, right: 3,
                   border: '2px solid #fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 8, color: '#fff', fontWeight: 700,
-                  lineHeight: 1
-                }}>
-                  {unreadCount > 9 ? '9+' : ''}
-                </div>
+                }} />
               )}
             </div>
 
@@ -541,11 +518,11 @@ export default function Topbar() {
               onClick={() => { setShowProfile(prev => !prev); setShowNotifications(false); }}
               style={{
                 width: 30, height: 30, borderRadius: '50%',
-                background: showProfile ? 'var(--theme-primary-dark)' : 'var(--theme-primary)',
+                background: showProfile ? '#e8672a' : '#ff9d5c',
                 color: '#fff', fontSize: 11, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer',
-                boxShadow: showProfile ? '0 0 0 3px var(--theme-primary-pale2)' : 'none',
+                boxShadow: showProfile ? '0 0 0 3px rgba(255,157,92,0.35)' : 'none',
                 transition: 'all 0.15s'
               }}
             >
