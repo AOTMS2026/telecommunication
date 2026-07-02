@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 
 const PURPLE = '#5b3fc7';
 const PURPLE_LIGHT = '#f0ecff';
+const GRADIENT = 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)';
 const TEXT_MAIN = '#2d2d6b';
 const TEXT_MUTED = '#888';
 const GREEN = '#22a163';
@@ -482,8 +483,7 @@ export default function Dashboard() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320 }}>
-      <div style={{ width: 32, height: 32, border: `4px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-      <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+      <div className="spinner-gradient" style={{ width: 32, height: 32 }} />
     </div>
   );
 
@@ -1788,13 +1788,33 @@ export default function Dashboard() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isSuperAdmin ? 'Admin Analytics Desk' : isAdmin ? 'Manager Analytics Desk' : 'Caller Performance Desk'}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2.5" style={{ cursor: 'pointer' }} onClick={refresh}>
-              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5"/>
-            </svg>
+            {isSuperAdmin ? 'Admin Desk' : isAdmin ? 'Manager Desk' : 'Caller Desk'}
+            <button
+              onClick={refresh}
+              style={{
+                width: 22, height: 22,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', background: 'transparent',
+                cursor: 'pointer', transition: 'transform 0.15s, opacity 0.15s', padding: 0
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'rotate(45deg)'; e.currentTarget.style.opacity = '0.75'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'rotate(0deg)'; e.currentTarget.style.opacity = '1'; }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <defs>
+                  <linearGradient id="refreshGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffb37c" />
+                    <stop offset="100%" stopColor="#38bdf8" />
+                  </linearGradient>
+                </defs>
+                <polyline points="23 4 23 10 17 10" stroke="url(#refreshGradient)" />
+                <polyline points="1 20 1 14 7 14" stroke="url(#refreshGradient)" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="url(#refreshGradient)" />
+              </svg>
+            </button>
           </div>
           <div style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
-            Welcome back, {user?.name}! Role: <span style={{ color: PURPLE, fontWeight: 700, textTransform: 'capitalize' }}>{user?.role}</span>
+            Welcome back, {user?.name}!
           </div>
         </div>
         
@@ -1870,7 +1890,7 @@ export default function Dashboard() {
             <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, padding: 24 }}>
               {workspaceLoading ? (
                 <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>
-                  <div style={{ width: 28, height: 28, border: `3px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <div className="spinner-gradient" style={{ width: 28, height: 28 }} />
                 </div>
               ) : workspaceLead ? (
                 <>
@@ -2132,7 +2152,7 @@ export default function Dashboard() {
             <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
               {modalLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>
-                  <div style={{ width: 28, height: 28, border: `3px solid ${PURPLE}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <div className="spinner-gradient" style={{ width: 28, height: 28 }} />
                 </div>
               ) : userAnalysisData ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

@@ -202,9 +202,9 @@ export default function Leads() {
   ].reduce((a, b) => a + b, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0 pb-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900">All Leads</h1>
           <p className="text-xs text-gray-400 mt-0.5">{total} total leads</p>
@@ -257,7 +257,7 @@ export default function Leads() {
 
       {/* Charts Panel */}
       {showCharts && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in duration-300">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in duration-300 flex-shrink-0 pb-4">
           {/* Bar Chart */}
           <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
@@ -266,7 +266,7 @@ export default function Leads() {
             </div>
             {statsLoading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="w-7 h-7 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 spinner-gradient" />
               </div>
             ) : statusStats.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-gray-300 text-sm">No data available</div>
@@ -296,7 +296,7 @@ export default function Leads() {
             </div>
             {statsLoading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="w-7 h-7 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 spinner-gradient" />
               </div>
             ) : statusStats.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-gray-300 text-sm">No data available</div>
@@ -333,11 +333,10 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Role-based filter tabs */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        {/* Sidebar-style filter tabs */}
-        <div className="flex border-b border-gray-100">
-          <div className="w-52 border-r border-gray-100 p-3 space-y-1 flex-shrink-0">
+      {/* Admin View and Leads table are now two independent, separately positioned cards */}
+      <div className="flex items-stretch gap-6 flex-1 min-h-0">
+        {/* Admin View - separate standalone card, scrolls independently */}
+        <div className="w-52 flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-3 space-y-1 overflow-y-auto">
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 mb-2">
               {isAdmin ? 'Admin View' : 'Caller View'}
             </div>
@@ -379,12 +378,12 @@ export default function Leads() {
                 </div>
               </div>
             )}
-          </div>
+        </div>
 
-          {/* Main content area */}
-          <div className="flex-1 min-w-0">
+        {/* Leads table - separate standalone card, scrolls independently */}
+        <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col overflow-hidden">
             {/* Search & Filters bar */}
-            <div className="flex items-center gap-2 p-3 border-b border-gray-100">
+            <div className="flex items-center gap-2 p-3 border-b border-gray-100 flex-shrink-0">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -418,9 +417,9 @@ export default function Leads() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-auto flex-1 min-h-0">
               <table className="w-full">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-gray-50/70">
                   <tr className="bg-gray-50/70">
                     <th className="px-4 py-3 text-left">
                       <input
@@ -442,7 +441,7 @@ export default function Leads() {
                   {loading ? (
                     <tr>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-16 text-center">
-                        <div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <div className="w-8 h-8 spinner-gradient mx-auto mb-2" />
                         <div className="text-sm text-gray-400">Loading leads...</div>
                       </td>
                     </tr>
@@ -546,7 +545,7 @@ export default function Leads() {
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 flex-shrink-0">
               <span className="text-xs text-gray-400">
                 {total > 0 ? `${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} of ${total}` : '0 results'}
               </span>
@@ -579,7 +578,6 @@ export default function Leads() {
                 </button>
               </div>
             </div>
-          </div>
         </div>
       </div>
     </div>

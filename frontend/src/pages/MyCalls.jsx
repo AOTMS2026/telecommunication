@@ -331,21 +331,23 @@ export default function MyCalls() {
   const isAdmin = user?.role === 'manager' || user?.role === 'admin';
 
   return (
-    <div className="flex gap-0" style={{ height: 'calc(100vh - 48px)' }}>
+    <div className="flex gap-0" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Left: Call list */}
       <div className="w-72 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col">
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-              <Phone className="w-4 h-4 text-indigo-600" />
+              <span className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--btn-gradient)' }}>
+                <Phone className="w-3.5 h-3.5 text-white" />
+              </span>
               {isAdmin ? 'My Logged Calls' : 'My Calls'}
             </h2>
-            <button onClick={fetchLeads} className="text-gray-400 hover:text-indigo-600 transition-colors">
+            <button onClick={fetchLeads} className="text-gray-400 hover:text-[#3b82f6] transition-colors">
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
           {isAdmin && (
-            <p className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg mb-2">
+            <p className="text-xs font-medium text-white px-2 py-1 rounded-lg mb-2" style={{ background: 'var(--btn-gradient)' }}>
               Showing only calls you personally made
             </p>
           )}
@@ -360,7 +362,7 @@ export default function MyCalls() {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="w-6 h-6 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 spinner-gradient" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 px-4">

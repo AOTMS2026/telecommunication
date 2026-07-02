@@ -38,6 +38,36 @@ body {
   .status-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
+  .template-name-list {
+    font-size: 13px; font-weight: 700; color: var(--theme-text-strong); margin-bottom: 3px;
+  }
+  .template-message-list {
+    font-size: 11.5px; color: #888; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .template-name-detail {
+    font-size: 18px; font-weight: 700; color: var(--theme-text-strong);
+  }
+  .template-message-detail {
+    flex: 1; background: var(--theme-surface-faint7); border-radius: 10px; padding: 18px;
+    font-size: 13.5px; color: #333; line-height: 1.7; white-space: pre-wrap;
+    border: 1.5px solid var(--theme-border-tint);
+  }
+  .tpl-list-panel {
+    background: #fff; border: 1px solid var(--theme-border-tint); border-radius: 12px;
+    display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden;
+  }
+  .tpl-preview-panel {
+    background: #fff; border: 1px solid var(--theme-border-tint); border-radius: 12px;
+    padding: 24px; display: flex; flex-direction: column; min-height: 0; height: 100%;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .spinner-gradient {
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #ffb37c, #38bdf8, #ffb37c);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+    animation: spin 0.9s linear infinite;
+  }
 }
 
 .sidebar-nav-item {
