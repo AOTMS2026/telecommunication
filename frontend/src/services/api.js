@@ -31,9 +31,6 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetPassword: (token, data) => api.post(`/auth/reset-password/${token}`, data),
-  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  verifyResetToken: (token) => api.get(`/auth/reset-password/${token}`),
-  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
 };
 
 export const leadsAPI = {
