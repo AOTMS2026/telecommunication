@@ -21,7 +21,7 @@ const EXCLUDED_STATUSES = ['Do Not Call', 'Invalid Number', 'Converted', 'Alread
 
 function withinCallWindow(window) {
   if (!window || (window.startHour == null && window.endHour == null)) return true;
-  const hour = new Date().getHours();
+  const hour = (new Date().getUTCHours() + 5) % 24; // UTC -> IST (+5:30, minute part ignored for hour check)
   const start = window.startHour ?? 0;
   const end = window.endHour ?? 24;
   return hour >= start && hour < end;

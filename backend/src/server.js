@@ -1,4 +1,4 @@
-// Nodemon restart trigger v6
+// Nodemon restart trigger v7
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -11,8 +11,8 @@ const { initFCM } = require('./services/fcm');
 const http = require('node:http');
 require('./models/ImportHistory');
 require('./models/Payment');
-// const { WebSocketServer } = require('ws');
-// const { handleConversationRelay } = require('./services/aiCaller/relayHandler');
+const { WebSocketServer } = require('ws');
+const { handleCall } = require('./services/aiCaller/orchestrator'); // NEW: in-process AI call orchestrator
 const { startSchedulePoller } = require('./services/workflowEngine');
 const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
 const campaignEngine = require('./services/aiCaller/campaignEngine');
@@ -87,14 +87,12 @@ app.use('/uploads', (req, res, next) => {
 app.use('/api/workflows', apiLimiter, require('./routes/workflows'));
 app.use('/api/salesforms', apiLimiter, require('./routes/salesforms'));
 app.use('/api/api-templates', apiLimiter, require('./routes/apiTemplates'));
-// Public inbound webhook endpoint (no auth — secured by token in URL)
 app.use('/api/webhooks', apiLimiter, require('./routes/webhooks'));
 app.use('/api/access-tokens', apiLimiter, require('./routes/accessTokens'));
 app.use('/api/call-iq-agents', apiLimiter, require('./routes/callIqAgents'));
 app.use('/api/mcp', apiLimiter, require('./routes/mcp'));
 app.use('/api/n8n', apiLimiter, require('./routes/n8n'));
 app.use('/api/email-campaigns', apiLimiter, require('./routes/emailCampaigns'));
-
 app.use('/api/lead-stages', apiLimiter, require('./routes/leadStages'));
 app.use('/api/lead-fields', apiLimiter, require('./routes/leadFields'));
 app.use('/api/call-feedback', apiLimiter, require('./routes/callFeedback'));
@@ -102,13 +100,11 @@ app.use('/api/custom-actions', apiLimiter, require('./routes/customActions'));
 app.use('/api/workspace-preferences', apiLimiter, require('./routes/workspacePreferences'));
 app.use('/api/permission-templates', apiLimiter, require('./routes/permissionTemplates'));
 app.use('/api/billing', apiLimiter, require('./routes/billing'));
-
-// Public API — authenticated via access tokens (atms_...), not JWT
 app.use('/api/public', apiLimiter, require('./routes/publicApi'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', app: 'AOTMS Backend' }));
 
-app.set('trust proxy', 1)
+app.set('trust proxy', 1);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
@@ -119,21 +115,30 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
-// ── WebSocket server for Twilio ConversationRelay (deprecated, kept for rollback)
-// const wss = new WebSocketServer({ server, path: '/ai-caller/relay' });
-// wss.on('connection', (ws) => handleConversationRelay(ws));
+// ── AI Call Orchestrator WebSocket ────────────────────────────────────────────
+// Replaces the external RunPod/Python orchestrator entirely.
+// Exotel's AgentStream connects here (wss://your-render-url/ai-caller/stream)
+// for each outbound call. Each connection gets its own handleCall() instance
+// running Sarvam STT → GPT-4.1-mini → Sarvam TTS in-process.
+// No GPU, no Docker, no RunPod — just this Node.js process on Render.
+const wss = new WebSocketServer({ server, path: '/ai-caller/stream' });
+wss.on('connection', (ws, req) => {
+  handleCall(ws, req).catch((err) =>
+    console.error('[orchestrator] unhandled error in handleCall:', err.message)
+  );
+});
+console.log('[server] AI orchestrator WS mounted at /ai-caller/stream');
 
 server.listen(PORT, () => {
   console.log(`🚀 AOTMS Server running on port ${PORT}`);
   startSchedulePoller(60 * 1000);
   startOverdueTaskChecker(5 * 60 * 1000);
-
   campaignEngine.startPoller();
   callbackEngine.startPoller();
   console.log('[server] AI campaign engine and callback engine started');
 });
 
-// Keep-alive self-ping every 10 minutes
+// Keep-alive self-ping every 10 minutes (Render free tier spin-down prevention)
 const SELF_URL = process.env.PUBLIC_BASE_URL;
 if (SELF_URL) {
   setInterval(() => {
