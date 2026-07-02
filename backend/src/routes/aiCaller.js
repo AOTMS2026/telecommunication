@@ -41,13 +41,14 @@ router.post('/trigger/:leadId', protect, async (req, res) => {
 });
 
 /**
- * GET/POST /api/ai-caller/stream-url/:leadId
- * Used ONLY if you configure the Exotel Voicebot Applet to use an HTTPS
- * resolver instead of a static WSS URL. Returns { "url": "wss://..." }.
+ * GET/POST /api/ai-caller/stream-url  (and /stream-url/:leadId for back-compat)
+ * Used by the App Bazaar Voicebot Applet's dynamic-URL fetch. Exotel calls
+ * this with leadId/campaignId as query params (set in dialer.js's flowUrl).
+ * Returns { "url": "wss://..." }.
  * NOT protected — called by Exotel directly.
  */
-router.all('/stream-url/:leadId', (req, res) => {
-  const leadId = req.params.leadId || '';
+router.all(['/stream-url', '/stream-url/:leadId'], (req, res) => {
+  const leadId = req.params.leadId || req.query.leadId || req.body?.leadId || '';
   const campaignId = req.query.campaignId || req.body?.campaignId || '';
 
   const baseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');

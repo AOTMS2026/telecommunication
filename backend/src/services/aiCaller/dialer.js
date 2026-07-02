@@ -65,20 +65,24 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   const exophone = process.env.EXOTEL_EXOPHONE;
   if (!exophone) throw new Error('EXOTEL_EXOPHONE is not configured on the server');
 
+  const appId = process.env.EXOTEL_APP_BAZAAR_ID;
+  if (!appId) throw new Error('EXOTEL_APP_BAZAAR_ID is not configured on the server');
+
   const toNumber = normalizePhone(lead.phone);
   const campaignQuery = campaign ? `&campaignId=${campaign._id}` : '';
-
-  // The orchestrator WS path matches what server.js mounts: /ai-caller/stream
-  const streamUrl = `${wsBase}/ai-caller/stream?leadId=${lead._id}${campaignQuery}`;
 
   try {
     const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
 
+    // App Bazaar Voicebot Applet flow — the applet's own dynamic-URL fetch
+    // (/api/ai-caller/stream-url) resolves the actual WSS endpoint per-call
+    // using the leadId/campaignId passed here as query params.
+    const flowUrl = `http://my.exotel.com/${accountSid}/exoml/start_voice/${appId}?leadId=${lead._id}${campaignQuery}`;
+
     const params = new URLSearchParams({
       from: toNumber,
       callerid: exophone,
-      streamurl: streamUrl,
-      streamtype: 'bidirectional',
+      url: flowUrl,
       statuscallback: `${baseUrl}/api/ai-caller/status?leadId=${lead._id}${campaignQuery}`,
       'statuscallbackevents[]': 'terminal',
     });
