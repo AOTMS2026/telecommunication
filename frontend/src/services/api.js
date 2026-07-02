@@ -340,4 +340,13 @@ export const billingAPI = {
   buyLicense: (data) => api.post('/billing/buy', data),
 };
 
+// ── WhatsApp Broadcasts ─────────────────────────────────────────────────────
+export const broadcastsAPI = {
+  getAll: (params) => api.get('/broadcasts', { params }),
+  getOne: (id) => api.get(`/broadcasts/${id}`),
+  preview: (filters) => api.post('/broadcasts/preview', { filters }),
+  create: (data) => api.post('/broadcasts', data),
+  update: (id, data) => api.put(`/broadcasts/${id}`, data),
+};
+
 export default api;

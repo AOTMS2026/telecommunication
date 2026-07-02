@@ -6,106 +6,125 @@ const { broadcastWebhooks } = require('../automationRunners');
 
 const WA_API = 'https://graph.facebook.com/v19.0';
 
-// Send a WhatsApp text message
-async function sendTextMessage(phoneNumberId, accessToken, to, text) {
-  const res = await axios.post(`${WA_API}/${phoneNumberId}/messages`, {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to,
-    type: 'text',
-    text: { preview_url: false, body: text },
-  }, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-  });
+// ── Webhook verification (Meta hub.challenge handshake) ────────────────────────
+function verifyWebhookToken(mode, token, challenge, verifyToken) {
+  if (mode === 'subscribe' && token && verifyToken && token === verifyToken) {
+    return { valid: true, challenge };
+  }
+  return { valid: false, challenge: null };
+}
+
+// ── Send a plain text message ───────────────────────────────────────────────────
+async function sendTextMessage(phoneNumberId, accessToken, to, message) {
+  const res = await axios.post(
+    `${WA_API}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'text',
+      text: { body: message },
+    },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
   return res.data;
 }
 
-// Send a WhatsApp template message
-async function sendTemplateMessage(phoneNumberId, accessToken, to, templateName, languageCode = 'en_US', components = []) {
-  const res = await axios.post(`${WA_API}/${phoneNumberId}/messages`, {
-    messaging_product: 'whatsapp',
-    to,
-    type: 'template',
-    template: { name: templateName, language: { code: languageCode }, components },
-  }, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-  });
+// ── Send a pre-approved template message ────────────────────────────────────────
+async function sendTemplateMessage(phoneNumberId, accessToken, to, templateName, languageCode, components) {
+  const res = await axios.post(
+    `${WA_API}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: languageCode || 'en_US' },
+        components: components || [],
+      },
+    },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
   return res.data;
 }
 
-// Get phone number details
-async function getPhoneNumberDetails(phoneNumberId, accessToken) {
-  const res = await axios.get(`${WA_API}/${phoneNumberId}`, {
-    params: { fields: 'verified_name,display_phone_number,status,quality_rating', access_token: accessToken },
-  });
-  return res.data;
-}
-
-// Get message templates
+// ── List approved message templates for a WABA ─────────────────────────────────
 async function getTemplates(wabaId, accessToken) {
   const res = await axios.get(`${WA_API}/${wabaId}/message_templates`, {
-    params: { access_token: accessToken, fields: 'name,status,language,category,components', limit: 100 },
+    params: { access_token: accessToken, limit: 100 },
   });
   return res.data.data || [];
 }
 
-// Handle incoming WhatsApp webhook event
+// ── Handle incoming WhatsApp Cloud webhook events ───────────────────────────────
+// Creates a Lead for first-time senders and fires workflow/webhook events for
+// every inbound message so automations (auto-reply, assignment, etc.) can react.
 async function handleWhatsAppWebhookEvent(body, integration) {
-  const entry = body.entry?.[0];
-  const changes = entry?.changes?.[0];
-  const value = changes?.value;
+  const entries = body.entry || [];
+  let created = 0;
+  let processed = 0;
 
-  if (!value || !value.messages) return { processed: false };
+  for (const entry of entries) {
+    for (const change of entry.changes || []) {
+      const value = change.value || {};
+      const messages = value.messages || [];
+      const contacts = value.contacts || [];
 
-  const msg = value.messages[0];
-  const contact = value.contacts?.[0];
+      for (const msg of messages) {
+        const phone = msg.from;
+        if (!phone) continue;
 
-  const phone = msg.from; // WhatsApp number
-  const name = contact?.profile?.name || 'WhatsApp Lead';
-  const text = msg.text?.body || '';
-  const msgType = msg.type;
+        const contact = contacts.find(c => c.wa_id === phone);
+        const name = contact?.profile?.name || 'WhatsApp Lead';
+        const text = msg.text?.body || '';
 
-  // Create lead if not exists
-  const existing = await Lead.findOne({ phone });
+        let lead = await Lead.findOne({ phone });
 
-  if (!existing) {
-    const lead = await Lead.create({
-      name,
-      phone,
-      leadSource: 'Whatsapp',
-      status: 'Fresh',
-      campaign: integration.defaultCampaign || undefined,
-      assignedTo: integration.defaultAssignedTo || undefined,
-      notes: text ? [{ content: `First WhatsApp message: ${text}`, type: 'note' }] : [],
-    });
+        if (!lead) {
+          lead = await Lead.create({
+            name,
+            phone,
+            leadSource: 'Whatsapp',
+            status: 'Fresh',
+            campaign: integration.defaultCampaign || undefined,
+            assignedTo: integration.defaultAssignedTo || undefined,
+          });
 
-    await Integration.findByIdAndUpdate(integration._id, {
-      $inc: { totalLeadsImported: 1 },
-      $set: { lastLeadAt: new Date() },
-    });
+          await Integration.findByIdAndUpdate(integration._id, {
+            $inc: { totalLeadsImported: 1 },
+            $set: { lastLeadAt: new Date() },
+          });
 
-    const ctx = { lead, user: null, changes: { source: 'whatsapp' } };
-    fireEvent('lead.created', ctx).catch(() => {});
-    fireEvent('lead.whatsapp_lead', ctx).catch(() => {});
-    broadcastWebhooks('lead.created', { lead: { id: lead._id, name, phone, source: 'whatsapp' } }).catch(() => {});
+          created++;
+        }
 
-    return { created: true, leadId: lead._id };
+        lead.activities = lead.activities || [];
+        lead.activities.push({
+          type: 'whatsapp',
+          description: text,
+        });
+        await lead.save();
+
+        const ctx = { lead, user: null, changes: { source: 'whatsapp', message: text } };
+        fireEvent('lead.created', ctx).catch(() => {});
+        fireEvent('lead.whatsapp_lead', ctx).catch(() => {});
+        broadcastWebhooks('lead.whatsapp_message', {
+          lead: { id: lead._id, name: lead.name, phone: lead.phone, source: 'whatsapp' },
+          message: text,
+        }).catch(() => {});
+
+        processed++;
+      }
+    }
   }
 
-  // Existing lead — log message as note
-  await Lead.findByIdAndUpdate(existing._id, {
-    $push: { notes: { content: `WhatsApp (${msgType}): ${text}`, type: 'note', createdAt: new Date() } },
-  });
-
-  return { created: false, leadId: existing._id };
+  return { processed, created };
 }
 
-// Verify webhook token
-function verifyWebhookToken(mode, token, challenge, verifyToken) {
-  if (mode === 'subscribe' && token === verifyToken) {
-    return { valid: true, challenge };
-  }
-  return { valid: false };
-}
-
-module.exports = { sendTextMessage, sendTemplateMessage, getPhoneNumberDetails, getTemplates, handleWhatsAppWebhookEvent, verifyWebhookToken };
+module.exports = {
+  verifyWebhookToken,
+  sendTextMessage,
+  sendTemplateMessage,
+  getTemplates,
+  handleWhatsAppWebhookEvent,
+};
