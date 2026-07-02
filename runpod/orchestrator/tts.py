@@ -70,7 +70,7 @@ async def _synthesize_async(text: str, voice: str) -> bytes:
     return bytes(mp3_bytes)
 
 
-def synthesize_to_pcm16(text: str, language: str | None = None) -> bytes:
+async def synthesize_to_pcm16(text: str, language: str | None = None) -> bytes:
     """
     `language` selects which Telugu/English Edge TTS voice to use. Defaults
     to Telugu, matching the current customer base (see promptBuilder.js /
@@ -94,7 +94,7 @@ def synthesize_to_pcm16(text: str, language: str | None = None) -> bytes:
 
     voice = _VOICES.get(language, _DEFAULT_VOICE)
 
-    mp3_bytes = asyncio.run(_synthesize_async(text, voice))
+    mp3_bytes = await _synthesize_async(text, voice)
 
     # Edge TTS returns MP3 — decode to raw PCM via pydub (uses ffmpeg, already
     # installed in the Dockerfile), then resample to 8kHz mono PCM16 for Exotel.

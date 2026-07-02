@@ -15,6 +15,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Fix: install cuDNN 8 libs required by ctranslate2==4.4.0 + faster-whisper
+RUN pip install --no-cache-dir nvidia-cublas-cu12 nvidia-cudnn-cu12==8.*
+ENV LD_LIBRARY_PATH=/usr/local/lib/python3.10/dist-packages/nvidia/cublas/lib:/usr/local/lib/python3.10/dist-packages/nvidia/cudnn/lib:$LD_LIBRARY_PATH
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

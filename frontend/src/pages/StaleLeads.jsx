@@ -79,14 +79,14 @@ export default function StaleLeads() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>Stale Leads Alert Console</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>Idle Leads Alert Console</h2>
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
             Monitor and recover leads falling through the cracks (idle 3+ days or overdue by 24h+).
           </p>
         </div>
         <button
           onClick={() => { setLoading(true); fetchData(); }}
-          style={{ background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ background: PURPLE, color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
           Refresh Console
         </button>
@@ -97,7 +97,7 @@ export default function StaleLeads() {
         <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 20 }}>🛑</div>
           <div>
-            <div style={{ fontSize: 13, color: TEXT_MUTED }}>Leads Stale (Idle 3+ Days)</div>
+            <div style={{ fontSize: 13, color: TEXT_MUTED }}>Leads Idle (3+ Days)</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.staleLeadsCount || 0}</div>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function StaleLeads() {
             <span style={{ color: RED }}>•</span> Leads with No Contact in 3+ Days ({staleLeads.length} visible)
           </h3>
           {staleLeads.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 Outstanding! No stale leads found in the system.</div>
+            <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 Outstanding! No idle leads found in the system.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>

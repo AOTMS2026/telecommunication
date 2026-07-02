@@ -9,7 +9,7 @@ const HOVER_BG = '#f0f9ff';
 const TEXT = '#374151';
 const ICON_COLOR = '#6b7280';
 const SECTION_COLOR = '#94a3b8';
-const ACCENT = '#5b3fc7';
+const ACCENT = '#ffab5e';
 const BORDER_COLOR = '#e0f0ff';
 const COLLAPSED_W = 48;
 const EXPANDED_W = 210;
@@ -228,7 +228,7 @@ export default function Sidebar() {
             <>
               <SectionLabel text="Management" />
               <NavItem to="/team-operations" icon={Icons.teamOps}    label="Team Operations" />
-              <NavItem to="/stale-leads"     icon={Icons.staleLeads} label="Stale Leads" />
+              <NavItem to="/stale-leads"     icon={Icons.staleLeads} label="Idle Leads" />
               <NavItem to="/blocklist"       icon={Icons.blocklist}  label="Blocklist" />
               <NavItem to="/users"           icon={Icons.users}      label="Users" />
 

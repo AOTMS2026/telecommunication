@@ -13,7 +13,7 @@ const TEXT_SUB = '#64748b';
 const SURFACE = '#ffffff';
 const BG = 'var(--theme-surface-faint)';
 const BORDER = 'var(--theme-border-tint)';
-const GRADIENT = 'linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-light) 100%)';
+const GRADIENT = 'var(--btn-gradient)';
 const GRADIENT_SUBTLE = 'linear-gradient(135deg, var(--theme-surface-tint2) 0%, var(--theme-surface-faint) 100%)';
 
 const globalStyles = `

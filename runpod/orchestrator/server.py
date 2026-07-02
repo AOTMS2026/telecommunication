@@ -70,7 +70,26 @@ class CallSession:
 
 
 async def handle_connection(ws):
+    # EXOTEL: when using the direct /calls/connect API with StreamUrl containing
+    # query params (?leadId=xxx&campaignId=yyy), Exotel passes those params in the
+    # WebSocket handshake URL itself — NOT in the start event's custom_parameters
+    # (that field only works for params configured in the Applet dashboard).
+    # Extract them here from ws.request.path at connection time.
+    from urllib.parse import urlparse, parse_qs
+    # websockets 12.0: path is on ws.request.path (not directly on ws)
+    try:
+        path = ws.request.path
+    except AttributeError:
+        path = getattr(ws, 'path', '') or ''
+    qs = parse_qs(urlparse(path).query)
+    url_lead_id = (qs.get('leadId') or qs.get('leadid') or [None])[0]
+    url_campaign_id = (qs.get('campaignId') or qs.get('campaignid') or [None])[0]
+    print(f"[server] new connection path={path} leadId={url_lead_id}")
+
     session = CallSession(call_sid="")
+    # Pre-populate from URL so handle_start can use them even if custom_parameters is empty
+    session.lead_id = url_lead_id
+    session.campaign_id = url_campaign_id
 
     async for raw in ws:
         try:
@@ -115,11 +134,17 @@ async def handle_connection(ws):
 async def handle_start(ws, session: CallSession, message: dict):
     start = message.get("start", {})
     session.call_sid = start.get("call_sid", "")
-    session.stream_sid = start.get("stream_sid", "")   # EXOTEL: snake_case field name
+    session.stream_sid = start.get("stream_sid", "")
 
-    custom_params = start.get("custom_parameters", {})  # EXOTEL: snake_case field name
-    session.lead_id = custom_params.get("leadId")
-    session.campaign_id = custom_params.get("campaignId")
+    # EXOTEL: custom_parameters only populated when using Applet dashboard config.
+    # When using direct /calls/connect API with ?leadId= in StreamUrl, leadId
+    # is already set on session from the URL query string in handle_connection.
+    # Only override here if custom_parameters actually has a value.
+    custom_params = start.get("custom_parameters", {})
+    if custom_params.get("leadId"):
+        session.lead_id = custom_params["leadId"]
+    if custom_params.get("campaignId"):
+        session.campaign_id = custom_params["campaignId"]
 
     print(f"[server] call started: {session.call_sid} stream={session.stream_sid} lead={session.lead_id}")
 
@@ -233,7 +258,7 @@ async def process_speech_segment(ws, session: CallSession, pcm16_bytes: bytes) -
 
 
 async def send_tts(ws, session: CallSession, text: str):
-    pcm16_audio = synthesize_to_pcm16(text, language=session.language)
+    pcm16_audio = await synthesize_to_pcm16(text, language=session.language)
     if not pcm16_audio:
         return
 
