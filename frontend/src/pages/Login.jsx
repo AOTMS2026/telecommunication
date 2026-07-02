@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import useTheme from '../hooks/useTheme';
 
