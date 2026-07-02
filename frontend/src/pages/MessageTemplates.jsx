@@ -132,7 +132,7 @@ export default function MessageTemplates() {
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 0 }}>
+    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 0, height: 'calc(100vh - 64px)', boxSizing: 'border-box', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--theme-text-strong)' }}>Message Templates</div>
@@ -155,9 +155,9 @@ export default function MessageTemplates() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, minHeight: 500 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {/* Left Sidebar */}
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div className="tpl-list-panel">
           {activeTab === 'EMAIL' ? (
             <>
               {/* Email tab header: search + new template */}
@@ -214,7 +214,7 @@ export default function MessageTemplates() {
           )}
 
           {/* Template List */}
-          <div style={{ overflowY: 'auto', flex: 1 }}>
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, overscrollBehavior: 'contain' }}>
             {loading ? (
               <div style={{ padding: 20, textAlign: 'center', color: '#888', fontSize: 13 }}>Loading...</div>
             ) : filteredTemplates.length === 0 ? (
@@ -232,8 +232,8 @@ export default function MessageTemplates() {
                   borderLeft: selected?._id === t._id ? '3px solid var(--theme-primary)' : '3px solid transparent',
                   transition: 'all 0.12s'
                 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--theme-text-strong)', marginBottom: 3 }}>/{t.shortcut}</div>
-                <div style={{ fontSize: 11.5, color: '#888', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                <div className="template-name-list">/{t.shortcut}</div>
+                <div className="template-message-list">
                   {t.bodyFormat === 'html' ? (t.subject || 'Rich email template') : t.message}
                 </div>
                 {t.isShared && <div style={{ fontSize: 10, color: 'var(--theme-primary)', marginTop: 3, fontWeight: 600 }}>Shared</div>}
@@ -243,7 +243,7 @@ export default function MessageTemplates() {
         </div>
 
         {/* Right — Preview */}
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: 24, display: 'flex', flexDirection: 'column' }}>
+        <div className="tpl-preview-panel">
           {!selected ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 14 }}>
               Select a template to preview
@@ -252,7 +252,7 @@ export default function MessageTemplates() {
             <>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)' }}>/{selected.shortcut}</div>
+                  <div className="template-name-detail">/{selected.shortcut}</div>
                   <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                     Created by {selected.createdBy?.name || 'You'} · {selected.isShared ? 'Shared with team' : 'Private'}
                   </div>
@@ -281,12 +281,7 @@ export default function MessageTemplates() {
                   />
                 </div>
               ) : (
-                <div style={{
-                  flex: 1, background: 'var(--theme-surface-faint7)', borderRadius: 10,
-                  padding: 18, fontSize: 13.5, color: '#333',
-                  lineHeight: 1.7, whiteSpace: 'pre-wrap',
-                  border: '1.5px solid var(--theme-border-tint)'
-                }}>
+                <div className="template-message-detail">
                   {selected.message}
                 </div>
               )}

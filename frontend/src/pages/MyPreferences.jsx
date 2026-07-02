@@ -100,7 +100,7 @@ export default function MyPreferences() {
   ];
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 48px)', background: 'var(--theme-surface-faint3)', padding: '32px 32px' }}>
+    <div style={{ minHeight: 'calc(100vh - 64px)', background: 'var(--theme-surface-faint3)', padding: '32px 32px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ fontSize: 15, color: '#666', marginBottom: 24, fontWeight: 500 }}>My Preferences</div>
 

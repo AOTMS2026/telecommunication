@@ -172,7 +172,7 @@ export default function IntegrationDetail() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-      <div style={{ width: 32, height: 32, border: '3px solid var(--theme-primary-alt)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div className="spinner-gradient" style={{ width: 32, height: 32 }} />
     </div>
   );
 

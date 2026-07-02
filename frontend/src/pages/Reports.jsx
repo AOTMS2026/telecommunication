@@ -97,7 +97,7 @@ function LeaderboardTab() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-12"><div className="w-8 h-8 spinner-gradient" /></div>
       ) : data.length === 0 ? (
         <div className="text-center py-12 text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">No calls recorded for this period</div>
       ) : (
@@ -290,7 +290,7 @@ function LeadViewCharts({ summary }) {
       <div className="p-5">
         {loading ? (
           <div className="flex justify-center items-center h-56">
-            <div className="w-8 h-8 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 spinner-gradient" />
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex items-center justify-center h-56 text-gray-300 text-sm">No data available</div>
@@ -580,7 +580,7 @@ export default function Reports() {
             </thead>
             <tbody>
               {tasksLoading ? (
-                <tr><td colSpan={7} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={7} className="px-4 py-10 text-center"><div className="w-6 h-6 spinner-gradient mx-auto" /></td></tr>
               ) : tasksData.length === 0 ? (
                 <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400 text-sm">No tasks found.</td></tr>
               ) : (
@@ -629,7 +629,7 @@ export default function Reports() {
             </thead>
             <tbody>
               {callsLoading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center"><div className="w-6 h-6 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mx-auto" /></td></tr>
+                <tr><td colSpan={5} className="px-4 py-10 text-center"><div className="w-6 h-6 spinner-gradient mx-auto" /></td></tr>
               ) : callsList.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400 text-sm">No call summaries available.</td></tr>
               ) : (

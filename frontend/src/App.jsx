@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout/Layout';
-import Landing from './pages/Landing';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -50,7 +49,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 spinner-gradient" />
         <p className="text-gray-500 text-sm">Loading AOTMS...</p>
       </div>
     </div>
@@ -69,11 +68,11 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
-          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/reset-password/:token" element={<PublicRoute><ResetPassword /></PublicRoute>} />
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="my-calls" element={<MyCalls />} />
             <Route path="call-recordings" element={<CallRecordings />} />
@@ -115,7 +114,7 @@ export default function App() {
             <Route path="permission-templates" element={<PermissionTemplates />} />
             <Route path="n8n-settings" element={<N8nSettings />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
