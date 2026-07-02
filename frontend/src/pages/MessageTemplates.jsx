@@ -173,7 +173,7 @@ export default function MessageTemplates() {
                 <button
                   title="New Email Template"
                   onClick={() => setShowEmailTemplateModal(true)}
-                  style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--theme-primary)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
+                  style={{ width: 30, height: 30, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--btn-gradient)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer' }}
                 >
                   <Plus size={15} />
                 </button>
@@ -182,7 +182,7 @@ export default function MessageTemplates() {
               {/* Primary email actions */}
               <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--theme-surface-tint)' }}>
                 <button onClick={openWizardFresh} style={{
-                  padding: '10px 12px', background: 'linear-gradient(135deg,var(--theme-primary),var(--theme-primary-mid))',
+                  padding: '10px 12px', background: 'var(--btn-gradient)',
                   color: '#fff', border: 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
                 }}>
@@ -207,7 +207,7 @@ export default function MessageTemplates() {
                 <option>Shared</option>
               </select>
               <button onClick={() => setShowNewModal(true)} style={{
-                padding: '6px 12px', background: 'var(--theme-primary)', color: '#fff', border: 'none',
+                padding: '6px 12px', background: 'var(--btn-gradient)', color: '#fff', border: 'none',
                 borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
               }}>+ New</button>
             </div>
@@ -325,7 +325,7 @@ export default function MessageTemplates() {
               </label>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button onClick={() => setShowNewModal(false)} style={{ padding: '10px 18px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 8, fontSize: 13, fontWeight: 600, background: '#fff', color: 'var(--theme-text-strong)', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleAdd} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--theme-primary)', color: '#fff', cursor: 'pointer' }}>Save Template</button>
+                <button onClick={handleAdd} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--btn-gradient)', color: '#fff', cursor: 'pointer' }}>Save Template</button>
               </div>
             </div>
           </div>

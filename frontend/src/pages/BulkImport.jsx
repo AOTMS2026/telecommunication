@@ -25,7 +25,7 @@ const Card = ({ children, style={} }) => (
   <div style={{ background:'#fff', borderRadius:14, boxShadow:'0 2px 16px rgba(var(--theme-primary-rgb), 0.08)', padding:24, ...style }}>{children}</div>
 );
 const Btn = ({ children, onClick, disabled, variant='primary', style={} }) => {
-  const variants = { primary:{background:PURPLE,color:'#fff'}, outline:{background:'#fff',color:PURPLE,border:`1.5px solid ${PURPLE}`}, danger:{background:RED,color:'#fff'}, success:{background:GREEN,color:'#fff'} };
+  const variants = { primary:{background:'var(--btn-gradient)',color:'#fff'}, outline:{background:'#fff',color:PURPLE,border:`1.5px solid ${PURPLE}`}, danger:{background:RED,color:'#fff'}, success:{background:GREEN,color:'#fff'} };
   return <button onClick={onClick} disabled={disabled} style={{ padding:'10px 24px', borderRadius:8, fontWeight:600, fontSize:14, cursor:disabled?'not-allowed':'pointer', border:'none', opacity:disabled?.5:1, ...variants[variant], ...style }}>{children}</button>;
 };
 const InfoBox = ({ type='info', children }) => {
