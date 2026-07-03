@@ -114,7 +114,7 @@ export default function IntegrationSetup() {
     setActivating(true);
     setError('');
     try {
-      const res = await integrationsAPI.create({ type, config });
+      const res = await integrationsAPI.create({ type, name: catalogItem.name, config });
       navigate(`/integrations/${res.data._id}`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to activate integration');
