@@ -13,6 +13,19 @@ function verifySignature(payload, signature, appSecret) {
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
 
+// Exchange OAuth "code" (from redirect) for a short-lived user access token
+async function exchangeCodeForToken(code, redirectUri) {
+  const res = await axios.get(`${FB_API}/oauth/access_token`, {
+    params: {
+      client_id: process.env.FACEBOOK_APP_ID,
+      client_secret: process.env.FACEBOOK_APP_SECRET,
+      redirect_uri: redirectUri,
+      code,
+    },
+  });
+  return res.data.access_token;
+}
+
 // Exchange short-lived token for long-lived token (60 days)
 async function getLongLivedToken(shortToken, appId, appSecret) {
   const res = await axios.get(`${FB_API}/oauth/access_token`, {
@@ -171,4 +184,4 @@ async function handleFacebookWebhookEvent(body, integration) {
   return { created };
 }
 
-module.exports = { verifySignature, getLongLivedToken, getUserPages, getPageForms, subscribePage, pullLeadsFromForm, handleFacebookWebhookEvent };
+module.exports = { verifySignature, exchangeCodeForToken, getLongLivedToken, getUserPages, getPageForms, subscribePage, pullLeadsFromForm, handleFacebookWebhookEvent };
