@@ -142,7 +142,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
           sample_rate: 8000, // per PDF: matches Exotel audio engine
         },
       }));
-      ws.send(JSON.stringify({ text }));
+      ws.send(JSON.stringify({ type: 'text', data: { text } }));
     });
 
     ws.on('message', (raw) => {
