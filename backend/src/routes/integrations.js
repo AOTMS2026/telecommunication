@@ -54,7 +54,10 @@ router.get('/catalog', protect, (req, res) => {
 
 router.get('/', protect, async (req, res) => {
   try {
-    const saved = await Integration.find().sort({ createdAt: -1 });
+    const saved = await Integration.find()
+      .populate('defaultCampaign', 'name')
+      .populate('defaultAssignedTo', 'name role')
+      .sort({ createdAt: -1 });
     const active = saved.filter(i => i.status === 'active');
     const pending = saved.filter(i => i.status !== 'active');
     const savedTypes = new Set(saved.map(i => i.type));
@@ -140,7 +143,9 @@ router.get('/facebook/oauth/callback', async (req, res) => {
 
 router.get('/:id', protect, async (req, res) => {
   try {
-    const integration = await Integration.findById(req.params.id);
+    const integration = await Integration.findById(req.params.id)
+      .populate('defaultCampaign', 'name')
+      .populate('defaultAssignedTo', 'name role');
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     res.json(integration);
   } catch (err) {
@@ -168,7 +173,9 @@ router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
       const m = String(body.config.sheetId).trim().match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
       body.config = { ...body.config, sheetId: m ? m[1] : String(body.config.sheetId).trim() };
     }
-    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: body }, { new: true });
+    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: body }, { new: true })
+      .populate('defaultCampaign', 'name')
+      .populate('defaultAssignedTo', 'name role');
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     res.json(integration);
   } catch (err) {
