@@ -48,7 +48,14 @@ const upload = multer({
 //   +91-9876543210.amr
 //   Recording_919876543210.wav
 function extractPhoneFromFilename(filename) {
-  const name = path.basename(filename, path.extname(filename));
+  let name = path.basename(filename, path.extname(filename));
+
+  // This app's own uploader names files as "<uploadTimestamp>_<agentName> <recordedAt>.ext"
+  // e.g. "1783065247777_Mahesh 2026-07-02 14-00-37.m4a" — neither the leading
+  // timestamp nor the trailing date/time is a phone number, but both are long
+  // digit runs that used to get mistaken for one. Strip both before scanning.
+  name = name.replace(/^\d{10,}_/, '');                              // leading upload timestamp
+  name = name.replace(/\s+\d{4}-\d{2}-\d{2}[ _]\d{2}-\d{2}-\d{2}$/, ''); // trailing "YYYY-MM-DD HH-MM-SS"
 
   // Match sequences of digits (with optional +, -, spaces) that look like phone numbers
   const matches = name.match(/[\+]?[\d][\d\s\-]{7,}/g);
@@ -93,10 +100,16 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       return res.status(400).json({ error: 'No audio file received (field name must be "audio")' });
     }
 
-    const { leadId, recordedAt } = req.body;
+    const { leadId, recordedAt, phone: bodyPhone } = req.body;
 
-    // Extract phone from original filename
-    const extractedPhone = extractPhoneFromFilename(req.file.originalname);
+    // Prefer the phone number sent directly by the caller app (mobile app
+    // sends it as a form field). Filename parsing is only a fallback for
+    // clients that don't send it, since filenames often contain timestamps
+    // or other digit sequences that look like phone numbers but aren't.
+    const bodyDigits = (bodyPhone || '').replace(/\D/g, '').slice(-10);
+    const extractedPhone = bodyDigits.length === 10
+      ? bodyDigits
+      : extractPhoneFromFilename(req.file.originalname);
 
     // Resolve lead: prefer explicit leadId, then auto-match by phone
     let resolvedLead = null;
@@ -168,18 +181,31 @@ router.post('/rematch', protect, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const unlinked = await CallRecording.find({ lead: null, phone: { $ne: null } }).lean();
+    const unlinked = await CallRecording.find({ lead: null }).lean();
     let matched = 0;
+    let corrected = 0;
 
     for (const rec of unlinked) {
-      const lead = await findLeadByPhone(rec.phone, req.user.workspace);
-      if (lead) {
-        await CallRecording.findByIdAndUpdate(rec._id, { lead: lead._id });
-        matched++;
+      // Re-derive phone with the current (fixed) extraction logic — this
+      // corrects previously-stored bad values (e.g. an upload timestamp
+      // that used to get mistaken for a phone number) and fills in phone
+      // for records that never had one extracted.
+      const freshPhone = extractPhoneFromFilename(rec.originalName);
+      if (freshPhone !== rec.phone) {
+        await CallRecording.findByIdAndUpdate(rec._id, { phone: freshPhone || null });
+        corrected++;
+      }
+
+      if (freshPhone) {
+        const lead = await findLeadByPhone(freshPhone, req.user.workspace);
+        if (lead) {
+          await CallRecording.findByIdAndUpdate(rec._id, { lead: lead._id });
+          matched++;
+        }
       }
     }
 
-    return res.json({ success: true, total: unlinked.length, matched });
+    return res.json({ success: true, total: unlinked.length, matched, corrected });
   } catch (err) {
     console.error('rematch error:', err);
     return res.status(500).json({ error: 'Rematch failed' });
