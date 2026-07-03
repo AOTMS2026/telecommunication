@@ -78,6 +78,12 @@ async function getColumns(integration, sheetIdRaw, rangeRaw) {
     if (e.code === 404 || e.response?.status === 404) {
       throw new Error('Sheet not found. Double-check the Sheet ID and make sure the sheet is shared with the Google account you connected.');
     }
+    const apiMsg = e.errors?.[0]?.message || e.message || '';
+    if (/unable to parse range/i.test(apiMsg)) {
+      const err = new Error(`Tab "${range.split('!')[0]}" doesn't exist in this spreadsheet. Open the sheet and check the exact tab name at the bottom (case-sensitive), then update Sheet Range.`);
+      err.code = 'SHEET_ID_MISSING';
+      throw err;
+    }
     throw e;
   }
 }
