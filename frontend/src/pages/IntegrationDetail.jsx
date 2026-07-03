@@ -3,6 +3,60 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { integrationsAPI, campaignsAPI, usersAPI } from '../services/api';
 import api from '../services/api';
 
+// Official brand logos, fetched live from each company's real domain.
+// Falls back to colored initials if the logo can't be loaded.
+const LOGO_DOMAINS = {
+  facebook: 'facebook.com',
+  justdial: 'justdial.com',
+  whatsapp: 'whatsapp.com',
+  whatsapp_cloud: 'whatsapp.com',
+  '99acres': '99acres.com',
+  callerdesk: 'callerdesk.io',
+  google_meet: 'meet.google.com',
+  google_sheets: 'google.com',
+  housing: 'housing.com',
+  indiamart: 'indiamart.com',
+  knowlarity: 'knowlarity.com',
+  magicbricks: 'magicbricks.com',
+  maqsam: 'maqsam.com',
+  sulekha: 'sulekha.com',
+  tradeindia: 'tradeindia.com',
+};
+
+const IntegrationLogo = ({ type, name, size = 52 }) => {
+  const initials = (name || type || '??').slice(0, 2).toUpperCase();
+  const domain = LOGO_DOMAINS[type];
+  const sources = domain ? [
+    `https://logo.clearbit.com/${domain}?size=128`,
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ] : [];
+  const [srcIdx, setSrcIdx] = useState(0);
+
+  if (domain && srcIdx < sources.length) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 12, background: '#fff',
+        border: '1px solid var(--theme-border-tint)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        padding: size * 0.16, boxSizing: 'border-box'
+      }}>
+        <img
+          src={sources[srcIdx]}
+          alt={name || type}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          onError={() => setSrcIdx(i => i + 1)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: size, height: size, borderRadius: 12, background: 'var(--theme-primary-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: size * 0.38, flexShrink: 0 }}>
+      {initials}
+    </div>
+  );
+};
+
 const STEPS = [
   { label: 'Step 1', sub: 'Integration details' },
   { label: 'Step 2', sub: 'Field mapping' },
@@ -350,9 +404,7 @@ export default function IntegrationDetail() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-        <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--theme-primary-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 20 }}>
-          {integration.name.slice(0, 2).toUpperCase()}
-        </div>
+        <IntegrationLogo type={integration.type} name={integration.name} size={52} />
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--theme-text-strongest)' }}>{integration.name}</h2>
           <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>{integration.description}</p>

@@ -11,6 +11,26 @@ const LOGO_COLORS = {
   sulekha: '#FF6B35', tradeindia: '#0066CC', webhook: 'var(--theme-primary-alt)',
 };
 
+// Official brand logos, fetched live from each company's real domain.
+// Falls back to colored initials if the logo can't be loaded.
+const LOGO_DOMAINS = {
+  facebook: 'facebook.com',
+  justdial: 'justdial.com',
+  whatsapp: 'whatsapp.com',
+  whatsapp_cloud: 'whatsapp.com',
+  '99acres': '99acres.com',
+  callerdesk: 'callerdesk.io',
+  google_meet: 'meet.google.com',
+  google_sheets: 'google.com',
+  housing: 'housing.com',
+  indiamart: 'indiamart.com',
+  knowlarity: 'knowlarity.com',
+  magicbricks: 'magicbricks.com',
+  maqsam: 'maqsam.com',
+  sulekha: 'sulekha.com',
+  tradeindia: 'tradeindia.com',
+};
+
 // Per-type config field definitions (same fields used once the integration is active)
 const CONFIG_FIELDS = {
   facebook: [
@@ -63,6 +83,31 @@ const s = {
 const IntegrationLogo = ({ type, name, size = 40 }) => {
   const color = LOGO_COLORS[type] || 'var(--theme-primary-alt)';
   const initials = (name || type || '??').slice(0, 2).toUpperCase();
+  const domain = LOGO_DOMAINS[type];
+  const sources = domain ? [
+    `https://logo.clearbit.com/${domain}?size=128`,
+    `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+  ] : [];
+  const [srcIdx, setSrcIdx] = useState(0);
+
+  if (domain && srcIdx < sources.length) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: 10, background: '#fff',
+        border: '1px solid var(--theme-border-tint)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        padding: size * 0.16, boxSizing: 'border-box'
+      }}>
+        <img
+          src={sources[srcIdx]}
+          alt={name || type}
+          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+          onError={() => setSrcIdx(i => i + 1)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{
       width: size, height: size, borderRadius: 10,
