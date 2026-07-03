@@ -2,14 +2,18 @@
 //
 // STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true (confirmed working)
 // TTS: bulbul:v3 model over WebSocket (wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3).
-//   Verified against Sarvam's live API docs (docs.sarvam.ai) — the original
-//   PDF guide's TTS field names/values (sample_rate, output_audio_codec=pcm,
-//   speaker=meera/anushka) were wrong or version-mismatched:
+//   Verified against Sarvam's live API docs (docs.sarvam.ai), NOT the PDF
+//   guides, which had two separate bugs:
 //     - config key is `speech_sample_rate`, not `sample_rate`
 //     - output_audio_codec values are linear16/mulaw/alaw/opus/flac/aac/wav/mp3
 //       ('pcm' is not a valid value — 'linear16' is the raw-PCM equivalent)
 //     - speaker `shubh` is valid for bulbul:v3 (`anushka` is a bulbul:v2-only voice)
-// Exotel sends raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
+//     - THE MAIN BUG: the text-to-synthesize message must use "type": "text",
+//       not "type": "convert" (which both PDFs got wrong in different ways —
+//       see the synthesizeSpeech() comment below for the full story). This
+//       was causing Sarvam to reject every single TTS request with a 422,
+//       which is why the agent could never speak.
+// Exotel sends/expects raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
 
 const axios = require('axios');
 const FormData = require('form-data');
@@ -85,21 +89,38 @@ async function transcribeAudio(pcm16Bytes) {
 }
 
 // ─── TTS ─────────────────────────────────────────────────────────────────────
-// Per PDF: WebSocket wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3
-// config payload: { type: "config", data: { target_language_code, speaker,
-// output_audio_codec: "pcm", sample_rate } } — then send { "text": ... } and
-// collect base64 "audio_chunk" fields from the socket. Raw PCM back already,
-// so no WAV header stripping needed.
+// Verified against the OFFICIAL Sarvam docs (docs.sarvam.ai/api-reference-docs/
+// api-guides-tutorials/text-to-speech/streaming-api/web-socket), not the PDF
+// guides, which turned out to be wrong on the wire format.
 //
-// NOTE: the PDF does NOT document any flush/EOF message — it only shows
-// sending {"text": ...} after config. An earlier version of this code sent
-// an extra {"type":"flush"} frame that isn't part of the documented
-// protocol; Sarvam was closing the socket with zero chunks because of it
-// ("Sarvam TTS returned no audio"). That frame has been removed. Since the
-// guide gives no explicit "done" signal, completion here is detected purely
-// client-side: once chunks start arriving, a short idle gap means synthesis
-// is finished (this doesn't modify the Sarvam protocol, just our own
-// bookkeeping around it).
+// The WS protocol is a discriminated union of exactly 4 input message types,
+// each named to match its `type` field: Config Message ("config"), Text
+// Message ("text"), Flush Message ("flush"), Ping Message ("ping").
+//
+// ROOT CAUSE OF THE TTS BUG: this file was sending `{"type": "convert", ...}`
+// for the text payload (copied from the PDF guides, neither of which
+// actually got the text-message shape right — one used a bare {"text":...}
+// with no envelope, the other guessed "convert"). "convert" is not a member
+// of Sarvam's discriminated union, so the server can't match it to any known
+// schema and rejects it with the generic 422 "Input parameters has to be a
+// valid dictionary" — on literally every utterance, exactly what the logs
+// showed. Fix: use "text" as the type.
+//
+// Confirmed message shapes (per docs):
+//   { "type": "config", "data": { target_language_code, speaker, pace,
+//       min_buffer_size, max_chunk_length, output_audio_codec,
+//       output_audio_bitrate, speech_sample_rate } }
+//   { "type": "text",   "data": { "text": "..." } }
+//   { "type": "flush" }
+//   { "type": "ping" }
+// Audio comes back as: { "type": "audio", "data": { "audio": "<base64>", "content_type": "..." } }
+// Errors come back as: { "type": "error", "data": { "message": "...", "code": ... } }
+//
+// output_audio_codec="linear16" is Sarvam's raw-PCM value (docs literally
+// list it as "pcm (LINEAR16)"), and speech_sample_rate=8000 is documented as
+// supported "for all models & modes" including streaming — both needed so
+// Sarvam hands back audio already in Exotel's 8kHz/16-bit PCM shape with no
+// resampling needed on our end.
 function synthesizeSpeech(text, languageCode = 'te-IN') {
   return new Promise((resolve, reject) => {
     if (!text || !text.trim()) return resolve(Buffer.alloc(0));
@@ -137,38 +158,57 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
       }
     }, 15000);
 
+    // Track which message we last sent so a subsequent error can be
+    // attributed precisely instead of guessing from a generic 422.
+    let lastSent = null;
+
     ws.on('open', () => {
       console.log('[sarvam-tts] ws open');
+
+      lastSent = 'config';
       ws.send(JSON.stringify({
         type: 'config',
         data: {
           target_language_code: languageCode,
-          speaker: 'shubh',              // valid bulbul:v3 speaker (anushka is v2-only)
-          output_audio_codec: 'linear16', // real values: linear16/mulaw/alaw/opus/flac/aac/wav/mp3 — 'pcm' isn't one
-          speech_sample_rate: 8000,       // real key is speech_sample_rate, not sample_rate
+          speaker: 'shubh',                // valid bulbul:v3 speaker (anushka is v2-only)
+          output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
+          speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
         },
       }));
-      ws.send(JSON.stringify({ type: 'convert', data: { text } }));
+
+      // FIX: the text message's "type" must be "text", not "convert".
+      // "convert" isn't a member of Sarvam's discriminated union, so the
+      // server rejected it with a generic 422 on every single utterance.
+      lastSent = 'text';
+      ws.send(JSON.stringify({ type: 'text', data: { text } }));
+
+      lastSent = 'flush';
       ws.send(JSON.stringify({ type: 'flush' }));
     });
 
     ws.on('message', (raw) => {
       const str = raw.toString();
+      let data;
       try {
-        const data = JSON.parse(str);
-        // Real Sarvam shape: {"type":"audio","data":{"content_type":"...","audio":"<base64>"}}
-        if (data.type === 'audio' && data.data && data.data.audio) {
-          chunks.push(Buffer.from(data.data.audio, 'base64'));
-          // reset idle timer — finish 600ms after the last chunk arrives
-          clearTimeout(idleTimer);
-          idleTimer = setTimeout(finish, 600);
-        } else {
-          // log non-audio frames (errors, acks, unexpected shapes) so we
-          // can see exactly what Sarvam is sending back
-          console.log(`[sarvam-tts] ws message (no audio): ${str.slice(0, 300)}`);
-        }
+        data = JSON.parse(str);
       } catch (e) {
         console.log(`[sarvam-tts] ws non-JSON message: ${str.slice(0, 300)}`);
+        return;
+      }
+
+      if (data.type === 'audio' && data.data && data.data.audio) {
+        chunks.push(Buffer.from(data.data.audio, 'base64'));
+        // reset idle timer — finish 600ms after the last chunk arrives
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(finish, 600);
+      } else if (data.type === 'error') {
+        const msg = data.data && data.data.message;
+        console.log(`[sarvam-tts] ws error frame (after sending "${lastSent}"): ${msg || str.slice(0, 300)}`);
+      } else if (data.type === 'event') {
+        // completion event (send_completion_event) — informational only
+        console.log(`[sarvam-tts] ws event: ${str.slice(0, 200)}`);
+      } else {
+        console.log(`[sarvam-tts] ws message (unrecognized, after sending "${lastSent}"): ${str.slice(0, 300)}`);
       }
     });
 
