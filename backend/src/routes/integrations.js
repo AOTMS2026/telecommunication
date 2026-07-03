@@ -17,21 +17,21 @@ const router = express.Router();
 const CALL_SERVICES = { knowlarity, callerdesk, maqsam };
 
 const CATALOG = [
-  { type: 'facebook', name: 'Facebook', category: 'oauth' },
-  { type: 'google_sheets', name: 'Google Sheets', category: 'oauth' },
-  { type: 'google_meet', name: 'Google Meet', category: 'oauth' },
-  { type: 'whatsapp_cloud', name: 'WhatsApp Cloud API', category: 'webhook' },
-  { type: 'whatsapp', name: 'WhatsApp', category: 'webhook' },
-  { type: 'knowlarity', name: 'Knowlarity', category: 'webhook' },
-  { type: 'callerdesk', name: 'CallerDesk', category: 'webhook' },
-  { type: 'maqsam', name: 'Maqsam', category: 'webhook' },
-  { type: 'justdial', name: 'JustDial', category: 'generic_webhook' },
-  { type: '99acres', name: '99acres', category: 'generic_webhook' },
-  { type: 'housing', name: 'Housing', category: 'generic_webhook' },
-  { type: 'indiamart', name: 'IndiaMart', category: 'generic_webhook' },
-  { type: 'magicbricks', name: 'MagicBricks', category: 'generic_webhook' },
-  { type: 'sulekha', name: 'Sulekha', category: 'generic_webhook' },
-  { type: 'tradeindia', name: 'TradeIndia', category: 'generic_webhook' },
+  { type: 'facebook', name: 'Facebook', category: 'oauth', description: 'Auto-import leads from Facebook Lead Ads' },
+  { type: 'google_sheets', name: 'Google Sheets', category: 'oauth', description: 'Sync leads to/from Google Sheets automatically' },
+  { type: 'google_meet', name: 'Google Meet', category: 'oauth', description: 'Schedule and manage Google Meet calls from leads' },
+  { type: 'whatsapp_cloud', name: 'Whatsapp Cloud API', category: 'webhook', description: 'Integrate WhatsApp Cloud API in your AOTMS account' },
+  { type: 'whatsapp', name: 'Whatsapp', category: 'webhook', description: 'Integrate Whatsapp in your TeleCRM account' },
+  { type: 'knowlarity', name: 'Knowlarity', category: 'webhook', description: 'Connect Knowlarity cloud telephony' },
+  { type: 'callerdesk', name: 'CallerDesk', category: 'webhook', description: 'Connect CallerDesk cloud telephony' },
+  { type: 'maqsam', name: 'Maqsam', category: 'webhook', description: 'Connect Maqsam cloud telephony' },
+  { type: 'justdial', name: 'JustDial', category: 'generic_webhook', description: 'Auto-import leads from JustDial' },
+  { type: '99acres', name: '99acres', category: 'generic_webhook', description: 'Auto-import leads from 99acres' },
+  { type: 'housing', name: 'Housing', category: 'generic_webhook', description: 'Auto-import leads from Housing.com' },
+  { type: 'indiamart', name: 'IndiaMart', category: 'generic_webhook', description: 'Auto-import leads from IndiaMart' },
+  { type: 'magicbricks', name: 'MagicBricks', category: 'generic_webhook', description: 'Auto-import leads from MagicBricks' },
+  { type: 'sulekha', name: 'Sulekha', category: 'generic_webhook', description: 'Auto-import leads from Sulekha' },
+  { type: 'tradeindia', name: 'TradeIndia', category: 'generic_webhook', description: 'Auto-import leads from TradeIndia' },
 ];
 
 function frontendBase() {
@@ -54,8 +54,17 @@ router.get('/catalog', protect, (req, res) => {
 
 router.get('/', protect, async (req, res) => {
   try {
-    const integrations = await Integration.find().sort({ createdAt: -1 });
-    res.json(integrations);
+    const saved = await Integration.find().sort({ createdAt: -1 });
+    const active = saved.filter(i => i.status === 'active');
+    const pending = saved.filter(i => i.status !== 'active');
+    const savedTypes = new Set(saved.map(i => i.type));
+    const available = CATALOG.filter(c => !savedTypes.has(c.type)).map(c => ({
+      type: c.type,
+      name: c.name,
+      description: c.description || `Integrate ${c.name} in your AOTMS account`,
+      category: c.category,
+    }));
+    res.json({ active, pending, available });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
