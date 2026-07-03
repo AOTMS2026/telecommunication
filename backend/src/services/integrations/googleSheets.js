@@ -5,17 +5,20 @@ const { fireEvent } = require('../workflowEngine');
 const { broadcastWebhooks } = require('../automationRunners');
 
 function getOAuth2Client(config) {
+  if (!config || (!config.refreshToken && !config.accessToken)) {
+    const err = new Error('Google account not connected. Click "Connect with Google (OAuth)" in Step 1 and authorize access first.');
+    err.code = 'GOOGLE_NOT_CONNECTED';
+    throw err;
+  }
   const client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI
   );
-  if (config.refreshToken) {
-    client.setCredentials({
-      refresh_token: config.refreshToken,
-      access_token: config.accessToken,
-    });
-  }
+  client.setCredentials({
+    refresh_token: config.refreshToken,
+    access_token: config.accessToken,
+  });
   return client;
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { integrationsAPI, campaignsAPI, usersAPI } from '../services/api';
 import api from '../services/api';
 
@@ -69,6 +69,7 @@ const s = {
 export default function IntegrationDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [integration, setIntegration] = useState(null);
   const [leads, setLeads] = useState([]);
   const [leadsTotal, setLeadsTotal] = useState(0);
@@ -93,6 +94,47 @@ export default function IntegrationDetail() {
   const [newMeeting, setNewMeeting] = useState({ summary: '', startTime: '', attendeeEmails: '' });
 
   useEffect(() => { fetchAll(); }, [id]);
+
+  // Handle Google OAuth popup completion
+  useEffect(() => {
+    const oauthStatus = searchParams.get('google_oauth');
+    if (!oauthStatus) return;
+
+    if (window.opener && window.opener !== window) {
+      // This tab IS the OAuth popup — notify the original tab and close.
+      window.opener.postMessage({ type: 'google_oauth', status: oauthStatus }, window.location.origin);
+      window.close();
+      return;
+    }
+
+    // This tab is the main app tab (fallback if popup blocked / same-tab redirect)
+    if (oauthStatus === 'success') {
+      fetchAll();
+      alert('Google account connected successfully.');
+    } else {
+      alert(`Google authorization failed: ${searchParams.get('message') || 'Unknown error'}`);
+    }
+    searchParams.delete('google_oauth');
+    searchParams.delete('type');
+    searchParams.delete('message');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams]);
+
+  // Listen for postMessage from the OAuth popup window
+  useEffect(() => {
+    const handler = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'google_oauth') return;
+      if (event.data.status === 'success') {
+        fetchAll();
+        alert('Google account connected successfully.');
+      } else {
+        alert('Google authorization failed. Please try again.');
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [id]);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -152,7 +194,7 @@ export default function IntegrationDetail() {
       const res = await fn();
       setActionResult({ ok: true, data: res.data });
     } catch (err) {
-      setActionResult({ ok: false, msg: err.response?.data?.message || err.message });
+      setActionResult({ ok: false, msg: err.response?.data?.message || err.message, needsAuth: !!err.response?.data?.needsAuth });
     } finally {
       setActionLoading('');
     }
@@ -474,9 +516,18 @@ export default function IntegrationDetail() {
 
                 {(type === 'google_sheets') && (
                   <div style={{ display: 'grid', gap: 12 }}>
+                    {!integration.config?.refreshToken && (
+                      <div style={{ padding: 12, background: '#fef3c7', borderRadius: 8, fontSize: 13, color: '#92400e' }}>
+                        Google account not connected yet.
+                        <button onClick={startGoogleOAuth} style={{ ...s.btnPrimary, marginTop: 10 }}>🔐 Connect with Google (OAuth)</button>
+                      </div>
+                    )}
                     <button onClick={() => doAction('sheets', () => api.get(`/integrations/${id}/sheets/list`))} style={s.btnPrimary} disabled={!!actionLoading}>
                       {actionLoading === 'sheets' ? 'Loading...' : 'Test Connection (List Sheets)'}
                     </button>
+                    {actionResult && !actionResult.ok && actionResult.needsAuth && (
+                      <button onClick={startGoogleOAuth} style={s.btnGhost}>🔐 Reconnect Google Account</button>
+                    )}
                   </div>
                 )}
 
