@@ -1,4 +1,9 @@
 // backend/src/services/aiCaller/sarvamClient.js
+//
+// Per Sarvam+Exotel integration PDF:
+// - STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true
+// - TTS: bulbul:v1 model, output_audio_codec=pcm, sample_rate=8000
+// - Exotel sends raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
 
 const axios = require('axios');
 const FormData = require('form-data');
@@ -12,6 +17,7 @@ function getSarvamKey() {
   return key;
 }
 
+// ─── WAV builder — wraps raw PCM16 8kHz from Exotel into WAV container ───────
 function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSample = 16) {
   const dataSize = pcm16Bytes.length;
   const byteRate = sampleRate * channels * (bitsPerSample / 8);
@@ -46,27 +52,38 @@ function stripWavHeader(wavBuf) {
   return wavBuf.slice(44);
 }
 
-// FIX: correct model name is saarika:v2 (not saaras:v2)
+// ─── STT ─────────────────────────────────────────────────────────────────────
+// Per PDF: model=saaras:v3, sample_rate=8000, high_vad_sensitivity=true
 async function transcribeAudio(pcm16Bytes) {
   if (!pcm16Bytes || pcm16Bytes.length < 320) return '';
+
   const key = getSarvamKey();
-  const wavBuf = buildWavBuffer(pcm16Bytes, 8000, 1);
+  const wavBuf = buildWavBuffer(pcm16Bytes, 8000, 1, 16);
+
   const form = new FormData();
   form.append('file', wavBuf, { filename: 'audio.wav', contentType: 'audio/wav' });
   form.append('language_code', 'te-IN');
-  form.append('model', 'saarika:v2');  // FIX: was saaras:v2
+  form.append('model', 'saaras:v3');         // per PDF: saaras:v3
+  form.append('sample_rate', '8000');         // per PDF: must match Exotel 8kHz
+  form.append('high_vad_sensitivity', 'true'); // per PDF: 0.5s silence boundary
+
   const response = await axios.post(SARVAM_STT_URL, form, {
     headers: { ...form.getHeaders(), 'api-subscription-key': key },
     timeout: 12000,
   });
+
   const transcript = (response.data.transcript || '').trim();
-  console.log(`[sarvam-stt] transcript: "${transcript.slice(0, 80)}"`);
+  if (transcript) console.log(`[sarvam-stt] "${transcript.slice(0, 80)}"`);
   return transcript;
 }
 
+// ─── TTS ─────────────────────────────────────────────────────────────────────
+// Per PDF: bulbul:v1, output_audio_codec=pcm, sample_rate=8000
 async function synthesizeSpeech(text, languageCode = 'te-IN') {
   if (!text || !text.trim()) return Buffer.alloc(0);
+
   const key = getSarvamKey();
+
   const response = await axios.post(SARVAM_TTS_URL, {
     inputs: [text],
     target_language_code: languageCode,
@@ -75,16 +92,18 @@ async function synthesizeSpeech(text, languageCode = 'te-IN') {
     pitch: 0,
     pace: 1.0,
     loudness: 1.5,
-    speech_sample_rate: 8000,
+    speech_sample_rate: 8000,   // per PDF: matches Exotel audio engine
     enable_preprocessing: true,
     enc_format: 'wav',
   }, {
     headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
     timeout: 15000,
   });
+
   const base64Audio = response.data?.audios?.[0];
   if (!base64Audio) throw new Error('Sarvam TTS returned no audio');
-  console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}..."`);
+
+  console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
   return stripWavHeader(Buffer.from(base64Audio, 'base64'));
 }
 
