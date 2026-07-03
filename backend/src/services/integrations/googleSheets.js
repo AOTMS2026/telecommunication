@@ -140,7 +140,7 @@ async function importFromOneSource(integration, source) {
     .map(col => ({ col, i: headers.indexOf(col) }))
     .filter(({ i }) => i >= 0);
 
-  let imported = 0, skipped = 0;
+  let imported = 0, skipped = 0, updated = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -148,7 +148,25 @@ async function importFromOneSource(integration, source) {
     if (!phone) { skipped++; continue; }
 
     const existing = await Lead.findOne({ phone });
-    if (existing) { skipped++; continue; }
+    if (existing) {
+      // Lead already exists. Always sync it to whatever campaign/assignee is
+      // currently set in Step 3 / Step 4 of this integration's config — so
+      // changing those and re-importing actually re-assigns the lead, instead
+      // of only filling in blanks.
+      const backfill = {};
+      if (integration.defaultCampaign && String(existing.campaign || '') !== String(integration.defaultCampaign)) {
+        backfill.campaign = integration.defaultCampaign;
+      }
+      if (integration.defaultAssignedTo && String(existing.assignedTo || '') !== String(integration.defaultAssignedTo)) {
+        backfill.assignedTo = integration.defaultAssignedTo;
+      }
+      if (Object.keys(backfill).length > 0) {
+        await Lead.findByIdAndUpdate(existing._id, { $set: backfill });
+        updated++;
+      }
+      skipped++;
+      continue;
+    }
 
     const customFields = {};
     for (const { col, i: ci } of extraColIndexes) {
@@ -188,7 +206,7 @@ async function importFromOneSource(integration, source) {
     imported++;
   }
 
-  return { imported, skipped };
+  return { imported, skipped, updated };
 }
 
 // Get sheet rows and import as leads. Supports multiple sheet sources
@@ -205,17 +223,18 @@ async function importLeadsFromSheet(integration) {
     throw err;
   }
 
-  let imported = 0, skipped = 0;
+  let imported = 0, skipped = 0, updated = 0;
   const perSheet = [];
 
   for (const source of sources) {
     const result = await importFromOneSource(integration, source);
     imported += result.imported;
     skipped += result.skipped;
+    updated += result.updated || 0;
     perSheet.push({ sheetId: source.sheetId, name: source.name || '', ...result });
   }
 
-  return { imported, skipped, perSheet };
+  return { imported, skipped, updated, perSheet };
 }
 
 // Append a lead to a Google Sheet (export)
