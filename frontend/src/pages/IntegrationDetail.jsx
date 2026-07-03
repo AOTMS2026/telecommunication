@@ -405,7 +405,7 @@ export default function IntegrationDetail() {
             <div style={{ fontSize: 13, color: '#6b7280' }}>
               {type === 'facebook' && 'Leads are pulled in real-time from Facebook Lead Ads via Meta webhooks.'}
               {(type === 'whatsapp_cloud') && 'Incoming WhatsApp messages create leads automatically. You can also send messages from lead profiles.'}
-              {type === 'google_sheets' && 'Import leads from your sheet or export leads to it. Use the Actions tab to sync.'}
+              {type === 'google_sheets' && 'Import leads from your sheet or export leads to it. Import from Configuration → Step 5.'}
               {type === 'google_meet' && 'Create Google Meet links directly from lead profiles. Use the Actions tab.'}
               {(type === 'knowlarity' || type === 'callerdesk' || type === 'maqsam') && 'Inbound calls create leads automatically. CDR is logged against existing leads.'}
               {isGenericWebhook && `${integration.name} sends leads to your webhook URL. Copy it and paste in your ${integration.name} dashboard.`}
@@ -777,12 +777,23 @@ export default function IntegrationDetail() {
                         <button onClick={startGoogleOAuth} style={{ ...s.btnPrimary, marginTop: 10 }}>🔐 Connect with Google (OAuth)</button>
                       </div>
                     )}
-                    <button onClick={() => doAction('sheets', async () => { await handleSave({}, true); return api.get(`/integrations/${id}/sheets/list`); })} style={s.btnPrimary} disabled={!!actionLoading}>
+                    <button onClick={() => doAction('sheets', async () => { await handleSave({}, true); return api.get(`/integrations/${id}/sheets/list`); })} style={s.btnGhost} disabled={!!actionLoading}>
                       {actionLoading === 'sheets' ? 'Loading...' : 'Test Connection (List Sheets)'}
                     </button>
                     {actionResult && !actionResult.ok && actionResult.needsAuth && (
                       <button onClick={startGoogleOAuth} style={s.btnGhost}>🔐 Reconnect Google Account</button>
                     )}
+                    <div style={{ height: 1, background: 'var(--theme-border-tint)', margin: '4px 0' }} />
+                    <div style={{ fontSize: 13, color: '#6b7280' }}>
+                      Saves your Default Campaign and Lead Distribution settings first, then imports — so leads land in the right campaign and get assigned correctly.
+                    </div>
+                    <button
+                      onClick={() => doAction('import', async () => { await handleSave({}, true); return api.post(`/integrations/${id}/sheets/import`); })}
+                      style={s.btnPrimary}
+                      disabled={!!actionLoading}
+                    >
+                      {actionLoading === 'import' ? 'Saving & Importing...' : '↓ Save Settings & Import Leads from Sheet'}
+                    </button>
                   </div>
                 )}
 
@@ -906,10 +917,11 @@ export default function IntegrationDetail() {
           {type === 'google_sheets' && (
             <div style={s.card}>
               <h4 style={{ margin: '0 0 16px' }}>Google Sheets Actions</h4>
+              <div style={{ padding: 12, background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af', marginBottom: 12 }}>
+                Importing leads has moved to <strong>Configuration → Step 5 (Connect & Finish)</strong>, so it always saves your
+                Default Campaign and Lead Distribution settings first — leads now land in the right campaign and get assigned correctly.
+              </div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button onClick={() => doAction('import', () => api.post(`/integrations/${id}/sheets/import`))} style={s.btnPrimary} disabled={!!actionLoading}>
-                  {actionLoading === 'import' ? 'Importing...' : '↓ Import Leads from Sheet'}
-                </button>
                 <button onClick={() => doAction('listsheets', () => api.get(`/integrations/${id}/sheets/list`))} style={s.btnGhost} disabled={!!actionLoading}>
                   {actionLoading === 'listsheets' ? '...' : 'List Sheets in Spreadsheet'}
                 </button>
