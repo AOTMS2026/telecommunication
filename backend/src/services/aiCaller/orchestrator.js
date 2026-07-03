@@ -106,15 +106,51 @@ function rms(pcm16Chunk) {
   return Math.sqrt(sum / len);
 }
 
+// ─── Speech text sanitizer ──────────────────────────────────────────────────
+//
+// Safety net for Sarvam's "Text must contain at least one character from the
+// allowed languages" 422. GPT is instructed (see promptBuilder.js) not to
+// produce markdown/emoji, but LLMs slip occasionally — and Sarvam's WS
+// buffers/splits long text internally (min_buffer_size/max_chunk_length),
+// so even one stray "**" or "😊" can land in its own chunk with no actual
+// letters in it and get rejected. Strip anything that isn't speakable
+// BEFORE it reaches synthesizeSpeech(), rather than trying to catch it after
+// Sarvam has already rejected it mid-call.
+function sanitizeForSpeech(text) {
+  if (!text) return '';
+  let s = text;
+
+  // Markdown headers: "### Heading" -> "Heading"
+  s = s.replace(/^#{1,6}\s*/gm, '');
+  // Bold/italic markers: **text**, __text__, *text*, _text_ -> text
+  s = s.replace(/\*\*(.*?)\*\*/g, '$1');
+  s = s.replace(/__(.*?)__/g, '$1');
+  s = s.replace(/\*(.*?)\*/g, '$1');
+  s = s.replace(/_(.*?)_/g, '$1');
+  // Code: fenced blocks and inline backticks -> plain text
+  s = s.replace(/```[\s\S]*?```/g, ' ');
+  s = s.replace(/`([^`]*)`/g, '$1');
+  // List markers: "- item", "* item", "1. item" -> "item"
+  s = s.replace(/^\s*[-*•]\s+/gm, '');
+  s = s.replace(/^\s*\d+\.\s+/gm, '');
+  // Emojis and other pictographic symbols
+  s = s.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}]/gu, '');
+  // Collapse whitespace/newlines from the above removals into single spaces
+  s = s.replace(/\s+/g, ' ').trim();
+
+  return s;
+}
+
 // ─── Send TTS audio to Exotel ────────────────────────────────────────────────
 
 async function sendTts(ws, session, text) {
-  if (!text || !text.trim()) return;
+  const clean = sanitizeForSpeech(text);
+  if (!clean) return;
 
   let pcm16;
   try {
     const langCode = session.language === 'English' ? 'en-IN' : 'te-IN';
-    pcm16 = await synthesizeSpeech(text, langCode);
+    pcm16 = await synthesizeSpeech(clean, langCode);
   } catch (err) {
     console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
     return;
