@@ -163,7 +163,12 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
 
 router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
-    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    const body = { ...req.body };
+    if (body.config?.sheetId) {
+      const m = String(body.config.sheetId).trim().match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      body.config = { ...body.config, sheetId: m ? m[1] : String(body.config.sheetId).trim() };
+    }
+    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: body }, { new: true });
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     res.json(integration);
   } catch (err) {
@@ -295,7 +300,7 @@ router.post('/:id/sheets/import', protect, async (req, res) => {
     const result = await googleSheets.importLeadsFromSheet(integration);
     res.json(result);
   } catch (err) {
-    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' || err.code === 'SHEET_ID_MISSING' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -306,7 +311,7 @@ router.get('/:id/sheets/list', protect, async (req, res) => {
     const sheets = await googleSheets.listSheets(integration);
     res.json(sheets);
   } catch (err) {
-    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' || err.code === 'SHEET_ID_MISSING' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -325,7 +330,7 @@ router.post('/:id/meet/create', protect, async (req, res) => {
     });
     res.json(meeting);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -336,7 +341,7 @@ router.get('/:id/meet/list', protect, async (req, res) => {
     const meetings = await googleMeet.listMeetings(integration.config);
     res.json(meetings);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -347,7 +352,7 @@ router.delete('/:id/meet/:eventId', protect, async (req, res) => {
     await googleMeet.deleteMeeting(integration.config, req.params.eventId);
     res.json({ message: 'Meeting deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 

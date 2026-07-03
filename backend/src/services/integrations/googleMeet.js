@@ -1,6 +1,11 @@
 const { google } = require('googleapis');
 
 function getOAuth2Client(config) {
+  if (!config || (!config.refreshToken && !config.accessToken)) {
+    const err = new Error('Google account not connected. Click "Connect with Google (OAuth)" in the Configuration tab and authorize access first.');
+    err.code = 'GOOGLE_NOT_CONNECTED';
+    throw err;
+  }
   const client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
