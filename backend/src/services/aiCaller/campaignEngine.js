@@ -107,7 +107,7 @@ async function processCampaign(campaign) {
   const baseQuery = {
     campaign: campaign._id,
     status: { $nin: EXCLUDED_STATUSES },
-    aiCallState: { $in: ['none', 'queued'] },
+    aiCallState: { $in: ['none', 'queued', 'completed'] },
     $or: [
       { aiLock: { $exists: false } },
       { 'aiLock.expiresAt': { $exists: false } },
