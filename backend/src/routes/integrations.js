@@ -193,6 +193,8 @@ router.get('/:id/leads', protect, async (req, res) => {
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     const query = { leadSource: integration.name };
     const leads = await Lead.find(query)
+      .populate('assignedTo', 'name role')
+      .populate('campaign', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));

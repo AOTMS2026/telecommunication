@@ -1051,7 +1051,7 @@ export default function IntegrationDetail() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: 'var(--theme-surface-faint2)' }}>
-                    {['Name', 'Phone', 'Email', 'Status', 'Assigned To', 'Date'].map(h => (
+                    {['Name', 'Phone', 'Email', 'Status', 'Campaign', 'Assigned To', 'Date'].map(h => (
                       <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--theme-surface-faint5)' }}>{h}</th>
                     ))}
                   </tr>
@@ -1066,6 +1066,7 @@ export default function IntegrationDetail() {
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ padding: '3px 10px', borderRadius: 12, background: 'var(--theme-surface-tint2)', color: 'var(--theme-primary)', fontSize: 12, fontWeight: 500 }}>{lead.status}</span>
                       </td>
+                      <td style={{ padding: '12px 16px', color: '#6b7280' }}>{lead.campaign?.name || '-'}</td>
                       <td style={{ padding: '12px 16px', color: '#6b7280' }}>{lead.assignedTo?.name || '-'}</td>
                       <td style={{ padding: '12px 16px', color: '#6b7280' }}>{new Date(lead.createdAt).toLocaleDateString()}</td>
                     </tr>
