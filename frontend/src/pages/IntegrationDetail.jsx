@@ -162,11 +162,11 @@ export default function IntegrationDetail() {
     }
   };
 
-  const handleSave = async (extra = {}) => {
+  const handleSave = async (extra = {}, silent = false) => {
     setSaving(true);
     try {
       await integrationsAPI.update(id, { config, fieldMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null, ...extra });
-      if (!extra.status) alert('Saved successfully');
+      if (!extra.status && !silent) alert('Saved successfully');
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
@@ -522,7 +522,7 @@ export default function IntegrationDetail() {
                         <button onClick={startGoogleOAuth} style={{ ...s.btnPrimary, marginTop: 10 }}>🔐 Connect with Google (OAuth)</button>
                       </div>
                     )}
-                    <button onClick={() => doAction('sheets', () => api.get(`/integrations/${id}/sheets/list`))} style={s.btnPrimary} disabled={!!actionLoading}>
+                    <button onClick={() => doAction('sheets', async () => { await handleSave({}, true); return api.get(`/integrations/${id}/sheets/list`); })} style={s.btnPrimary} disabled={!!actionLoading}>
                       {actionLoading === 'sheets' ? 'Loading...' : 'Test Connection (List Sheets)'}
                     </button>
                     {actionResult && !actionResult.ok && actionResult.needsAuth && (

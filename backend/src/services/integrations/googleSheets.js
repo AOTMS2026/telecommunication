@@ -53,6 +53,11 @@ async function exchangeCode(code) {
 
 // Get sheet rows and import as leads
 async function importLeadsFromSheet(integration) {
+  if (!integration.config?.sheetId) {
+    const err = new Error('No Google Sheet ID set. Enter your Sheet ID in Step 1 and save before importing.');
+    err.code = 'SHEET_ID_MISSING';
+    throw err;
+  }
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
 
@@ -126,6 +131,11 @@ async function appendLeadToSheet(integration, leadData) {
 
 // List sheets in a spreadsheet
 async function listSheets(integration) {
+  if (!integration.config?.sheetId) {
+    const err = new Error('No Google Sheet ID set. Enter your Sheet ID in Step 1 and save before testing.');
+    err.code = 'SHEET_ID_MISSING';
+    throw err;
+  }
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
   const res = await sheets.spreadsheets.get({ spreadsheetId: integration.config.sheetId, fields: 'sheets.properties' });
