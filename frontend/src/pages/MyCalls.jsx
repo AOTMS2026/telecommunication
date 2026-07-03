@@ -43,7 +43,7 @@ function AddNoteModal({ onClose, onSubmit }) {
           <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex gap-2 mb-3">
-          {['note', 'whatsapp', 'sms'].map(t => (
+          {['note', 'whatsapp'].map(t => (
             <button key={t} onClick={() => setType(t)} className={`text-xs px-3 py-1.5 rounded-full capitalize transition-colors ${type === t ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{t}</button>
           ))}
         </div>
@@ -324,7 +324,6 @@ export default function MyCalls() {
   const activityIcon = (type) => {
     if (type === 'call') return <Phone className="w-3.5 h-3.5" />;
     if (type === 'whatsapp') return <MessageCircle className="w-3.5 h-3.5" />;
-    if (type === 'sms') return <MessageSquare className="w-3.5 h-3.5" />;
     return <MessageSquare className="w-3.5 h-3.5" />;
   };
 

@@ -1,5 +1,5 @@
 // New file — wraps the Resend SDK for the Email Campaign feature only.
-// Does not touch Twilio/WhatsApp/SMS sending paths.
+// Does not touch Twilio/WhatsApp sending paths.
 const { Resend } = require('resend');
 
 let resendClient = null;

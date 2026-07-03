@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const activitySchema = new mongoose.Schema({
-  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'sms', 'followup'], required: true },
+  type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'followup'], required: true },
   description: { type: String, default: '' },
   callDuration: { type: Number, default: 0 },
   callStatus: { type: String, enum: ['connected', 'no_answer', 'busy', 'failed', ''], default: '' },

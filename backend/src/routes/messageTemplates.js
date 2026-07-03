@@ -3,7 +3,7 @@ const MessageTemplate = require('../models/MessageTemplate');
 const { protect } = require('../middleware/auth');
 const router = express.Router();
 
-// GET /api/message-templates?type=whatsapp|sms|email
+// GET /api/message-templates?type=whatsapp|email
 router.get('/', protect, async (req, res) => {
   try {
     const { type } = req.query;
