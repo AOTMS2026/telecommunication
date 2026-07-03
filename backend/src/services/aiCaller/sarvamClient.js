@@ -132,6 +132,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
     }, 15000);
 
     ws.on('open', () => {
+      console.log('[sarvam-tts] ws open');
       ws.send(JSON.stringify({
         type: 'config',
         data: {
@@ -145,20 +146,33 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
     });
 
     ws.on('message', (raw) => {
+      const str = raw.toString();
       try {
-        const data = JSON.parse(raw.toString());
+        const data = JSON.parse(str);
         if (data.audio_chunk) {
           chunks.push(Buffer.from(data.audio_chunk, 'base64'));
           // reset idle timer — finish 600ms after the last chunk arrives
           clearTimeout(idleTimer);
           idleTimer = setTimeout(finish, 600);
+        } else {
+          // log non-audio frames (errors, acks, unexpected shapes) so we
+          // can see exactly what Sarvam is sending back
+          console.log(`[sarvam-tts] ws message (no audio_chunk): ${str.slice(0, 300)}`);
         }
       } catch (e) {
-        // non-JSON frame, ignore
+        console.log(`[sarvam-tts] ws non-JSON message: ${str.slice(0, 300)}`);
       }
     });
 
+    ws.on('unexpected-response', (req, res) => {
+      console.log(`[sarvam-tts] unexpected-response status=${res.statusCode}`);
+      let body = '';
+      res.on('data', (c) => { body += c; });
+      res.on('end', () => console.log(`[sarvam-tts] unexpected-response body: ${body.slice(0, 300)}`));
+    });
+
     ws.on('error', (err) => {
+      console.log(`[sarvam-tts] ws error: ${err.message}`);
       if (!settled) {
         settled = true;
         clearTimeout(overallTimer);
@@ -167,7 +181,8 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reasonBuf) => {
+      console.log(`[sarvam-tts] ws closed code=${code} reason=${reasonBuf ? reasonBuf.toString() : ''} chunks=${chunks.length}`);
       // server closed the socket on its own — treat as end of stream
       finish();
     });
