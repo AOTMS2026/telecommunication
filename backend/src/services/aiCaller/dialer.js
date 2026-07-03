@@ -1,4 +1,10 @@
 // backend/src/services/aiCaller/dialer.js
+//
+// Per Sarvam+Exotel integration PDF:
+// Pass StreamUrl directly in the Calls/connect API call.
+// DO NOT use App Bazaar Url= flow for AI calls.
+// StreamType=bidirectional tells Exotel to connect the call directly
+// to our WebSocket orchestrator at /ai-caller/stream.
 
 const axios = require('axios');
 const Lead = require('../../models/Lead');
@@ -10,7 +16,7 @@ function getExotelConfig() {
   const accountSid = process.env.EXOTEL_ACCOUNT_SID;
   const subdomain = process.env.EXOTEL_SUBDOMAIN || 'api.exotel.com';
   if (!apiKey || !apiToken || !accountSid) {
-    throw new Error('Exotel credentials not configured');
+    throw new Error('Exotel credentials not configured (EXOTEL_API_KEY / EXOTEL_API_TOKEN / EXOTEL_ACCOUNT_SID)');
   }
   return { apiKey, apiToken, accountSid, subdomain };
 }
@@ -46,36 +52,41 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   if (!exophone) throw new Error('EXOTEL_EXOPHONE is not configured');
 
   const toNumber = normalizePhone(lead.phone);
-  const fromNumber = normalizePhone(exophone);
   const campaignQuery = campaign ? `&campaignId=${campaign._id}` : '';
+
+  // Per PDF: StreamUrl is the WebSocket endpoint of our orchestrator.
+  // Exotel connects directly to this WS — no App Bazaar flow needed.
   const streamUrl = `${wsBase}/ai-caller/stream?leadId=${lead._id}${campaignQuery}`;
 
   try {
     const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
 
-    // Exact same format as working curl command — capital field names
+    // From PDF: exact field names for Calls/connect with StreamType=bidirectional
     const params = new URLSearchParams({
-      From: fromNumber,
-      To: toNumber,
-      CallerId: fromNumber,
-      StreamUrl: streamUrl,
+      From: toNumber,        // caller's number (who gets the call)
+      CallerId: exophone,    // your Exophone virtual number
+      StreamUrl: streamUrl,  // our WS orchestrator
       StreamType: 'bidirectional',
       StatusCallback: `${baseUrl}/api/ai-caller/status?leadId=${lead._id}${campaignQuery}`,
       StatusCallbackEvent: 'terminal',
+      Record: 'true',
     });
 
     const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/Accounts/${accountSid}/Calls/connect`;
-    console.log(`[dialer] → ${url.replace(apiToken, '***')}`);
-    console.log(`[dialer] From=${fromNumber} To=${toNumber} StreamUrl=${streamUrl}`);
+    console.log(`[dialer] POST ${url.replace(apiToken, '***')}`);
+    console.log(`[dialer] To=${toNumber} CallerId=${exophone}`);
+    console.log(`[dialer] StreamUrl=${streamUrl}`);
 
     const response = await axios.post(url, params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 
-    // Exotel returns TwiML-compatible XML — parse Call.Sid from it
+    // Exotel returns TwiML-compatible XML
     const xml = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
     const sidMatch = xml.match(/<Sid>([^<]+)<\/Sid>/);
     const callSid = sidMatch ? sidMatch[1] : 'unknown';
+
+    console.log(`[dialer] call placed SID=${callSid}`);
 
     lead.activities.unshift({
       type: 'note',
