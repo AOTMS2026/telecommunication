@@ -1,6 +1,7 @@
 // models/CallRecording.js
 // Collection: callrecordings
 const mongoose = require('mongoose');
+const { normalizePhone10 } = require('../utils/phone');
 
 const callRecordingSchema = new mongoose.Schema(
   {
@@ -23,7 +24,19 @@ const callRecordingSchema = new mongoose.Schema(
     // Phone number extracted from the recording filename (digits only, last
     // 10 kept) — lets a recording be matched to a lead's call history even
     // when no leadId was sent or the lead didn't exist yet at upload time.
-    phone: { type: String, default: null, index: true },
+    // Always normalized to exactly the last 10 digits — never more, never
+    // less — same rule as Lead.phone (see utils/phone.js). Left as null
+    // only when no phone digits could be found anywhere in the upload.
+    phone: {
+      type: String,
+      default: null,
+      index: true,
+      set: v => (v === null || v === undefined || v === '' ? null : normalizePhone10(v)),
+      validate: {
+        validator: v => v === null || /^\d{10}$/.test(v),
+        message: props => `Recording phone must be exactly 10 digits (got "${props.value}")`,
+      },
+    },
 
     // Original filename as saved by the phone's call-recorder app
     originalName: { type: String, required: true },

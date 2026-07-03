@@ -26,9 +26,26 @@ const leadSchema = new mongoose.Schema({
   // Always stored as the last 10 digits only (no +91, spaces, or dashes) —
   // see utils/phone.js. The setter runs on assignment (new Lead(), .create(),
   // doc.phone = ..., and findByIdAndUpdate/findOneAndUpdate), so every write
-  // path ends up normalized automatically.
-  phone: { type: String, required: true, set: normalizePhone10 },
-  alternatePhone: { type: String, default: '', set: normalizePhone10 },
+  // path ends up normalized automatically. The validator then enforces the
+  // final stored value is exactly 10 digits — not more, not less.
+  phone: {
+    type: String,
+    required: true,
+    set: normalizePhone10,
+    validate: {
+      validator: v => /^\d{10}$/.test(v),
+      message: props => `Phone must be exactly 10 digits (got "${props.value}")`,
+    },
+  },
+  alternatePhone: {
+    type: String,
+    default: '',
+    set: normalizePhone10,
+    validate: {
+      validator: v => v === '' || /^\d{10}$/.test(v),
+      message: props => `Alternate phone must be exactly 10 digits (got "${props.value}")`,
+    },
+  },
   email: { type: String, default: '' },
   status: {
     type: String,
@@ -69,10 +86,6 @@ const leadSchema = new mongoose.Schema({
   // 'in_progress' -> Twilio call placed, RunPod session active
   // 'completed'   -> last AI call finished (outcome already applied)
   aiCallState: { type: String, enum: ['none', 'queued', 'in_progress', 'completed'], default: 'none' },
-
-  // Exotel CallSid of the currently in-progress AI call (if any). Needed so
-  // ai-pause can actively hang up a live call instead of only stopping new dials.
-  activeCallSid: { type: String, default: null },
 
   // Full structured GPT-4.1-mini output from the most recent AI call. Used by
   // conversationMemory.js to build "last time we spoke..." context for the next call.

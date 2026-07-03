@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const router = express.Router();
 const CallRecording = require('../models/CallRecording');
 const Lead = require('../models/Lead');
+const { normalizePhone10 } = require('../utils/phone');
 const { protect } = require('../middleware/auth');
 const { transcribeAudioFile } = require('../services/transcriptionService');
 
@@ -102,13 +103,17 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       return res.status(400).json({ error: 'No audio file received (field name must be "audio")' });
     }
 
-    const { leadId, recordedAt, phone: bodyPhone } = req.body;
+    const { leadId, recordedAt } = req.body;
 
     // Prefer the phone number sent directly by the caller app (mobile app
-    // sends it as a form field). Filename parsing is only a fallback for
-    // clients that don't send it, since filenames often contain timestamps
-    // or other digit sequences that look like phone numbers but aren't.
-    const bodyDigits = (bodyPhone || '').replace(/\D/g, '').slice(-10);
+    // sends it as a form field). Accept a few likely field names in case
+    // the app doesn't use exactly "phone". Filename parsing is only a
+    // fallback for clients that don't send it at all, since filenames
+    // often contain timestamps or other digit sequences that look like
+    // phone numbers but aren't.
+    const bodyPhoneRaw = req.body.phone || req.body.mobile || req.body.number
+      || req.body.contactNumber || req.body.callerNumber || req.body.msisdn || '';
+    const bodyDigits = normalizePhone10(bodyPhoneRaw);
     const extractedPhone = bodyDigits.length === 10
       ? bodyDigits
       : extractPhoneFromFilename(req.file.originalname);
