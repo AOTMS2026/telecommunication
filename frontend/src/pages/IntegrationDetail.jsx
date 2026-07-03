@@ -784,15 +784,22 @@ export default function IntegrationDetail() {
                       <button onClick={startGoogleOAuth} style={s.btnGhost}>🔐 Reconnect Google Account</button>
                     )}
                     <div style={{ height: 1, background: 'var(--theme-border-tint)', margin: '4px 0' }} />
-                    <div style={{ fontSize: 13, color: '#6b7280' }}>
-                      Saves your Default Campaign and Lead Distribution settings first, then imports — so leads land in the right campaign and get assigned correctly.
+                    <div style={{ padding: 12, background: '#f0fdf4', borderRadius: 8, fontSize: 13, color: '#166534' }}>
+                      ⚡ Auto-sync is on. New rows students fill in the sheet are picked up automatically every ~2 minutes and land straight into <strong>{integration.defaultCampaign?.name || 'the selected campaign'}</strong>, assigned to <strong>{integration.defaultAssignedTo?.name || 'the selected assignee'}</strong>. No manual import needed.
                     </div>
+                    {integration.lastAutoSyncAt && (
+                      <div style={{ fontSize: 12, color: '#6b7280' }}>
+                        Last checked: {new Date(integration.lastAutoSyncAt).toLocaleString()}
+                        {integration.lastAutoSyncResult ? ` · Imported ${integration.lastAutoSyncResult.imported}, updated ${integration.lastAutoSyncResult.updated || 0}` : ''}
+                        {integration.lastAutoSyncError ? ` · Error: ${integration.lastAutoSyncError}` : ''}
+                      </div>
+                    )}
                     <button
                       onClick={() => doAction('import', async () => { await handleSave({}, true); return api.post(`/integrations/${id}/sheets/import`); })}
-                      style={s.btnPrimary}
+                      style={s.btnGhost}
                       disabled={!!actionLoading}
                     >
-                      {actionLoading === 'import' ? 'Saving & Importing...' : '↓ Save Settings & Import Leads from Sheet'}
+                      {actionLoading === 'import' ? 'Syncing...' : '↓ Sync Now (optional, for testing)'}
                     </button>
                   </div>
                 )}
