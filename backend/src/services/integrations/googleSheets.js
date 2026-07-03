@@ -12,14 +12,6 @@ function extractSheetId(raw) {
   return match ? match[1] : trimmed;
 }
 
-// Accepts either a raw Sheet ID or a full Google Sheets URL and returns just the ID
-function extractSheetId(raw) {
-  if (!raw) return '';
-  const trimmed = String(raw).trim();
-  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : trimmed;
-}
-
 function getOAuth2Client(config) {
   if (!config || (!config.refreshToken && !config.accessToken)) {
     const err = new Error('Google account not connected. Click "Connect with Google (OAuth)" in Step 1 and authorize access first.');
@@ -67,13 +59,41 @@ async function exchangeCode(code) {
   return tokens; // { access_token, refresh_token, expiry_date }
 }
 
-// Get sheet rows and import as leads
-async function importLeadsFromSheet(integration) {
+// Fetch header row (first row) of a sheet range so the UI can offer a column picker
+async function getColumns(integration, sheetIdRaw, rangeRaw) {
+  const sheetId = extractSheetId(sheetIdRaw || integration.config?.sheetId);
+  if (!sheetId) {
+    const err = new Error('Enter a Sheet ID first.');
+    err.code = 'SHEET_ID_MISSING';
+    throw err;
+  }
+  const range = rangeRaw || 'Sheet1!A1:Z1';
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
+    const headerRow = (res.data.values && res.data.values[0]) || [];
+    return headerRow.map(h => String(h).trim()).filter(Boolean);
+  } catch (e) {
+    if (e.code === 404 || e.response?.status === 404) {
+      throw new Error('Sheet not found. Double-check the Sheet ID and make sure the sheet is shared with the Google account you connected.');
+    }
+    throw e;
+  }
+}
 
-  const sheetId = integration.config.sheetId;
-  const range = integration.config.sheetRange || 'Sheet1!A1:Z1000';
+// Import leads from a single {sheetId, sheetRange, fieldMapping} source.
+// Only columns explicitly selected in fieldMapping are read — unmapped fields are left blank.
+async function importFromOneSource(integration, source) {
+  const sheetId = extractSheetId(source.sheetId);
+  if (!sheetId) return { imported: 0, skipped: 0, error: 'No Sheet ID set for this sheet.' };
+
+  const range = source.sheetRange || 'Sheet1!A1:Z1000';
+  const mapping = source.fieldMapping || {};
+  if (!mapping.phone) return { imported: 0, skipped: 0, error: 'Phone column not mapped — this sheet was skipped.' };
+
+  const auth = getOAuth2Client(integration.config);
+  const sheets = google.sheets({ version: 'v4', auth });
 
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
   const rows = res.data.values || [];
@@ -187,4 +207,4 @@ async function listSheets(integration) {
   }
 }
 
-module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets };
+module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets, extractSheetId, getColumns };

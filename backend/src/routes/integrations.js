@@ -300,7 +300,19 @@ router.post('/:id/sheets/import', protect, async (req, res) => {
     const result = await googleSheets.importLeadsFromSheet(integration);
     res.json(result);
   } catch (err) {
-    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' || err.code === 'SHEET_ID_MISSING' ? 400 : 500).json({ message: err.message });
+  }
+});
+
+router.get('/:id/sheets/columns', protect, async (req, res) => {
+  try {
+    const integration = await Integration.findById(req.params.id);
+    if (!integration) return res.status(404).json({ message: 'Integration not found' });
+    const { sheetId, sheetRange } = req.query;
+    const columns = await googleSheets.getColumns(integration, sheetId, sheetRange);
+    res.json({ columns });
+  } catch (err) {
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' || err.code === 'SHEET_ID_MISSING' ? 400 : 500).json({ message: err.message });
   }
 });
 

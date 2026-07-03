@@ -184,8 +184,17 @@ export default function IntegrationDetail() {
   const handleSave = async (extra = {}, silent = false) => {
     setSaving(true);
     try {
-      await integrationsAPI.update(id, { config, fieldMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null, ...extra });
-      if (!extra.status) alert('Saved successfully');
+      let payloadConfig = config;
+      let payloadMapping = fieldMapping;
+      if (type === 'google_sheets') {
+        const cleanSources = sheetSources
+          .filter(src => src.sheetId)
+          .map(({ columns, columnsLoading, columnsError, ...rest }) => rest);
+        payloadConfig = { ...config, sheetSources: cleanSources, sheetId: cleanSources[0]?.sheetId || '', sheetRange: cleanSources[0]?.sheetRange || '' };
+        payloadMapping = cleanSources[0]?.fieldMapping || fieldMapping;
+      }
+      await integrationsAPI.update(id, { config: payloadConfig, fieldMapping: payloadMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null, ...extra });
+      if (!extra.status && !silent) alert('Saved successfully');
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
