@@ -192,9 +192,9 @@ export default function IntegrationDetail() {
     setActionResult(null);
     try {
       const res = await fn();
-      setActionResult({ ok: true, data: res.data });
+      setActionResult({ ok: true, data: res.data, label });
     } catch (err) {
-      setActionResult({ ok: false, msg: err.response?.data?.message || err.message, needsAuth: !!err.response?.data?.needsAuth });
+      setActionResult({ ok: false, msg: err.response?.data?.message || err.message, needsAuth: !!err.response?.data?.needsAuth, label });
     } finally {
       setActionLoading('');
     }
@@ -689,6 +689,38 @@ export default function IntegrationDetail() {
               <button onClick={() => doAction('listmeet', () => api.get(`/integrations/${id}/meet/list`))} style={s.btnGhost} disabled={!!actionLoading}>
                 {actionLoading === 'listmeet' ? '...' : 'View Upcoming Meetings'}
               </button>
+
+              {actionResult && actionResult.ok && actionResult.label === 'meet' && actionResult.data?.meetLink && (
+                <div style={{ marginTop: 16, padding: 14, borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac' }}>
+                  <div style={{ fontWeight: 600, marginBottom: 8, color: '#166534' }}>✅ Meeting created: {actionResult.data.summary}</div>
+                  <a href={actionResult.data.meetLink} target="_blank" rel="noreferrer" style={{ ...s.btnPrimary, display: 'inline-block', textDecoration: 'none' }}>
+                    🎥 Join Google Meet
+                  </a>
+                </div>
+              )}
+
+              {actionResult && actionResult.ok && Array.isArray(actionResult.data) && (
+                <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
+                  {actionResult.data.length === 0 && (
+                    <div style={{ color: '#9ca3af', fontSize: 13 }}>No upcoming meetings with a Google Meet link found.</div>
+                  )}
+                  {actionResult.data.map(m => (
+                    <div key={m.eventId} style={{ padding: 12, border: '1px solid var(--theme-border-tint)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{m.summary || 'Meeting'}</div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>{m.start ? new Date(m.start).toLocaleString() : ''}</div>
+                      </div>
+                      {m.meetLink ? (
+                        <a href={m.meetLink} target="_blank" rel="noreferrer" style={{ ...s.btnPrimary, textDecoration: 'none', padding: '7px 16px' }}>
+                          🎥 Join
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#9ca3af' }}>No link</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -725,7 +757,7 @@ export default function IntegrationDetail() {
             </div>
           )}
 
-          {actionResult && (
+          {actionResult && !(type === 'google_meet' && (actionResult.label === 'meet' || actionResult.label === 'listmeet')) && (
             <div style={{ ...s.card, background: actionResult.ok ? '#f0fdf4' : '#fef2f2', border: `1px solid ${actionResult.ok ? '#86efac' : '#fca5a5'}` }}>
               <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 12, color: actionResult.ok ? '#166534' : '#dc2626' }}>
                 {actionResult.ok ? JSON.stringify(actionResult.data, null, 2) : `❌ ${actionResult.msg}`}
