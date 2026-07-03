@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, MessageSquare, Copy, Check, Trash2, BookOpen, Zap, Sparkles } from 'lucide-react';
+import { ArrowLeft, Phone, PhoneOff, Mail, MapPin, Award, IndianRupee, Globe, User, Calendar, Tag, Star, Edit3, Save, X, Plus, Clock, MessageCircle, Copy, Check, Trash2, BookOpen, Zap, Sparkles } from 'lucide-react';
 import { leadsAPI, campaignsAPI, usersAPI, coursesAPI, followupsAPI, blocklistAPI, leadStagesAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../common/StatusBadge';
@@ -49,7 +49,7 @@ function AddNoteModal({ onClose, onSubmit }) {
           <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="flex gap-2 mb-4">
-          {['note', 'whatsapp', 'sms'].map(t => (
+          {['note', 'whatsapp'].map(t => (
             <button key={t} onClick={() => setType(t)} className={`text-xs px-3 py-1.5 rounded-full capitalize font-semibold transition-all ${type === t ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{t}</button>
           ))}
         </div>
@@ -707,7 +707,6 @@ export default function LeadDetailsPage({
   const activityIcon = (type) => {
     if (type === 'call') return <Phone className="w-4 h-4 text-green-600" />;
     if (type === 'whatsapp') return <MessageCircle className="w-4 h-4 text-green-500" />;
-    if (type === 'sms') return <MessageSquare className="w-4 h-4 text-blue-600" />;
     if (type === 'status_change') return <Tag className="w-4 h-4 text-orange-600" />;
     if (type === 'api_call') return <Zap className="w-4 h-4 text-purple-600" />;
     return <Clock className="w-4 h-4 text-indigo-600" />;

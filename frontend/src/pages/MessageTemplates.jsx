@@ -5,8 +5,8 @@ import EmailCampaignWizard from '../components/EmailCampaignWizard';
 import EmailTemplateModal from '../components/EmailTemplateModal';
 import EmailCampaignHistory from '../components/EmailCampaignHistory';
 
-const TABS = ['WHATSAPP', 'SMS', 'EMAIL'];
-const TAB_TYPE_MAP = { WHATSAPP: 'whatsapp', SMS: 'sms', EMAIL: 'email' };
+const TABS = ['WHATSAPP', 'EMAIL'];
+const TAB_TYPE_MAP = { WHATSAPP: 'whatsapp', EMAIL: 'email' };
 
 // FIX BUG-06: Templates now saved to/loaded from database
 export default function MessageTemplates() {
@@ -16,7 +16,7 @@ export default function MessageTemplates() {
   const [newTemplate, setNewTemplate] = useState({ shortcut: '', message: '', isShared: false });
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('All'); // All | Mine | Shared (WhatsApp/SMS only)
+  const [filter, setFilter] = useState('All'); // All | Mine | Shared (WhatsApp only)
   const [emailSearch, setEmailSearch] = useState(''); // Email tab only
 
   // Email-only feature state
@@ -119,11 +119,6 @@ export default function MessageTemplates() {
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
       </svg>
     );
-    if (tab === 'SMS') return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-      </svg>
-    );
     return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
@@ -136,7 +131,7 @@ export default function MessageTemplates() {
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--theme-text-strong)' }}>Message Templates</div>
-        <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Manage reusable message templates for WhatsApp, SMS, and Email. Shared templates are visible to all team members.</div>
+        <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Manage reusable message templates for WhatsApp and Email. Shared templates are visible to all team members.</div>
       </div>
 
       {/* Tabs */}
@@ -198,7 +193,7 @@ export default function MessageTemplates() {
               </div>
             </>
           ) : (
-            /* WhatsApp / SMS — unchanged filter + New */
+            /* WhatsApp — unchanged filter + New */
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               <select value={filter} onChange={e => setFilter(e.target.value)}
                 style={{ flex: 1, padding: '6px 8px', border: '1.5px solid var(--theme-border-tint)', borderRadius: 7, fontSize: 12, color: '#444', background: '#fff', outline: 'none' }}>
@@ -290,7 +285,7 @@ export default function MessageTemplates() {
         </div>
       </div>
 
-      {/* New Template Modal — WhatsApp / SMS only (unchanged) */}
+      {/* New Template Modal — WhatsApp only (unchanged) */}
       {showNewModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(45,45,107,0.4)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
           <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, padding: 28, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)' }}>
