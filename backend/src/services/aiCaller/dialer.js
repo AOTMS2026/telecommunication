@@ -93,6 +93,7 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
       description: `AI Call initiated to ${toNumber} (SID: ${callSid})${campaign ? ` [Campaign: ${campaign.name}]` : ''}`,
       performedBy: performedBy || undefined,
     });
+    lead.activeCallSid = callSid;
     await lead.save();
 
     return { success: true, callSid, to: toNumber, status: 'in-progress' };
@@ -105,4 +106,27 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   }
 }
 
-module.exports = { triggerAiCall, getExotelConfig, getBaseUrl, normalizePhone };
+// Actively terminate a live Exotel call (used by ai-pause "stop" so calls
+// don't just keep ringing/talking after the user hits stop).
+// Exotel's standard Call-update endpoint: POST .../Calls/{CallSid}.json
+// with Status=completed hangs up an in-progress call.
+async function hangupCall(callSid) {
+  if (!callSid || callSid === 'unknown') return { success: false, reason: 'no callSid' };
+
+  const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
+  const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/Accounts/${accountSid}/Calls/${callSid}.json`;
+
+  try {
+    await axios.post(url, new URLSearchParams({ Status: 'completed' }).toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+    console.log(`[dialer] hung up call SID=${callSid}`);
+    return { success: true };
+  } catch (err) {
+    const message = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+    console.error(`[dialer] hangup failed for SID=${callSid}: ${message}`);
+    return { success: false, reason: message };
+  }
+}
+
+module.exports = { triggerAiCall, hangupCall, getExotelConfig, getBaseUrl, normalizePhone };

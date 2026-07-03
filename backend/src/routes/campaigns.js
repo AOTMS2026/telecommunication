@@ -14,6 +14,8 @@ const express = require('express');
 const Campaign = require('../models/Campaign');
 const Lead = require('../models/Lead');
 const { protect, authorize } = require('../middleware/auth');
+const { hangupCall } = require('../services/aiCaller/dialer');
+const { releaseLock } = require('../services/aiCaller/leadLock');
 const router = express.Router();
 
 // GET /api/campaigns
@@ -169,9 +171,10 @@ router.post('/:id/ai-start', protect, authorize('manager', 'admin'), async (req,
   }
 });
 
-// POST /api/campaigns/:id/ai-pause  — stop the AI engine from picking up new leads
-// (in-flight calls already placed are allowed to finish naturally; their lock
-// auto-releases via outcomeService when the call ends)
+// POST /api/campaigns/:id/ai-pause  — stop the AI engine AND hang up any calls
+// currently in progress for this campaign (previously this only stopped new
+// dials and let in-flight calls keep running to completion — that's the bug
+// where "stop" didn't actually stop the AI call).
 router.post('/:id/ai-pause', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
     const campaign = await Campaign.findByIdAndUpdate(
@@ -181,7 +184,29 @@ router.post('/:id/ai-pause', protect, authorize('manager', 'admin'), async (req,
     );
     if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
 
-    res.json({ campaign, message: 'AI calling paused for this campaign.' });
+    const inProgressLeads = await Lead.find({
+      campaign: campaign._id,
+      aiCallState: 'in_progress',
+    });
+
+    for (const lead of inProgressLeads) {
+      if (lead.activeCallSid) {
+        await hangupCall(lead.activeCallSid).catch((err) =>
+          console.error(`[ai-pause] hangup failed for lead ${lead._id}:`, err.message)
+        );
+      }
+      await Lead.updateOne(
+        { _id: lead._id },
+        { aiCallState: 'none', activeCallSid: null, $unset: { aiLock: '' } }
+      ).catch(() => {});
+      await releaseLock(lead._id, 'ai-engine').catch(() => {});
+    }
+
+    res.json({
+      campaign,
+      stoppedCalls: inProgressLeads.length,
+      message: `AI calling paused. ${inProgressLeads.length} in-progress call(s) hung up.`,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
