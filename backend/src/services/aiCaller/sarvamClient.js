@@ -7,9 +7,10 @@
 
 const axios = require('axios');
 const FormData = require('form-data');
+const WebSocket = require('ws');
 
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
-const SARVAM_TTS_URL = 'https://api.sarvam.ai/text-to-speech';
+const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3';
 
 function getSarvamKey() {
   const key = process.env.SARVAM_API_KEY;
@@ -78,33 +79,86 @@ async function transcribeAudio(pcm16Bytes) {
 }
 
 // ─── TTS ─────────────────────────────────────────────────────────────────────
-// Per PDF: bulbul:v1, output_audio_codec=pcm, sample_rate=8000
-async function synthesizeSpeech(text, languageCode = 'te-IN') {
-  if (!text || !text.trim()) return Buffer.alloc(0);
+// Per PDF: WebSocket wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3
+// config payload: { type: "config", data: { target_language_code, speaker,
+// output_audio_codec: "pcm", sample_rate } } — then send { "text": ... } and
+// collect base64 "audio_chunk" fields from the socket. Raw PCM back already,
+// so no WAV header stripping needed.
+function synthesizeSpeech(text, languageCode = 'te-IN') {
+  return new Promise((resolve, reject) => {
+    if (!text || !text.trim()) return resolve(Buffer.alloc(0));
 
-  const key = getSarvamKey();
+    const key = getSarvamKey();
+    const chunks = [];
+    let settled = false;
 
-  const response = await axios.post(SARVAM_TTS_URL, {
-    inputs: [text],
-    target_language_code: languageCode,
-    speaker: 'meera',
-    model: 'bulbul:v1',
-    pitch: 0,
-    pace: 1.0,
-    loudness: 1.5,
-    speech_sample_rate: 8000,   // per PDF: matches Exotel audio engine
-    enable_preprocessing: true,
-    enc_format: 'wav',
-  }, {
-    headers: { 'Content-Type': 'application/json', 'api-subscription-key': key },
-    timeout: 15000,
+    const ws = new WebSocket(SARVAM_TTS_WS_URL, {
+      headers: { 'api-subscription-key': key },
+    });
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        ws.terminate();
+        reject(new Error('Sarvam TTS WebSocket timed out'));
+      }
+    }, 15000);
+
+    ws.on('open', () => {
+      ws.send(JSON.stringify({
+        type: 'config',
+        data: {
+          target_language_code: languageCode,
+          speaker: 'meera',
+          output_audio_codec: 'pcm',
+          sample_rate: 8000, // per PDF: matches Exotel audio engine
+        },
+      }));
+      ws.send(JSON.stringify({ text }));
+      ws.send(JSON.stringify({ type: 'flush' }));
+    });
+
+    ws.on('message', (raw) => {
+      try {
+        const data = JSON.parse(raw.toString());
+        if (data.audio_chunk) {
+          chunks.push(Buffer.from(data.audio_chunk, 'base64'));
+        }
+        if (data.type === 'flush_done' || data.event === 'done') {
+          settled = true;
+          clearTimeout(timer);
+          ws.close();
+          const audio = Buffer.concat(chunks);
+          console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
+          resolve(audio);
+        }
+      } catch (e) {
+        // non-JSON frame, ignore
+      }
+    });
+
+    ws.on('error', (err) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        reject(err);
+      }
+    });
+
+    ws.on('close', () => {
+      clearTimeout(timer);
+      if (!settled) {
+        settled = true;
+        const audio = Buffer.concat(chunks);
+        if (audio.length === 0) {
+          reject(new Error('Sarvam TTS returned no audio'));
+        } else {
+          console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
+          resolve(audio);
+        }
+      }
+    });
   });
-
-  const base64Audio = response.data?.audios?.[0];
-  if (!base64Audio) throw new Error('Sarvam TTS returned no audio');
-
-  console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
-  return stripWavHeader(Buffer.from(base64Audio, 'base64'));
 }
 
 module.exports = { transcribeAudio, synthesizeSpeech };
