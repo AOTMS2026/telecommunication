@@ -89,6 +89,11 @@ export default function IntegrationDetail() {
   const [defaultCampaign, setDefaultCampaign] = useState('');
   const [defaultAssignedTo, setDefaultAssignedTo] = useState('');
 
+  // Multiple Google Sheets sources (google_sheets type only) — each has its own
+  // sheetId/sheetRange/fieldMapping and its own fetched column list.
+  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: { name: '', phone: '', email: '', location: '' }, columns: [], columnsLoading: false, columnsError: '' });
+  const [sheetSources, setSheetSources] = useState([emptySheetSource()]);
+
   // Extra states for Google Meet
   const [meetings, setMeetings] = useState([]);
   const [newMeeting, setNewMeeting] = useState({ summary: '', startTime: '', attendeeEmails: '' });
@@ -148,6 +153,20 @@ export default function IntegrationDetail() {
       setIntegration(intg);
       setConfig(intg.config || {});
       setFieldMapping(intg.fieldMapping || { name: 'name', phone: 'phone', email: 'email', location: 'location' });
+      if (intg.type === 'google_sheets') {
+        const existing = (intg.config?.sheetSources && intg.config.sheetSources.length > 0)
+          ? intg.config.sheetSources
+          : [{ sheetId: intg.config?.sheetId || '', sheetRange: intg.config?.sheetRange || '', name: '', fieldMapping: intg.fieldMapping || {} }];
+        setSheetSources(existing.map(src => ({
+          sheetId: src.sheetId || '',
+          sheetRange: src.sheetRange || '',
+          name: src.name || '',
+          fieldMapping: { name: src.fieldMapping?.name || '', phone: src.fieldMapping?.phone || '', email: src.fieldMapping?.email || '', location: src.fieldMapping?.location || '' },
+          columns: [],
+          columnsLoading: false,
+          columnsError: '',
+        })));
+      }
       setDefaultCampaign(intg.defaultCampaign?._id || '');
       setDefaultAssignedTo(intg.defaultAssignedTo?._id || '');
       setCampaigns(campRes.data?.campaigns || []);
@@ -166,7 +185,7 @@ export default function IntegrationDetail() {
     setSaving(true);
     try {
       await integrationsAPI.update(id, { config, fieldMapping, defaultCampaign: defaultCampaign || null, defaultAssignedTo: defaultAssignedTo || null, ...extra });
-      if (!extra.status && !silent) alert('Saved successfully');
+      if (!extra.status) alert('Saved successfully');
       fetchAll();
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
@@ -197,6 +216,28 @@ export default function IntegrationDetail() {
       setActionResult({ ok: false, msg: err.response?.data?.message || err.message, needsAuth: !!err.response?.data?.needsAuth, label });
     } finally {
       setActionLoading('');
+    }
+  };
+
+  const addSheetSource = () => setSheetSources(prev => [...prev, emptySheetSource()]);
+
+  const removeSheetSource = (idx) => setSheetSources(prev => prev.filter((_, i) => i !== idx));
+
+  const updateSheetSource = (idx, patch) => setSheetSources(prev => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+
+  const updateSheetSourceMapping = (idx, field, value) => setSheetSources(prev => prev.map((s, i) => (
+    i === idx ? { ...s, fieldMapping: { ...s.fieldMapping, [field]: value } } : s
+  )));
+
+  const fetchColumnsForSource = async (idx) => {
+    const src = sheetSources[idx];
+    if (!src.sheetId) { updateSheetSource(idx, { columnsError: 'Enter a Sheet ID first.' }); return; }
+    updateSheetSource(idx, { columnsLoading: true, columnsError: '' });
+    try {
+      const res = await integrationsAPI.getSheetColumns(id, src.sheetId, src.sheetRange);
+      updateSheetSource(idx, { columns: res.data.columns || [], columnsLoading: false });
+    } catch (err) {
+      updateSheetSource(idx, { columnsLoading: false, columnsError: err.response?.data?.message || 'Could not load columns' });
     }
   };
 
@@ -395,8 +436,60 @@ export default function IntegrationDetail() {
                   </div>
                 )}
 
+                {type === 'google_sheets' && (
+                  <div style={{ display: 'grid', gap: 16 }}>
+                    {sheetSources.map((src, idx) => (
+                      <div key={idx} style={{ ...s.card, position: 'relative' }}>
+                        {sheetSources.length > 1 && (
+                          <button onClick={() => removeSheetSource(idx)} style={{ position: 'absolute', top: 12, right: 12, ...s.btnDanger, padding: '4px 10px' }}>
+                            Remove
+                          </button>
+                        )}
+                        <div style={{ display: 'grid', gap: 12 }}>
+                          <div>
+                            <label style={s.lbl}>Sheet Label (optional)</label>
+                            <input
+                              value={src.name}
+                              onChange={e => updateSheetSource(idx, { name: e.target.value })}
+                              placeholder={`Sheet ${idx + 1}`}
+                              style={s.inp}
+                            />
+                          </div>
+                          <div>
+                            <label style={s.lbl}>Google Sheet ID</label>
+                            <input
+                              value={src.sheetId}
+                              onChange={e => updateSheetSource(idx, { sheetId: e.target.value, columns: [] })}
+                              placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+                              style={s.inp}
+                            />
+                            <div style={s.hint}>From the sheet URL: /spreadsheets/d/&#123;SHEET_ID&#125;/</div>
+                          </div>
+                          <div>
+                            <label style={s.lbl}>Sheet Range</label>
+                            <input
+                              value={src.sheetRange}
+                              onChange={e => updateSheetSource(idx, { sheetRange: e.target.value, columns: [] })}
+                              placeholder="Sheet1!A1:Z1000"
+                              style={s.inp}
+                            />
+                          </div>
+                          <button onClick={() => fetchColumnsForSource(idx)} style={s.btnGhost} disabled={src.columnsLoading}>
+                            {src.columnsLoading ? 'Loading columns...' : '↻ Load Columns from this Sheet'}
+                          </button>
+                          {src.columnsError && <div style={{ color: '#dc2626', fontSize: 13 }}>{src.columnsError}</div>}
+                          {src.columns.length > 0 && (
+                            <div style={{ fontSize: 12, color: '#059669' }}>✓ {src.columns.length} columns loaded — map them in Step 2</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={addSheetSource} style={s.btnGhost}>+ Add Another Sheet</button>
+                  </div>
+                )}
+
                 {/* Manual config fields */}
-                {configFields.length > 0 && (
+                {configFields.length > 0 && type !== 'google_sheets' && (
                   <div style={{ display: 'grid', gap: 16, marginTop: 16 }}>
                     {configFields.map(field => (
                       <div key={field.key}>
@@ -429,27 +522,68 @@ export default function IntegrationDetail() {
               <div>
                 <h4 style={{ margin: '0 0 8px', color: 'var(--theme-text-strongest)' }}>Map Fields</h4>
                 <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>
-                  Map the source field names to AOTMS lead fields. Leave as-is if they match.
+                  {type === 'google_sheets'
+                    ? 'Pick which column from each sheet fills each AOTMS lead field. Only mapped columns are imported.'
+                    : 'Map the source field names to AOTMS lead fields. Leave as-is if they match.'}
                 </p>
                 {type === 'facebook' && (
                   <div style={{ marginBottom: 16, padding: 12, background: '#eff6ff', borderRadius: 8, fontSize: 13, color: '#1e40af' }}>
                     Facebook default fields: <code>full_name</code>, <code>phone_number</code>, <code>email</code>, <code>city</code>
                   </div>
                 )}
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {['name', 'phone', 'email', 'location'].map(field => (
-                    <div key={field} style={{ display: 'grid', gridTemplateColumns: '120px 20px 1fr', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-strongest)', textTransform: 'capitalize' }}>{field}</span>
-                      <span style={{ color: '#9ca3af' }}>←</span>
-                      <input
-                        value={fieldMapping[field] || ''}
-                        onChange={e => setFieldMapping(prev => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={`Source field for "${field}"`}
-                        style={s.inp}
-                      />
-                    </div>
-                  ))}
-                </div>
+
+                {type === 'google_sheets' ? (
+                  <div style={{ display: 'grid', gap: 20 }}>
+                    {sheetSources.map((src, idx) => (
+                      <div key={idx} style={s.card}>
+                        <h5 style={{ margin: '0 0 4px' }}>{src.name || `Sheet ${idx + 1}`}</h5>
+                        <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12, wordBreak: 'break-all' }}>{src.sheetId || 'No Sheet ID set'}</div>
+                        {src.columns.length === 0 ? (
+                          <div style={{ fontSize: 13, color: '#b45309', background: '#fef3c7', padding: 10, borderRadius: 8 }}>
+                            No columns loaded yet — go back to Step 1 and click "Load Columns from this Sheet".
+                          </div>
+                        ) : (
+                          <div style={{ display: 'grid', gap: 12 }}>
+                            {['name', 'phone', 'email', 'location'].map(field => (
+                              <div key={field} style={{ display: 'grid', gridTemplateColumns: '120px 20px 1fr', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-strongest)', textTransform: 'capitalize' }}>
+                                  {field}{field === 'phone' && ' *'}
+                                </span>
+                                <span style={{ color: '#9ca3af' }}>←</span>
+                                <select
+                                  value={src.fieldMapping[field] || ''}
+                                  onChange={e => updateSheetSourceMapping(idx, field, e.target.value)}
+                                  style={s.inp}
+                                >
+                                  <option value="">-- Not mapped (skip) --</option>
+                                  {src.columns.map(col => (
+                                    <option key={col} value={col}>{col}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 12, color: '#9ca3af' }}>* Phone must be mapped or that sheet is skipped on import.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {['name', 'phone', 'email', 'location'].map(field => (
+                      <div key={field} style={{ display: 'grid', gridTemplateColumns: '120px 20px 1fr', alignItems: 'center', gap: 12 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-strongest)', textTransform: 'capitalize' }}>{field}</span>
+                        <span style={{ color: '#9ca3af' }}>←</span>
+                        <input
+                          value={fieldMapping[field] || ''}
+                          onChange={e => setFieldMapping(prev => ({ ...prev, [field]: e.target.value }))}
+                          placeholder={`Source field for "${field}"`}
+                          style={s.inp}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
