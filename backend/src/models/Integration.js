@@ -26,6 +26,9 @@ const integrationSchema = new mongoose.Schema({
     wabaId: { type: String, default: '' },
     did: { type: String, default: '' },
     virtualNumber: { type: String, default: '' },
+    // Multiple Google Sheets sources, each with its own sheetId/range/fieldMapping/name.
+    // Falls back to top-level sheetId/sheetRange/fieldMapping (above/outside config) when empty.
+    sheetSources: { type: [mongoose.Schema.Types.Mixed], default: [] },
     extraConfig: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   // Field mapping: integration field -> lead field

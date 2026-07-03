@@ -166,6 +166,7 @@ export const integrationsAPI = {
   // Google Sheets
   importFromSheet: (id) => api.post(`/integrations/${id}/sheets/import`),
   listSheets: (id) => api.get(`/integrations/${id}/sheets/list`),
+  getSheetColumns: (id, sheetId, sheetRange) => api.get(`/integrations/${id}/sheets/columns`, { params: { sheetId, sheetRange } }),
 
   // Google Meet
   createMeeting: (id, data) => api.post(`/integrations/${id}/meet/create`, data),
