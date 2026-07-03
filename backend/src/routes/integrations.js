@@ -300,6 +300,125 @@ router.get('/:id/whatsapp/templates', protect, async (req, res) => {
   }
 });
 
+// ── Submit a new template to Meta for approval ─────────────────────────────────
+// Called by AddTemplateForm on the WhatsApp > Templates tab.
+router.post('/:id/whatsapp/templates', protect, async (req, res) => {
+  try {
+    const MessageTemplate = require('../models/MessageTemplate');
+    const integration = await Integration.findById(req.params.id);
+    if (!integration) return res.status(404).json({ message: 'Integration not found' });
+
+    const { name, category, language, headerType, headerText, message, footer, buttons } = req.body;
+    if (!name || !message) return res.status(400).json({ message: 'name and message are required' });
+
+    // Meta requires lowercase_snake_case, unique template names
+    const metaTemplateName = String(name).trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
+    const languageCode = { English: 'en_US', Hindi: 'hi', Telugu: 'te', Tamil: 'ta' }[language] || language || 'en_US';
+
+    const components = [];
+    if (headerType === 'Text' && headerText) {
+      components.push({ type: 'HEADER', format: 'TEXT', text: headerText });
+    }
+    components.push({ type: 'BODY', text: message });
+    if (footer) components.push({ type: 'FOOTER', text: footer });
+    if (Array.isArray(buttons) && buttons.length) {
+      components.push({
+        type: 'BUTTONS',
+        buttons: buttons.map(b => {
+          if (b.type === 'URL') return { type: 'URL', text: b.text, url: b.value };
+          if (b.type === 'Phone Number') return { type: 'PHONE_NUMBER', text: b.text, phone_number: b.value };
+          return { type: 'QUICK_REPLY', text: b.text };
+        }),
+      });
+    }
+
+    let metaResult;
+    try {
+      metaResult = await whatsapp.submitTemplate(
+        integration.config.wabaId,
+        integration.config.accessToken,
+        { name: metaTemplateName, category: (category || 'MARKETING').toUpperCase(), language: languageCode, components }
+      );
+    } catch (metaErr) {
+      return res.status(400).json({ message: metaErr.response?.data?.error?.message || metaErr.message });
+    }
+
+    const template = await MessageTemplate.create({
+      type: 'whatsapp',
+      shortcut: name,
+      message,
+      metaTemplateId: metaResult.id,
+      metaTemplateName,
+      category: (category || 'MARKETING').toUpperCase(),
+      language: languageCode,
+      components,
+      waStatus: metaResult.status || 'PENDING',
+      integration: integration._id,
+      createdBy: req.user._id,
+    });
+
+    res.status(201).json({ metaTemplateId: metaResult.id, status: metaResult.status || 'PENDING', template });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── Pull latest approval status for all templates from Meta ────────────────────
+// Fallback for when the status-update webhook isn't configured yet.
+router.post('/:id/whatsapp/templates/sync', protect, async (req, res) => {
+  try {
+    const MessageTemplate = require('../models/MessageTemplate');
+    const integration = await Integration.findById(req.params.id);
+    if (!integration) return res.status(404).json({ message: 'Integration not found' });
+
+    const metaTemplates = await whatsapp.getTemplates(integration.config.wabaId, integration.config.accessToken);
+    let updated = 0;
+    for (const mt of metaTemplates) {
+      const result = await MessageTemplate.findOneAndUpdate(
+        { metaTemplateId: String(mt.id) },
+        { $set: { waStatus: mt.status, category: mt.category, rejectedReason: mt.rejected_reason || '' } }
+      );
+      if (result) updated++;
+    }
+    res.json({ updated, total: metaTemplates.length });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ── Meta Cloud API webhook (public — verified by hub.verify_token / no CRM auth) ─
+// Configure this URL in Meta App Dashboard > WhatsApp > Configuration:
+//   Callback URL: {BACKEND_URL}/api/integrations/:id/whatsapp/webhook
+//   Verify Token: whatever you set in integration.config.webhookVerifyToken
+router.get('/:id/whatsapp/webhook', async (req, res) => {
+  try {
+    const integration = await Integration.findById(req.params.id);
+    if (!integration) return res.sendStatus(404);
+
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    const result = whatsapp.verifyWebhookToken(mode, token, challenge, integration.config.webhookVerifyToken);
+    if (result.valid) return res.status(200).send(result.challenge);
+    return res.sendStatus(403);
+  } catch (err) {
+    res.sendStatus(500);
+  }
+});
+
+router.post('/:id/whatsapp/webhook', async (req, res) => {
+  // Ack immediately — Meta retries aggressively on non-200 responses.
+  res.sendStatus(200);
+  try {
+    const integration = await Integration.findById(req.params.id);
+    if (!integration) return;
+    await whatsapp.handleWhatsAppWebhookEvent(req.body, integration);
+  } catch (err) {
+    console.error('WhatsApp webhook processing error:', err.message);
+  }
+});
+
 // ---------- Google Sheets actions ----------
 
 router.post('/:id/sheets/import', protect, async (req, res) => {

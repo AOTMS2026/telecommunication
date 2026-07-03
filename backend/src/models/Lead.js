@@ -6,6 +6,12 @@ const activitySchema = new mongoose.Schema({
   description: { type: String, default: '' },
   callDuration: { type: Number, default: 0 },
   callStatus: { type: String, enum: ['connected', 'no_answer', 'busy', 'failed', ''], default: '' },
+  // --- NEW: only meaningful when type === 'whatsapp' ---
+  // 'outbound_broadcast' -> sent as part of a Broadcast
+  // 'outbound_agent'     -> sent by an agent replying from the WhatsApp inbox
+  // 'inbound'            -> received from the lead via the Meta webhook
+  direction: { type: String, enum: ['outbound_broadcast', 'outbound_agent', 'inbound', ''], default: '' },
+  metaMessageId: { type: String, default: '' },
   performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now }
 });
@@ -96,6 +102,16 @@ const leadSchema = new mongoose.Schema({
   // override per-lead if you ever onboard non-Telugu-speaking students.
   language: { type: String, enum: ['Telugu', 'English', 'Hinglish', ''], default: 'Telugu' },
   // =================================================================================
+
+  // ====================== NEW FIELDS (WhatsApp inbox tabs) ========================
+  // Drives the All / Pending / Intervened tabs on the WhatsApp inbox page.
+  // 'none'        -> no inbound WhatsApp reply yet (may still show under "All" if broadcasted)
+  // 'pending'     -> lead has sent an inbound WhatsApp message and no agent has replied since
+  // 'intervened'  -> an agent has replied to the lead's WhatsApp message
+  waStatus: { type: String, enum: ['none', 'pending', 'intervened'], default: 'none' },
+  lastWaMessageAt: { type: Date },
+  lastWaMessagePreview: { type: String, default: '' },
+  // =================================================================================
 }, { timestamps: true });
 
 leadSchema.index({ phone: 1 });
@@ -105,5 +121,6 @@ leadSchema.index({ campaign: 1 });
 leadSchema.index({ importId: 1 });
 leadSchema.index({ 'aiLock.expiresAt': 1 }); // NEW — fast lookup of unlocked/expired leads
 leadSchema.index({ campaign: 1, aiCallState: 1 }); // NEW — campaignEngine eligibility query
+leadSchema.index({ waStatus: 1, lastWaMessageAt: -1 }); // NEW — WhatsApp inbox tab queries
 
 module.exports = mongoose.model('Lead', leadSchema);
