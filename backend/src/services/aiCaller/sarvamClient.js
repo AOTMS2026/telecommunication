@@ -148,22 +148,24 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
           speech_sample_rate: 8000,       // real key is speech_sample_rate, not sample_rate
         },
       }));
-      ws.send(JSON.stringify({ text }));
+      ws.send(JSON.stringify({ type: 'convert', data: { text } }));
+      ws.send(JSON.stringify({ type: 'flush' }));
     });
 
     ws.on('message', (raw) => {
       const str = raw.toString();
       try {
         const data = JSON.parse(str);
-        if (data.audio_chunk) {
-          chunks.push(Buffer.from(data.audio_chunk, 'base64'));
+        // Real Sarvam shape: {"type":"audio","data":{"content_type":"...","audio":"<base64>"}}
+        if (data.type === 'audio' && data.data && data.data.audio) {
+          chunks.push(Buffer.from(data.data.audio, 'base64'));
           // reset idle timer — finish 600ms after the last chunk arrives
           clearTimeout(idleTimer);
           idleTimer = setTimeout(finish, 600);
         } else {
           // log non-audio frames (errors, acks, unexpected shapes) so we
           // can see exactly what Sarvam is sending back
-          console.log(`[sarvam-tts] ws message (no audio_chunk): ${str.slice(0, 300)}`);
+          console.log(`[sarvam-tts] ws message (no audio): ${str.slice(0, 300)}`);
         }
       } catch (e) {
         console.log(`[sarvam-tts] ws non-JSON message: ${str.slice(0, 300)}`);
