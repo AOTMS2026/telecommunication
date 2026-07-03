@@ -48,6 +48,10 @@ const integrationSchema = new mongoose.Schema({
   // Leads imported via this integration
   totalLeadsImported: { type: Number, default: 0 },
   lastLeadAt: { type: Date },
+  // Auto-sync tracking (Google Sheets background poller)
+  lastAutoSyncAt: { type: Date },
+  lastAutoSyncResult: { type: mongoose.Schema.Types.Mixed },
+  lastAutoSyncError: { type: String },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

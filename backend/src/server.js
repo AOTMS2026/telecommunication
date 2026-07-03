@@ -17,6 +17,7 @@ const { startSchedulePoller } = require('./services/workflowEngine');
 const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
 const campaignEngine = require('./services/aiCaller/campaignEngine');
 const callbackEngine = require('./services/aiCaller/callbackEngine');
+const { startSheetsAutoSyncPoller } = require('./services/sheetsAutoSync');
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -180,6 +181,7 @@ server.listen(PORT, () => {
   startOverdueTaskChecker(5 * 60 * 1000);
   campaignEngine.startPoller();
   callbackEngine.startPoller();
+  startSheetsAutoSyncPoller(2 * 60 * 1000); // auto-import new Google Sheet rows every 2 minutes
   console.log('[server] AI campaign engine and callback engine started');
 });
 
