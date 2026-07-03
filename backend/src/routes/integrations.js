@@ -163,7 +163,12 @@ router.post('/', protect, authorize('manager', 'admin'), async (req, res) => {
 
 router.put('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
-    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    const body = { ...req.body };
+    if (body.config?.sheetId) {
+      const m = String(body.config.sheetId).trim().match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      body.config = { ...body.config, sheetId: m ? m[1] : String(body.config.sheetId).trim() };
+    }
+    const integration = await Integration.findByIdAndUpdate(req.params.id, { $set: body }, { new: true });
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     res.json(integration);
   } catch (err) {

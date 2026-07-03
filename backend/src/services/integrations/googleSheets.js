@@ -4,6 +4,14 @@ const Integration = require('../../models/Integration');
 const { fireEvent } = require('../workflowEngine');
 const { broadcastWebhooks } = require('../automationRunners');
 
+// Accepts either a raw Sheet ID or a full Google Sheets URL and returns just the ID
+function extractSheetId(raw) {
+  if (!raw) return '';
+  const trimmed = String(raw).trim();
+  const match = trimmed.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : trimmed;
+}
+
 function getOAuth2Client(config) {
   if (!config || (!config.refreshToken && !config.accessToken)) {
     const err = new Error('Google account not connected. Click "Connect with Google (OAuth)" in Step 1 and authorize access first.');
@@ -61,7 +69,7 @@ async function importLeadsFromSheet(integration) {
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
 
-  const sheetId = integration.config.sheetId;
+  const sheetId = extractSheetId(integration.config.sheetId);
   const range = integration.config.sheetRange || 'Sheet1!A1:Z1000';
 
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
@@ -116,7 +124,7 @@ async function appendLeadToSheet(integration, leadData) {
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
 
-  const sheetId = integration.config.sheetId;
+  const sheetId = extractSheetId(integration.config.sheetId);
   const range = integration.config.sheetRange || 'Sheet1!A1';
 
   await sheets.spreadsheets.values.append({
@@ -138,8 +146,15 @@ async function listSheets(integration) {
   }
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
-  const res = await sheets.spreadsheets.get({ spreadsheetId: integration.config.sheetId, fields: 'sheets.properties' });
-  return res.data.sheets.map(s => ({ id: s.properties.sheetId, title: s.properties.title }));
+  try {
+    const res = await sheets.spreadsheets.get({ spreadsheetId: extractSheetId(integration.config.sheetId), fields: 'sheets.properties' });
+    return res.data.sheets.map(s => ({ id: s.properties.sheetId, title: s.properties.title }));
+  } catch (e) {
+    if (e.code === 404 || e.response?.status === 404) {
+      throw new Error('Sheet not found. Double-check the Sheet ID (not the full URL) and make sure the sheet is shared with the Google account you connected.');
+    }
+    throw e;
+  }
 }
 
-module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets };
+module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets, extractSheetId };
