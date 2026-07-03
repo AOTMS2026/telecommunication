@@ -12,7 +12,12 @@ const { protect } = require('../middleware/auth');
 const { transcribeAudioFile } = require('../services/transcriptionService');
 
 // ─── Storage setup ────────────────────────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
+// UPLOAD_DIR points at Render's persistent disk mount (/var/data by default)
+// so files survive restarts/redeploys. Falls back to a local folder for dev.
+const UPLOAD_DIR = process.env.RECORDINGS_DIR
+  || (process.env.NODE_ENV === 'production'
+    ? path.join('/var/data', 'recordings')
+    : path.join(__dirname, '..', 'uploads', 'recordings'));
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
@@ -88,10 +93,16 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       return res.status(400).json({ error: 'No audio file received (field name must be "audio")' });
     }
 
-    const { leadId, recordedAt } = req.body;
+    const { leadId, recordedAt, phone: bodyPhone } = req.body;
 
-    // Extract phone from original filename
-    const extractedPhone = extractPhoneFromFilename(req.file.originalname);
+    // Prefer the phone number sent directly by the caller app (mobile app
+    // sends it as a form field). Filename parsing is only a fallback for
+    // clients that don't send it, since filenames often contain timestamps
+    // or other digit sequences that look like phone numbers but aren't.
+    const bodyDigits = (bodyPhone || '').replace(/\D/g, '').slice(-10);
+    const extractedPhone = bodyDigits.length === 10
+      ? bodyDigits
+      : extractPhoneFromFilename(req.file.originalname);
 
     // Resolve lead: prefer explicit leadId, then auto-match by phone
     let resolvedLead = null;

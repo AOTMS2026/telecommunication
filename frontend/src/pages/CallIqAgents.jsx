@@ -170,7 +170,20 @@ function AgentEditor({ initial, onClose, onSaved }) {
               {audits.map(au => (
                 <div key={au._id} style={{ border: `1px solid ${C.border}`, borderRadius: 8, padding: 12, marginBottom: 8, background: 'var(--theme-surface-faint)' }}>
                   <div style={{ fontSize: 12, color: C.sub, marginBottom: 6 }}>{au.lead?.name || 'Pasted transcript'} · {new Date(au.createdAt).toLocaleString()} · <span style={{ color: au.status === 'success' ? '#059669' : '#dc2626' }}>{au.status}</span></div>
-                  <pre style={{ margin: 0, fontSize: 12, color: C.ink, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>{JSON.stringify(au.result, null, 2)}</pre>
+                  {au.status === 'failed' && au.error && (
+                    <div style={{ fontSize: 12, color: '#dc2626', marginBottom: 6 }}>{au.error}</div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {a.outputFields.map(fld => (
+                      <div key={fld.key} style={{ fontSize: 12, color: C.ink }}>
+                        <span style={{ fontWeight: 700 }}>{fld.label || fld.key}: </span>
+                        <span>{au.result && au.result[fld.key] !== undefined && au.result[fld.key] !== null && au.result[fld.key] !== '' ? (typeof au.result[fld.key] === 'object' ? JSON.stringify(au.result[fld.key]) : String(au.result[fld.key])) : '—'}</span>
+                      </div>
+                    ))}
+                    {a.outputFields.length === 0 && (
+                      <div style={{ fontSize: 12, color: C.sub }}>This agent has no output fields configured.</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

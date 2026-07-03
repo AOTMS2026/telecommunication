@@ -91,14 +91,18 @@ export default function RunCallIqModal({ leadId, activityId, recordingId, onClos
               <p className="text-xs text-red-600 mb-2">{result.error}</p>
             )}
             <div className="space-y-1.5">
-              {Object.entries(result.result || {}).map(([k, v]) => (
-                <div key={k} className="text-xs">
-                  <span className="font-semibold text-gray-700">{k}: </span>
-                  <span className="text-gray-600">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+              {(agents.find(a => a._id === agentId)?.outputFields || []).map(fld => (
+                <div key={fld.key} className="text-xs">
+                  <span className="font-semibold text-gray-700">{fld.label || fld.key}: </span>
+                  <span className="text-gray-600">
+                    {result.result && result.result[fld.key] !== undefined && result.result[fld.key] !== null && result.result[fld.key] !== ''
+                      ? (typeof result.result[fld.key] === 'object' ? JSON.stringify(result.result[fld.key]) : String(result.result[fld.key]))
+                      : '—'}
+                  </span>
                 </div>
               ))}
-              {(!result.result || Object.keys(result.result).length === 0) && (
-                <p className="text-xs text-gray-400">No structured result returned.</p>
+              {(!agents.find(a => a._id === agentId)?.outputFields?.length) && (
+                <p className="text-xs text-gray-400">This agent has no output fields configured.</p>
               )}
             </div>
           </div>
