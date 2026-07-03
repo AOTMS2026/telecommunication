@@ -325,7 +325,7 @@ router.post('/:id/meet/create', protect, async (req, res) => {
     });
     res.json(meeting);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -336,7 +336,7 @@ router.get('/:id/meet/list', protect, async (req, res) => {
     const meetings = await googleMeet.listMeetings(integration.config);
     res.json(meetings);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 
@@ -347,7 +347,7 @@ router.delete('/:id/meet/:eventId', protect, async (req, res) => {
     await googleMeet.deleteMeeting(integration.config, req.params.eventId);
     res.json({ message: 'Meeting deleted' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.code === 'GOOGLE_NOT_CONNECTED' ? 400 : 500).json({ message: err.message });
   }
 });
 
