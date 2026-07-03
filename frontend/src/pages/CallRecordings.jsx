@@ -280,6 +280,33 @@ export default function CallRecordings() {
                   "{r.transcript.slice(0, 220)}{r.transcript.length > 220 ? '…' : ''}"
                 </p>
               )}
+              {r.lastCallIqReport && (
+                <div style={{ marginTop: 8, background: 'var(--theme-surface-tint2)', border: `1px solid var(--theme-border-tint)`, borderRadius: 8, padding: '8px 10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: PURPLE, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                      Latest Call IQ · {r.lastCallIqReport.agentName || 'Agent'}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: r.lastCallIqReport.status === 'success' ? '#059669' : '#dc2626' }}>
+                      {r.lastCallIqReport.status === 'success' ? '✓ success' : (r.lastCallIqReport.status || 'failed')}
+                    </span>
+                  </div>
+                  {r.lastCallIqReport.status === 'success' && r.lastCallIqReport.result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {Object.entries(r.lastCallIqReport.result).map(([key, val]) => (
+                        val === undefined || val === null || val === '' ? null : (
+                          <div key={key} style={{ fontSize: 12, color: TEXT_MAIN }}>
+                            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{key}: </span>
+                            <span style={{ color: TEXT_MUTED }}>{typeof val === 'object' ? JSON.stringify(val) : String(val)}</span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 12, color: '#dc2626', margin: 0 }}>{r.lastCallIqReport.error || 'Audit failed'}</p>
+                  )}
+                  <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4 }}>{fmtDate(r.lastCallIqReport.runAt)}</div>
+                </div>
+              )}
             </div>
           ))}
         </div>

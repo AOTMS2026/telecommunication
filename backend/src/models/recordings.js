@@ -48,7 +48,14 @@ const upload = multer({
 //   +91-9876543210.amr
 //   Recording_919876543210.wav
 function extractPhoneFromFilename(filename) {
-  const name = path.basename(filename, path.extname(filename));
+  let name = path.basename(filename, path.extname(filename));
+
+  // This app's own uploader names files as "<uploadTimestamp>_<agentName> <recordedAt>.ext"
+  // e.g. "1783065247777_Mahesh 2026-07-02 14-00-37.m4a" — neither the leading
+  // timestamp nor the trailing date/time is a phone number, but both are long
+  // digit runs that used to get mistaken for one. Strip both before scanning.
+  name = name.replace(/^\d{10,}_/, '');                              // leading upload timestamp
+  name = name.replace(/\s+\d{4}-\d{2}-\d{2}[ _]\d{2}-\d{2}-\d{2}$/, ''); // trailing "YYYY-MM-DD HH-MM-SS"
 
   // Match sequences of digits (with optional +, -, spaces) that look like phone numbers
   const matches = name.match(/[\+]?[\d][\d\s\-]{7,}/g);
@@ -67,11 +74,13 @@ function extractPhoneFromFilename(filename) {
 }
 
 // ─── Match phone to lead (format/separator agnostic) ───────────────────────
-// Builds a regex that matches the 10 digits in order, allowing any
-// non-digit characters (spaces, dashes, +country code, etc.) in between,
-// anchored to the END of the stored phone value. This means leads stored
-// as "9876543210", "+91 98765-43210", "091-9876543210" etc. all match a
-// recording whose extracted number is the bare 10-digit "9876543210".
+// Leads are now normalized to exactly 10 digits on write (see
+// models/Lead.js's phone setter + utils/phone.js), so a straight equality
+// check is enough for anything saved going forward. The regex is kept as a
+// fallback for any pre-migration leads that still have +country code,
+// spaces, or dashes in their stored phone value — it matches the 10 digits
+// in order, allowing any non-digit characters in between, anchored to the
+// end of the stored value.
 function buildPhoneRegex(phone10) {
   const escaped = phone10.split('').join('\\D*');
   return new RegExp(`${escaped}$`);
@@ -80,7 +89,7 @@ function buildPhoneRegex(phone10) {
 async function findLeadByPhone(phone10, workspaceId) {
   if (!phone10 || phone10.length !== 10) return null;
 
-  const query = { phone: { $regex: buildPhoneRegex(phone10) } };
+  const query = { $or: [{ phone: phone10 }, { phone: { $regex: buildPhoneRegex(phone10) } }] };
   if (workspaceId) query.workspace = workspaceId;
 
   return Lead.findOne(query).select('_id name phone').lean();
@@ -174,21 +183,45 @@ router.post('/rematch', protect, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    const unlinked = await CallRecording.find({ lead: null, phone: { $ne: null } }).lean();
+    const unlinked = await CallRecording.find({ lead: null }).lean();
     let matched = 0;
+    let corrected = 0;
+    let failed = 0;
 
     for (const rec of unlinked) {
-      const lead = await findLeadByPhone(rec.phone, req.user.workspace);
-      if (lead) {
-        await CallRecording.findByIdAndUpdate(rec._id, { lead: lead._id });
-        matched++;
+      try {
+        // Only fall back to re-deriving the phone from the filename when the
+        // recording doesn't already have one — a body-supplied phone (from
+        // the mobile app's upload) is always more trustworthy than a
+        // filename guess, so we never let this overwrite it with null.
+        let phone10 = rec.phone;
+        if (!phone10) {
+          const freshPhone = extractPhoneFromFilename(rec.originalName);
+          if (freshPhone) {
+            phone10 = freshPhone;
+            await CallRecording.findByIdAndUpdate(rec._id, { phone: freshPhone });
+            corrected++;
+          }
+        }
+
+        if (phone10) {
+          const lead = await findLeadByPhone(phone10, req.user.workspace);
+          if (lead) {
+            await CallRecording.findByIdAndUpdate(rec._id, { lead: lead._id });
+            matched++;
+          }
+        }
+      } catch (recErr) {
+        // One bad record shouldn't fail the whole batch — log and keep going.
+        console.error(`rematch: failed on recording ${rec._id}:`, recErr);
+        failed++;
       }
     }
 
-    return res.json({ success: true, total: unlinked.length, matched });
+    return res.json({ success: true, total: unlinked.length, matched, corrected, failed });
   } catch (err) {
     console.error('rematch error:', err);
-    return res.status(500).json({ error: 'Rematch failed' });
+    return res.status(500).json({ error: err.message || 'Rematch failed' });
   }
 });
 
@@ -283,6 +316,17 @@ function formatRecording(r) {
     transcript: r.transcript || '',
     transcriptStatus: r.transcriptStatus || 'none',
     transcriptError: r.transcriptError || '',
+    // Latest Call IQ report only (never the first-ever one — see
+    // models/CallRecording.js, overwritten on every "Run Call IQ").
+    lastCallIqReport: r.lastCallIqReport && r.lastCallIqReport.runAt
+      ? {
+          agentName: r.lastCallIqReport.agentName || '',
+          status: r.lastCallIqReport.status || '',
+          result: r.lastCallIqReport.result || null,
+          error: r.lastCallIqReport.error || '',
+          runAt: r.lastCallIqReport.runAt,
+        }
+      : null,
   };
 }
 

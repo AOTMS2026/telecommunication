@@ -52,6 +52,21 @@ const callRecordingSchema = new mongoose.Schema(
     transcript: { type: String, default: '' },
     transcriptStatus: { type: String, enum: ['none', 'pending', 'done', 'failed'], default: 'none' },
     transcriptError: { type: String, default: '' },
+
+    // Snapshot of the MOST RECENT Call IQ audit run against this recording.
+    // Overwritten every time "Run Call IQ" is used (never appended), so this
+    // always reflects the latest report — not the first one ever run — and
+    // can be shown directly in the recordings list without a second fetch.
+    lastCallIqReport: {
+      audit: { type: mongoose.Schema.Types.ObjectId, ref: 'CallAudit', default: null },
+      agent: { type: mongoose.Schema.Types.ObjectId, ref: 'AiAgent', default: null },
+      agentName: { type: String, default: '' },
+      status: { type: String, enum: ['success', 'failed', ''], default: '' },
+      result: { type: mongoose.Schema.Types.Mixed, default: null },
+      error: { type: String, default: '' },
+      runAt: { type: Date, default: null },
+      runBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    },
   },
   { timestamps: true } // adds createdAt, updatedAt
 );

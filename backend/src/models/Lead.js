@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { normalizePhone10 } = require('../utils/phone');
 
 const activitySchema = new mongoose.Schema({
   type: { type: String, enum: ['call', 'note', 'status_change', 'whatsapp', 'followup'], required: true },
@@ -22,8 +23,12 @@ const aiLockSchema = new mongoose.Schema({
 
 const leadSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
-  phone: { type: String, required: true },
-  alternatePhone: { type: String, default: '' },
+  // Always stored as the last 10 digits only (no +91, spaces, or dashes) —
+  // see utils/phone.js. The setter runs on assignment (new Lead(), .create(),
+  // doc.phone = ..., and findByIdAndUpdate/findOneAndUpdate), so every write
+  // path ends up normalized automatically.
+  phone: { type: String, required: true, set: normalizePhone10 },
+  alternatePhone: { type: String, default: '', set: normalizePhone10 },
   email: { type: String, default: '' },
   status: {
     type: String,

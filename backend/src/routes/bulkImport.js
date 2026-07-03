@@ -6,6 +6,7 @@ const Campaign = require('../models/Campaign');
 const User = require('../models/User');
 const ImportHistory = require('../models/ImportHistory');
 const Notification = require('../models/Notification');
+const { normalizePhone10 } = require('../utils/phone');
 const { protect, authorize } = require('../middleware/auth');
 const { fireEvent } = require('../services/workflowEngine');
 
@@ -119,7 +120,7 @@ function applyMapping(row, fieldMapping, campaignId, importId) {
     }
     switch (systemField) {
       case 'name': lead.name = strVal; break;
-      case 'phone': lead.phone = strVal.replace(/\s+/g,''); break;
+      case 'phone': lead.phone = normalizePhone10(strVal); break;
       case 'email': lead.email = strVal; break;
       case 'alternatePhone': lead.alternatePhone = strVal.replace(/\s+/g,''); break;
       case 'collegeName': lead.collegeName = strVal; break;
@@ -185,7 +186,7 @@ router.post('/check-duplicates', protect, authorize('manager','admin'), upload.s
     const uniqueRows = [];
     const emptyPhoneRows = [];
     for (let i = 0; i < rows.length; i++) {
-      const rawPhone = phoneCol ? String(rows[i][phoneCol] || '').replace(/\s+/g,'') : '';
+      const rawPhone = phoneCol ? normalizePhone10(rows[i][phoneCol]) : '';
       if (!rawPhone) { emptyPhoneRows.push(i+2); continue; }
       if (phonesSeen.has(rawPhone)) { fileDuplicates.push(i+2); } else { phonesSeen.add(rawPhone); uniqueRows.push({ row:i, phone:rawPhone }); }
     }

@@ -164,6 +164,23 @@ router.post('/:id/run', protect, async (req, res) => {
       requestedBy: req.user._id,
     });
 
+    // Store this as the recording's LATEST Call IQ report — overwrite, never
+    // append, so re-running Call IQ always replaces the previous snapshot
+    // instead of leaving the recordings list showing the first-ever result.
+    if (recording) {
+      recording.lastCallIqReport = {
+        audit: audit._id,
+        agent: agent._id,
+        agentName: agent.name,
+        status,
+        result,
+        error,
+        runAt: new Date(),
+        runBy: req.user._id,
+      };
+      await recording.save();
+    }
+
     res.json({ audit });
   } catch (err) {
     res.status(500).json({ message: err.message });

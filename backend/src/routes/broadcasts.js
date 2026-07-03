@@ -4,6 +4,7 @@ const Lead = require('../models/Lead');
 const MessageTemplate = require('../models/MessageTemplate');
 const Integration = require('../models/Integration');
 const whatsappService = require('../services/integrations/whatsapp');
+const { toIndiaE164 } = require('../utils/phone');
 const { protect } = require('../middleware/auth');
 
 const router = express.Router();
@@ -121,7 +122,7 @@ router.post('/', protect, async (req, res) => {
         await whatsappService.sendTextMessage(
           integration.config.phoneNumberId,
           integration.config.accessToken,
-          lead.phone,
+          toIndiaE164(lead.phone),
           personalized
         );
         sentCount += 1;
