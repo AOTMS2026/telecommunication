@@ -51,7 +51,24 @@ const CONFIG_FIELDS = {
   ],
 };
 
-const OAUTH_TYPES = ['facebook', 'google_sheets', 'google_meet'];
+// Target AOTMS lead fields available for mapping (matches backend Lead schema).
+// 'name' and 'phone' are core; the rest are optional but all get imported when mapped.
+const LEAD_MAP_FIELDS = [
+  { key: 'name', label: 'Name' },
+  { key: 'phone', label: 'Phone', required: true },
+  { key: 'alternatePhone', label: 'Alternate Phone' },
+  { key: 'email', label: 'Email' },
+  { key: 'location', label: 'Location' },
+  { key: 'collegeName', label: 'College Name' },
+  { key: 'lastQualification', label: 'Last Qualification' },
+  { key: 'mode', label: 'Mode (Online/Offline/Hybrid)' },
+  { key: 'budget', label: 'Budget' },
+];
+
+const emptyFieldMapping = () => ({
+  name: '', phone: '', alternatePhone: '', email: '', location: '',
+  collegeName: '', lastQualification: '', mode: '', budget: '',
+});
 const WEBHOOK_TYPES = ['whatsapp_cloud', 'whatsapp', 'knowlarity', 'callerdesk', 'maqsam'];
 const GENERIC_WEBHOOK_TYPES = ['justdial', '99acres', 'housing', 'indiamart', 'magicbricks', 'sulekha', 'tradeindia', 'webhook'];
 
@@ -88,10 +105,13 @@ export default function IntegrationDetail() {
   const [fieldMapping, setFieldMapping] = useState({ name: 'name', phone: 'phone', email: 'email', location: 'location' });
   const [defaultCampaign, setDefaultCampaign] = useState('');
   const [defaultAssignedTo, setDefaultAssignedTo] = useState('');
+  const [showNewCampaign, setShowNewCampaign] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
 
   // Multiple Google Sheets sources (google_sheets type only) — each has its own
   // sheetId/sheetRange/fieldMapping and its own fetched column list.
-  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: { name: '', phone: '', email: '', location: '' }, columns: [], columnsLoading: false, columnsError: '', availableTabs: [] });
+  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: emptyFieldMapping(), extraColumns: [], columns: [], columnsLoading: false, columnsError: '', availableTabs: [] });
   const [sheetSources, setSheetSources] = useState([emptySheetSource()]);
 
   // Extra states for Google Meet
@@ -161,10 +181,12 @@ export default function IntegrationDetail() {
           sheetId: src.sheetId || '',
           sheetRange: src.sheetRange || '',
           name: src.name || '',
-          fieldMapping: { name: src.fieldMapping?.name || '', phone: src.fieldMapping?.phone || '', email: src.fieldMapping?.email || '', location: src.fieldMapping?.location || '' },
+          fieldMapping: { ...emptyFieldMapping(), ...(src.fieldMapping || {}) },
+          extraColumns: src.extraColumns || [],
           columns: [],
           columnsLoading: false,
           columnsError: '',
+          availableTabs: [],
         })));
       }
       setDefaultCampaign(intg.defaultCampaign?._id || '');
@@ -203,6 +225,24 @@ export default function IntegrationDetail() {
     }
   };
 
+  const createCampaignInline = async () => {
+    if (!newCampaignName.trim()) return;
+    setCreatingCampaign(true);
+    try {
+      const res = await campaignsAPI.create({ name: newCampaignName.trim() });
+      const created = res.data.campaign || res.data;
+      setCampaigns(prev => [...prev, created]);
+      setDefaultCampaign(created._id);
+      setNewCampaignName('');
+      setShowNewCampaign(false);
+      await handleSave({}, true);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create campaign');
+    } finally {
+      setCreatingCampaign(false);
+    }
+  };
+
   const handleRemove = async () => {
     if (!window.confirm('Remove this integration? Leads already imported will remain.')) return;
     setRemoving(true);
@@ -237,6 +277,12 @@ export default function IntegrationDetail() {
   const updateSheetSourceMapping = (idx, field, value) => setSheetSources(prev => prev.map((s, i) => (
     i === idx ? { ...s, fieldMapping: { ...s.fieldMapping, [field]: value } } : s
   )));
+
+  const toggleExtraColumn = (idx, col) => setSheetSources(prev => prev.map((s, i) => {
+    if (i !== idx) return s;
+    const has = s.extraColumns.includes(col);
+    return { ...s, extraColumns: has ? s.extraColumns.filter(c => c !== col) : [...s.extraColumns, col] };
+  }));
 
   const fetchColumnsForSource = async (idx) => {
     const src = sheetSources[idx];
@@ -570,10 +616,10 @@ export default function IntegrationDetail() {
                           </div>
                         ) : (
                           <div style={{ display: 'grid', gap: 12 }}>
-                            {['name', 'phone', 'email', 'location'].map(field => (
-                              <div key={field} style={{ display: 'grid', gridTemplateColumns: '120px 20px 1fr', alignItems: 'center', gap: 12 }}>
-                                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-strongest)', textTransform: 'capitalize' }}>
-                                  {field}{field === 'phone' && ' *'}
+                            {LEAD_MAP_FIELDS.map(({ key: field, label, required }) => (
+                              <div key={field} style={{ display: 'grid', gridTemplateColumns: '160px 20px 1fr', alignItems: 'center', gap: 12 }}>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--theme-text-strongest)' }}>
+                                  {label}{required && ' *'}
                                 </span>
                                 <span style={{ color: '#9ca3af' }}>←</span>
                                 <select
@@ -588,6 +634,31 @@ export default function IntegrationDetail() {
                                 </select>
                               </div>
                             ))}
+                            {(() => {
+                              const mappedCols = new Set(Object.values(src.fieldMapping).filter(Boolean));
+                              const remaining = src.columns.filter(col => !mappedCols.has(col));
+                              if (remaining.length === 0) return null;
+                              return (
+                                <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--theme-border-tint)' }}>
+                                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Other columns in this sheet</div>
+                                  <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+                                    Not part of the standard AOTMS fields above — check any you also want imported (saved as extra custom fields on the lead).
+                                  </div>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {remaining.map(col => (
+                                      <label key={col} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: '#f9fafb', border: '1px solid var(--theme-border-tint)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer' }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={src.extraColumns.includes(col)}
+                                          onChange={() => toggleExtraColumn(idx, col)}
+                                        />
+                                        {col}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -618,10 +689,27 @@ export default function IntegrationDetail() {
               <div>
                 <h4 style={{ margin: '0 0 8px' }}>Default Campaign</h4>
                 <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>Leads from this integration will be added to this campaign.</p>
-                <select value={defaultCampaign} onChange={e => setDefaultCampaign(e.target.value)} style={s.inp}>
-                  <option value="">No campaign</option>
-                  {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select value={defaultCampaign} onChange={e => setDefaultCampaign(e.target.value)} style={{ ...s.inp, flex: 1 }}>
+                    <option value="">No campaign</option>
+                    {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
+                  <button onClick={() => setShowNewCampaign(v => !v)} style={s.btnGhost}>+ New Campaign</button>
+                </div>
+                {showNewCampaign && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                    <input
+                      value={newCampaignName}
+                      onChange={e => setNewCampaignName(e.target.value)}
+                      placeholder="Campaign name"
+                      style={{ ...s.inp, flex: 1 }}
+                      onKeyDown={e => { if (e.key === 'Enter') createCampaignInline(); }}
+                    />
+                    <button onClick={createCampaignInline} style={s.btnPrimary} disabled={creatingCampaign || !newCampaignName.trim()}>
+                      {creatingCampaign ? 'Creating...' : 'Create'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -749,11 +837,11 @@ export default function IntegrationDetail() {
           {step < 5 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
               <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} style={{ ...s.btnGhost, opacity: step === 0 ? 0.5 : 1 }}>Back</button>
-              <button onClick={() => {
-                if (step === 4) { handleSave({ status: 'active' }); setStep(5); }
-                else setStep(s => s + 1);
-              }} style={s.btnPrimary}>
-                {step === 4 ? (saving ? 'Saving...' : 'Save & Finish') : 'Next'}
+              <button onClick={async () => {
+                if (step === 4) { await handleSave({ status: 'active' }); setStep(5); }
+                else { await handleSave({}, true); setStep(s => s + 1); }
+              }} style={s.btnPrimary} disabled={saving}>
+                {step === 4 ? (saving ? 'Saving...' : 'Save & Finish') : (saving ? 'Saving...' : 'Next')}
               </button>
             </div>
           )}

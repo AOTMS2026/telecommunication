@@ -84,6 +84,16 @@ async function transcribeAudio(pcm16Bytes) {
 // output_audio_codec: "pcm", sample_rate } } — then send { "text": ... } and
 // collect base64 "audio_chunk" fields from the socket. Raw PCM back already,
 // so no WAV header stripping needed.
+//
+// NOTE: the PDF does NOT document any flush/EOF message — it only shows
+// sending {"text": ...} after config. An earlier version of this code sent
+// an extra {"type":"flush"} frame that isn't part of the documented
+// protocol; Sarvam was closing the socket with zero chunks because of it
+// ("Sarvam TTS returned no audio"). That frame has been removed. Since the
+// guide gives no explicit "done" signal, completion here is detected purely
+// client-side: once chunks start arriving, a short idle gap means synthesis
+// is finished (this doesn't modify the Sarvam protocol, just our own
+// bookkeeping around it).
 function synthesizeSpeech(text, languageCode = 'te-IN') {
   return new Promise((resolve, reject) => {
     if (!text || !text.trim()) return resolve(Buffer.alloc(0));
@@ -91,14 +101,31 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
     const key = getSarvamKey();
     const chunks = [];
     let settled = false;
+    let idleTimer = null;
 
     const ws = new WebSocket(SARVAM_TTS_WS_URL, {
       headers: { 'api-subscription-key': key },
     });
 
-    const timer = setTimeout(() => {
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(overallTimer);
+      clearTimeout(idleTimer);
+      ws.close();
+      const audio = Buffer.concat(chunks);
+      if (audio.length === 0) {
+        reject(new Error('Sarvam TTS returned no audio'));
+      } else {
+        console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
+        resolve(audio);
+      }
+    };
+
+    const overallTimer = setTimeout(() => {
       if (!settled) {
         settled = true;
+        clearTimeout(idleTimer);
         ws.terminate();
         reject(new Error('Sarvam TTS WebSocket timed out'));
       }
@@ -115,7 +142,6 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
         },
       }));
       ws.send(JSON.stringify({ text }));
-      ws.send(JSON.stringify({ type: 'flush' }));
     });
 
     ws.on('message', (raw) => {
@@ -123,14 +149,9 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
         const data = JSON.parse(raw.toString());
         if (data.audio_chunk) {
           chunks.push(Buffer.from(data.audio_chunk, 'base64'));
-        }
-        if (data.type === 'flush_done' || data.event === 'done') {
-          settled = true;
-          clearTimeout(timer);
-          ws.close();
-          const audio = Buffer.concat(chunks);
-          console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
-          resolve(audio);
+          // reset idle timer — finish 600ms after the last chunk arrives
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(finish, 600);
         }
       } catch (e) {
         // non-JSON frame, ignore
@@ -140,23 +161,15 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
     ws.on('error', (err) => {
       if (!settled) {
         settled = true;
-        clearTimeout(timer);
+        clearTimeout(overallTimer);
+        clearTimeout(idleTimer);
         reject(err);
       }
     });
 
     ws.on('close', () => {
-      clearTimeout(timer);
-      if (!settled) {
-        settled = true;
-        const audio = Buffer.concat(chunks);
-        if (audio.length === 0) {
-          reject(new Error('Sarvam TTS returned no audio'));
-        } else {
-          console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
-          resolve(audio);
-        }
-      }
+      // server closed the socket on its own — treat as end of stream
+      finish();
     });
   });
 }

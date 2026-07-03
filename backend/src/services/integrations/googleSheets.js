@@ -127,8 +127,18 @@ async function importFromOneSource(integration, source) {
 
   const nameCol = colIndex(mapping.name);
   const phoneCol = colIndex(mapping.phone);
+  const alternatePhoneCol = colIndex(mapping.alternatePhone);
   const emailCol = colIndex(mapping.email);
   const locationCol = colIndex(mapping.location);
+  const collegeNameCol = colIndex(mapping.collegeName);
+  const lastQualificationCol = colIndex(mapping.lastQualification);
+  const modeCol = colIndex(mapping.mode);
+  const budgetCol = colIndex(mapping.budget);
+
+  const extraColumns = Array.isArray(source.extraColumns) ? source.extraColumns : [];
+  const extraColIndexes = extraColumns
+    .map(col => ({ col, i: headers.indexOf(col) }))
+    .filter(({ i }) => i >= 0);
 
   let imported = 0, skipped = 0;
 
@@ -140,11 +150,27 @@ async function importFromOneSource(integration, source) {
     const existing = await Lead.findOne({ phone });
     if (existing) { skipped++; continue; }
 
+    const customFields = {};
+    for (const { col, i: ci } of extraColIndexes) {
+      const val = row[ci];
+      if (val !== undefined && val !== null && String(val).trim() !== '') customFields[col] = String(val).trim();
+    }
+
+    const validModes = ['Online', 'Offline', 'Hybrid'];
+    const rawMode = modeCol >= 0 ? row[modeCol]?.trim() : '';
+    const rawBudget = budgetCol >= 0 ? row[budgetCol]?.trim() : '';
+
     const lead = await Lead.create({
       name: (nameCol >= 0 ? row[nameCol]?.trim() : '') || 'Sheet Lead',
       phone,
+      alternatePhone: alternatePhoneCol >= 0 ? row[alternatePhoneCol]?.trim() || '' : '',
       email: emailCol >= 0 ? row[emailCol]?.trim() || '' : '',
       location: locationCol >= 0 ? row[locationCol]?.trim() || '' : '',
+      collegeName: collegeNameCol >= 0 ? row[collegeNameCol]?.trim() || '' : '',
+      lastQualification: lastQualificationCol >= 0 ? row[lastQualificationCol]?.trim() || '' : '',
+      mode: validModes.includes(rawMode) ? rawMode : '',
+      budget: rawBudget && !isNaN(Number(rawBudget)) ? Number(rawBudget) : 0,
+      customFields,
       leadSource: 'Google Sheets',
       status: 'Fresh',
       campaign: integration.defaultCampaign || undefined,
