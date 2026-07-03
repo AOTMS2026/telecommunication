@@ -1,9 +1,15 @@
 // backend/src/services/aiCaller/sarvamClient.js
 //
-// Per Sarvam+Exotel integration PDF:
-// - STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true
-// - TTS: bulbul:v1 model, output_audio_codec=pcm, sample_rate=8000
-// - Exotel sends raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
+// STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true (confirmed working)
+// TTS: bulbul:v3 model over WebSocket (wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3).
+//   Verified against Sarvam's live API docs (docs.sarvam.ai) — the original
+//   PDF guide's TTS field names/values (sample_rate, output_audio_codec=pcm,
+//   speaker=meera/anushka) were wrong or version-mismatched:
+//     - config key is `speech_sample_rate`, not `sample_rate`
+//     - output_audio_codec values are linear16/mulaw/alaw/opus/flac/aac/wav/mp3
+//       ('pcm' is not a valid value — 'linear16' is the raw-PCM equivalent)
+//     - speaker `shubh` is valid for bulbul:v3 (`anushka` is a bulbul:v2-only voice)
+// Exotel sends raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
 
 const axios = require('axios');
 const FormData = require('form-data');
@@ -137,9 +143,9 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
         type: 'config',
         data: {
           target_language_code: languageCode,
-          speaker: 'anushka',
-          output_audio_codec: 'pcm',
-          sample_rate: 8000, // per PDF: matches Exotel audio engine
+          speaker: 'shubh',              // valid bulbul:v3 speaker (anushka is v2-only)
+          output_audio_codec: 'linear16', // real values: linear16/mulaw/alaw/opus/flac/aac/wav/mp3 — 'pcm' isn't one
+          speech_sample_rate: 8000,       // real key is speech_sample_rate, not sample_rate
         },
       }));
       ws.send(JSON.stringify({ text }));
