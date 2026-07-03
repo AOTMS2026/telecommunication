@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { recordingsAPI, usersAPI } from '../services/api';
 import RunCallIqModal from '../components/RunCallIqModal';
-import axios from 'axios';
 
 const PURPLE = 'var(--theme-primary)';
 const TEXT_MAIN = 'var(--theme-text-strongest)';
@@ -125,7 +124,7 @@ export default function CallRecordings() {
     setRematching(true);
     setRematchResult(null);
     try {
-      const res = await axios.post('/api/recordings/rematch');
+      const res = await recordingsAPI.rematch();
       setRematchResult(res.data);
       load();
     } catch (e) {

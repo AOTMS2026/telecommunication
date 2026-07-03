@@ -8,7 +8,10 @@ const { protect, authorize } = require('../middleware/auth');
 const { runCallAudit } = require('../services/callIqService');
 const { transcribeAudioFile } = require('../services/transcriptionService');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
+const UPLOAD_DIR = process.env.RECORDINGS_DIR
+  || (process.env.NODE_ENV === 'production'
+    ? path.join('/var/data', 'recordings')
+    : path.join(__dirname, '..', 'uploads', 'recordings'));
 
 const router = express.Router();
 

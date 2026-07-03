@@ -12,7 +12,12 @@ const { protect } = require('../middleware/auth');
 const { transcribeAudioFile } = require('../services/transcriptionService');
 
 // ─── Storage setup ────────────────────────────────────────────────────────
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads', 'recordings');
+// UPLOAD_DIR points at Render's persistent disk mount (/var/data by default)
+// so files survive restarts/redeploys. Falls back to a local folder for dev.
+const UPLOAD_DIR = process.env.RECORDINGS_DIR
+  || (process.env.NODE_ENV === 'production'
+    ? path.join('/var/data', 'recordings')
+    : path.join(__dirname, '..', 'uploads', 'recordings'));
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
@@ -61,19 +66,21 @@ function extractPhoneFromFilename(filename) {
   return null;
 }
 
-// ─── Match phone to lead (tries multiple formats) ─────────────────────────
+// ─── Match phone to lead (format/separator agnostic) ───────────────────────
+// Builds a regex that matches the 10 digits in order, allowing any
+// non-digit characters (spaces, dashes, +country code, etc.) in between,
+// anchored to the END of the stored phone value. This means leads stored
+// as "9876543210", "+91 98765-43210", "091-9876543210" etc. all match a
+// recording whose extracted number is the bare 10-digit "9876543210".
+function buildPhoneRegex(phone10) {
+  const escaped = phone10.split('').join('\\D*');
+  return new RegExp(`${escaped}$`);
+}
+
 async function findLeadByPhone(phone10, workspaceId) {
-  if (!phone10) return null;
+  if (!phone10 || phone10.length !== 10) return null;
 
-  // Try: exact last-10, with +91, with 0, with 91
-  const variants = [
-    phone10,
-    `+91${phone10}`,
-    `91${phone10}`,
-    `0${phone10}`,
-  ];
-
-  const query = { phone: { $in: variants } };
+  const query = { phone: { $regex: buildPhoneRegex(phone10) } };
   if (workspaceId) query.workspace = workspaceId;
 
   return Lead.findOne(query).select('_id name phone').lean();

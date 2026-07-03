@@ -70,6 +70,27 @@ app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/recordings', apiLimiter, require('./routes/recordings'));
 
 // ── Audio streaming with proper Range support and CORS headers ────────────────
+const RECORDINGS_DIR = process.env.RECORDINGS_DIR
+  || (process.env.NODE_ENV === 'production'
+    ? path.join('/var/data', 'recordings')
+    : path.join(__dirname, 'uploads', 'recordings'));
+
+app.use('/uploads/recordings', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin === '*' ? '*' : allowedOrigin);
+  res.setHeader('Access-Control-Allow-Headers', 'Range');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+}, express.static(RECORDINGS_DIR, {
+  setHeaders: (res, filePath) => {
+    if (/\.(m4a|mp3|wav|amr|3gp|3gpp|aac|ogg)$/i.test(filePath)) {
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
+
+// Any other (non-recording) uploads still served from the local repo path
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin === '*' ? '*' : allowedOrigin);
   res.setHeader('Access-Control-Allow-Headers', 'Range');
