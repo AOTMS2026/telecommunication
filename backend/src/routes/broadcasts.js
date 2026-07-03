@@ -118,13 +118,31 @@ router.post('/', protect, async (req, res) => {
         const personalized = template.message
           .replace(/\{\{\s*name\s*\}\}/gi, lead.name || '')
           .replace(/\{\{\s*first_name\s*\}\}/gi, (lead.name || '').split(' ')[0] || '');
-        await whatsappService.sendTextMessage(
+        const sendResult = await whatsappService.sendTextMessage(
           integration.config.phoneNumberId,
           integration.config.accessToken,
           lead.phone,
           personalized
         );
         sentCount += 1;
+
+        // Record on the lead so it shows up in the WhatsApp inbox ("All" tab).
+        // Note: a broadcast alone does NOT change waStatus — a lead only moves
+        // to "Pending" once they actually reply (see whatsapp.js webhook handler).
+        await Lead.findByIdAndUpdate(lead._id, {
+          $push: {
+            activities: {
+              type: 'whatsapp',
+              description: personalized,
+              direction: 'outbound_broadcast',
+              metaMessageId: sendResult?.messages?.[0]?.id || '',
+            },
+          },
+          $set: {
+            lastWaMessageAt: new Date(),
+            lastWaMessagePreview: personalized,
+          },
+        });
       } catch (sendErr) {
         errors.push({
           lead: lead._id,

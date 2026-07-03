@@ -19,6 +19,8 @@ const BORDER     = '#e5e2f5';
 const BG         = '#f8f7ff';
 
 const NAV_ITEMS = [
+  { key: 'inbox', label: 'Inbox',
+    icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
   { key: 'broadcasts', label: 'Broadcasts',
     icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 8.5c0 2.5-1.5 4.5-3.5 5.5L22 21H16l-1.5-3h-5L8 21H2l3.5-7C3.5 13 2 11 2 8.5 2 5.5 4.5 3 8 3h8c3.5 0 6 2.5 6 5.5z"/></svg> },
   { key: 'templates',  label: 'Templates',
@@ -400,33 +402,271 @@ const labelStyle = { fontSize: 12, fontWeight: 600, color: TEXT_MAIN, display: '
 const inputStyle = { width: '100%', padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', background: '#fff', color: TEXT_MAIN };
 const varBtnStyle = { fontSize: 11, color: PURPLE, background: '#f0ecff', border: `1px solid #d6ccff`, borderRadius: 5, padding: '3px 10px', cursor: 'pointer', fontWeight: 600 };
 
+// ── Inbox Tab ──────────────────────────────────────────────────────────────────
+// Matches the All / Pending / Intervened lead-inbox reference UI.
+//   All         -> every lead that's ever been part of a broadcast or WhatsApp conversation
+//   Pending     -> lead replied, no agent response yet
+//   Intervened  -> an agent has replied
+function InboxTab({ onSendTemplate }) {
+  const TABS = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'intervened', label: 'Intervened' },
+  ];
+
+  const [tab, setTab] = useState('all');
+  const [search, setSearch] = useState('');
+  const [leads, setLeads] = useState([]);
+  const [counts, setCounts] = useState({ all: 0, pending: 0, intervened: 0 });
+  const [loadingList, setLoadingList] = useState(false);
+
+  const [selectedId, setSelectedId] = useState(null);
+  const [thread, setThread] = useState(null); // { lead, thread, withinWindow }
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef(null);
+
+  const fetchLeads = async () => {
+    setLoadingList(true);
+    try {
+      const res = await api.get('/whatsapp-inbox', { params: { tab, search } });
+      setLeads(res.data.leads || []);
+      setCounts(res.data.counts || { all: 0, pending: 0, intervened: 0 });
+    } catch {
+      // swallow — keep prior list on transient errors
+    } finally {
+      setLoadingList(false);
+    }
+  };
+
+  useEffect(() => { fetchLeads(); }, [tab, search]);
+
+  const openThread = async (leadId) => {
+    setSelectedId(leadId);
+    setLoadingThread(true);
+    try {
+      const res = await api.get(`/whatsapp-inbox/${leadId}`);
+      setThread(res.data);
+    } catch {
+      setThread(null);
+    } finally {
+      setLoadingThread(false);
+    }
+  };
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [thread]);
+
+  const sendReply = async () => {
+    if (!replyText.trim() || !selectedId) return;
+    setSending(true);
+    try {
+      await api.post(`/whatsapp-inbox/${selectedId}/reply`, { text: replyText.trim() });
+      setReplyText('');
+      await openThread(selectedId);   // refresh thread
+      await fetchLeads();             // lead may have moved from Pending -> Intervened
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send reply');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const waStatusDot = (s) => s === 'pending' ? '#f59e0b' : s === 'intervened' ? GREEN : '#ccc';
+
+  return (
+    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      {/* Left: tabs + search + lead list */}
+      <div style={{ width: 320, borderRight: `1px solid ${BORDER}`, background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${BORDER}` }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => { setTab(t.key); setSelectedId(null); setThread(null); }}
+              style={{
+                flex: 1, padding: '12px 6px', border: 'none', background: 'none', cursor: 'pointer',
+                fontSize: 12.5, fontWeight: tab === t.key ? 700 : 500,
+                color: tab === t.key ? DARK_GREEN : TEXT_MUTED,
+                borderBottom: `2px solid ${tab === t.key ? GREEN : 'transparent'}`,
+                marginBottom: -1, transition: 'all 0.15s',
+              }}>
+              {t.label} ({counts[t.key] ?? 0})
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: '10px 12px', borderBottom: `1px solid ${BORDER}` }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search lead(s)"
+            style={{ ...inputStyle, marginBottom: 0, fontSize: 12.5, padding: '8px 10px' }} />
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {loadingList && <div style={{ padding: 20, textAlign: 'center', color: TEXT_MUTED, fontSize: 12.5 }}>Loading…</div>}
+          {!loadingList && leads.length === 0 && (
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: TEXT_MUTED, fontSize: 12.5 }}>
+              No leads in this tab yet.
+            </div>
+          )}
+          {!loadingList && leads.map(lead => (
+            <div key={lead._id} onClick={() => openThread(lead._id)}
+              style={{
+                padding: '12px 14px', cursor: 'pointer',
+                background: selectedId === lead._id ? '#f0fdf4' : '#fff',
+                borderBottom: '1px solid #f5f5f5', borderLeft: `3px solid ${selectedId === lead._id ? GREEN : 'transparent'}`,
+              }}
+              onMouseEnter={e => { if (selectedId !== lead._id) e.currentTarget.style.background = BG; }}
+              onMouseLeave={e => { if (selectedId !== lead._id) e.currentTarget.style.background = '#fff'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN }}>{lead.name || lead.phone}</span>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: waStatusDot(lead.waStatus), flexShrink: 0 }} />
+              </div>
+              <div style={{ fontSize: 11.5, color: TEXT_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {lead.lastWaMessagePreview || 'No messages yet'}
+              </div>
+              <div style={{ fontSize: 10, color: '#aaa', marginTop: 2 }}>
+                {lead.lastWaMessageAt ? new Date(lead.lastWaMessageAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: chat thread */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#e9f5ee' }}>
+        {!selectedId && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT_MUTED, fontSize: 13 }}>
+            Select a lead to view the conversation
+          </div>
+        )}
+
+        {selectedId && loadingThread && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEXT_MUTED, fontSize: 13 }}>
+            Loading conversation…
+          </div>
+        )}
+
+        {selectedId && !loadingThread && thread && (
+          <>
+            <div style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '12px 20px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_MAIN }}>{thread.lead.name || thread.lead.phone}</div>
+              <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>{thread.lead.phone}</div>
+            </div>
+
+            <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {thread.thread.length === 0 && (
+                <div style={{ textAlign: 'center', color: TEXT_MUTED, fontSize: 12.5, marginTop: 40 }}>No messages yet</div>
+              )}
+              {thread.thread.map((m, i) => {
+                const isInbound = m.direction === 'inbound';
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: isInbound ? 'flex-start' : 'flex-end' }}>
+                    <div style={{
+                      maxWidth: '65%', padding: '8px 12px', borderRadius: 10,
+                      background: isInbound ? '#fff' : '#d9fdd3',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
+                      fontSize: 13, color: '#111', lineHeight: 1.5,
+                    }}>
+                      {m.description}
+                      <div style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 4, textAlign: 'right' }}>
+                        {new Date(m.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                        {m.direction === 'outbound_broadcast' && '  · broadcast'}
+                        {m.direction === 'outbound_agent' && '  · agent'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ background: '#fff', borderTop: `1px solid ${BORDER}`, padding: '12px 20px' }}>
+              {thread.withinWindow ? (
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input value={replyText} onChange={e => setReplyText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !sending) sendReply(); }}
+                    placeholder="Type a reply…" style={{ ...inputStyle, marginBottom: 0, flex: 1 }} />
+                  <button onClick={sendReply} disabled={sending || !replyText.trim()}
+                    style={{ padding: '10px 20px', background: sending || !replyText.trim() ? '#ccc' : GREEN, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: sending || !replyText.trim() ? 'not-allowed' : 'pointer' }}>
+                    {sending ? 'Sending…' : 'Send'}
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px' }}>
+                  <span style={{ fontSize: 12.5, color: '#92400e' }}>
+                    You can only send template messages because the 24hr window passed
+                  </span>
+                  <button onClick={() => onSendTemplate && onSendTemplate(thread.lead)}
+                    style={{ padding: '7px 16px', background: PURPLE, color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Send Template
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Templates Tab ──────────────────────────────────────────────────────────────
 function TemplatesTab() {
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [integrationId, setIntegrationId] = useState(null);
-  const [templates, setTemplates] = useState([
-    { id: 1, name: 'Welcome Message',    category: 'MARKETING', status: 'APPROVED', language: 'English', body: 'Hello {{1}}, welcome to Academy of Tech Masters!' },
-    { id: 2, name: 'Follow Up',          category: 'UTILITY',   status: 'APPROVED', language: 'English', body: 'Hi {{1}}, just following up on your interest.' },
-    { id: 3, name: 'Course Info',        category: 'MARKETING', status: 'PENDING',  language: 'English', body: 'Dear {{1}}, learn about our 30-day AI Crash Course!' },
-  ]);
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
-  // Fetch the active WhatsApp Cloud integration ID on mount
+  const loadTemplates = () => {
+    setLoading(true);
+    api.get('/message-templates', { params: { type: 'whatsapp' } })
+      .then(res => {
+        const raw = res.data?.templates || res.data || [];
+        setTemplates(raw.map(t => ({
+          id: t._id,
+          name: t.shortcut,
+          category: t.category || 'MARKETING',
+          status: t.waStatus || 'LOCAL',
+          language: t.language || 'en_US',
+          body: t.message,
+          rejectedReason: t.rejectedReason,
+        })));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  // Fetch the active WhatsApp Cloud integration ID on mount, then load templates
   useEffect(() => {
     api.get('/integrations').then(res => {
       const integrations = res.data?.integrations || [];
       const wa = integrations.find(i => i.type === 'whatsapp_cloud' && i.status === 'active');
       if (wa) setIntegrationId(wa._id);
     }).catch(() => {});
+    loadTemplates();
   }, []);
+
+  const syncWithMeta = async () => {
+    if (!integrationId) return;
+    setSyncing(true);
+    try {
+      await api.post(`/integrations/${integrationId}/whatsapp/templates/sync`);
+      loadTemplates();
+    } catch {
+      // non-fatal — statuses will still update via the approval webhook
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filtered = templates.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
     t.category.toLowerCase().includes(search.toLowerCase())
   );
 
-  const statusColor = (s) => s === 'APPROVED' ? '#16a34a' : s === 'PENDING' ? '#d97706' : '#e53e3e';
-  const statusBg   = (s) => s === 'APPROVED' ? '#f0fdf4'  : s === 'PENDING' ? '#fffbeb'  : '#fef2f2';
+  const statusColor = (s) => s === 'APPROVED' ? '#16a34a' : s === 'PENDING' ? '#d97706' : s === 'LOCAL' ? TEXT_MUTED : '#e53e3e';
+  const statusBg   = (s) => s === 'APPROVED' ? '#f0fdf4'  : s === 'PENDING' ? '#fffbeb'  : s === 'LOCAL' ? BG : '#fef2f2';
 
   if (creating) {
     return (
@@ -467,10 +707,9 @@ function TemplatesTab() {
         <AddTemplateForm
           integrationId={integrationId}
           onCancel={() => setCreating(false)}
-          onSave={(data) => {
-            if (!data.name.trim()) return;
-            setTemplates(p => [...p, { id: Date.now(), name: data.name, category: data.type.toUpperCase(), status: 'PENDING', language: data.language, body: data.message }]);
+          onSave={() => {
             setCreating(false);
+            loadTemplates(); // refetch so the real Meta-assigned status (PENDING) shows up
           }}
         />
       </div>
@@ -484,11 +723,24 @@ function TemplatesTab() {
           <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_MAIN }}>Message Templates</div>
           <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Pre-approved WhatsApp Business message templates</div>
         </div>
-        <button onClick={() => setCreating(true)}
-          style={{ padding: '9px 18px', background: GREEN, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          + Create Template
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {integrationId && (
+            <button onClick={syncWithMeta} disabled={syncing}
+              style={{ padding: '9px 16px', background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer' }}>
+              {syncing ? 'Syncing…' : '↻ Sync with Meta'}
+            </button>
+          )}
+          <button onClick={() => setCreating(true)}
+            style={{ padding: '9px 18px', background: GREEN, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            + Create Template
+          </button>
+        </div>
       </div>
+      {!integrationId && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#92400e' }}>
+          No active WhatsApp Cloud integration found — templates you create here will be saved locally but not submitted to Meta until you connect one in Setup.
+        </div>
+      )}
       <div style={{ position: 'relative', marginBottom: 16 }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}>
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -496,8 +748,12 @@ function TemplatesTab() {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..."
           style={{ width: '100%', padding: '9px 12px 9px 36px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
       </div>
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>Loading templates…</div>}
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>No templates yet. Create your first one.</div>
+      )}
       <div style={{ display: 'grid', gap: 12 }}>
-        {filtered.map(t => (
+        {!loading && filtered.map(t => (
           <div key={t.id} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -508,6 +764,9 @@ function TemplatesTab() {
               <span style={{ fontSize: 11, color: TEXT_MUTED }}>{t.language}</span>
             </div>
             <div style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.body}</div>
+            {t.status === 'REJECTED' && t.rejectedReason && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: '#e53e3e' }}>Rejected: {t.rejectedReason}</div>
+            )}
           </div>
         ))}
       </div>
@@ -523,9 +782,51 @@ function BroadcastsTab() {
   const [leadStatus, setLeadStatus] = useState('');
   const [campaign, setCampaign] = useState('');
   const [leadSource, setLeadSource] = useState('');
-  const [history] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState('');
+  const [sendSuccess, setSendSuccess] = useState('');
 
-  const sampleTemplates = ['Welcome Message', 'Follow Up', 'Course Info'];
+  useEffect(() => {
+    api.get('/message-templates', { params: { type: 'whatsapp' } })
+      .then(res => setTemplates(res.data?.templates || res.data || []))
+      .catch(() => {});
+  }, []);
+
+  const fetchHistory = () => {
+    api.get('/broadcasts').then(res => setHistory(res.data?.broadcasts || [])).catch(() => {});
+  };
+  useEffect(() => { if (subTab === 'history') fetchHistory(); }, [subTab]);
+
+  const filters = () => ({
+    status: leadStatus || undefined,
+    campaign: campaign || undefined,
+    leadSource: leadSource || undefined,
+  });
+
+  const previewAudience = async () => {
+    try {
+      const res = await api.post('/broadcasts/preview', { filters: filters() });
+      setPreview(res.data);
+    } catch (err) {
+      setSendError(err.response?.data?.message || 'Failed to preview audience');
+    }
+  };
+
+  const sendBroadcast = async () => {
+    setSendError(''); setSendSuccess(''); setSending(true);
+    try {
+      await api.post('/broadcasts', { name: broadcastName, templateId: template, filters: filters() });
+      setSendSuccess('Broadcast sent! Recipients now appear in the WhatsApp Inbox under "All".');
+      setBroadcastName(''); setTemplate(''); setPreview(null);
+    } catch (err) {
+      setSendError(err.response?.data?.message || 'Failed to send broadcast');
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div style={{ padding: 28 }}>
@@ -561,7 +862,7 @@ function BroadcastsTab() {
             <label style={labelStyle}>WhatsApp Template</label>
             <select value={template} onChange={e => setTemplate(e.target.value)} style={inputStyle}>
               <option value="">Select a template...</option>
-              {sampleTemplates.map(t => <option key={t}>{t}</option>)}
+              {templates.map(t => <option key={t._id} value={t._id}>{t.shortcut} {t.waStatus && t.waStatus !== 'LOCAL' ? `(${t.waStatus})` : ''}</option>)}
             </select>
           </div>
           <div style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>AUDIENCE FILTERS</div>
@@ -584,14 +885,31 @@ function BroadcastsTab() {
             <label style={labelStyle}>Lead Source</label>
             <input value={leadSource} onChange={e => setLeadSource(e.target.value)} placeholder="e.g. Facebook" style={inputStyle} />
           </div>
+          {preview && (
+            <div style={{ background: BG, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12.5, color: TEXT_MAIN }}>
+              <strong>{preview.count}</strong> leads match this audience.
+              {preview.sample?.length > 0 && (
+                <div style={{ color: TEXT_MUTED, marginTop: 4 }}>
+                  e.g. {preview.sample.map(s => s.name).join(', ')}
+                </div>
+              )}
+            </div>
+          )}
+          {sendError && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#e53e3e' }}>⚠️ {sendError}</div>
+          )}
+          {sendSuccess && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#16a34a' }}>✅ {sendSuccess}</div>
+          )}
           <div style={{ display: 'flex', gap: 12 }}>
-            <button style={{ padding: '10px 20px', background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <button onClick={previewAudience} style={{ padding: '10px 20px', background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Preview Audience
             </button>
-            <button style={{ padding: '10px 20px', background: template && broadcastName ? GREEN : '#ccc', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: template && broadcastName ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <button onClick={sendBroadcast} disabled={!template || !broadcastName || sending}
+              style={{ padding: '10px 20px', background: template && broadcastName && !sending ? GREEN : '#ccc', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: template && broadcastName && !sending ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 7 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Send Broadcast
+              {sending ? 'Sending…' : 'Send Broadcast'}
             </button>
           </div>
         </div>
@@ -606,7 +924,21 @@ function BroadcastsTab() {
             <div style={{ fontSize: 14, fontWeight: 600, color: TEXT_MAIN }}>No broadcasts sent yet</div>
             <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 4 }}>Your sent broadcasts will appear here.</div>
           </div>
-        ) : null
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {history.map(b => (
+              <div key={b._id} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '14px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN }}>{b.name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 5, padding: '2px 8px', background: b.status === 'completed' ? '#f0fdf4' : b.status === 'failed' ? '#fef2f2' : '#fffbeb', color: b.status === 'completed' ? '#16a34a' : b.status === 'failed' ? '#e53e3e' : '#d97706' }}>{b.status}</span>
+                </div>
+                <div style={{ fontSize: 11.5, color: TEXT_MUTED }}>
+                  {b.sentCount}/{b.recipientCount} sent · {b.failedCount} failed · {new Date(b.createdAt).toLocaleString('en-IN')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
@@ -748,11 +1080,12 @@ function SetupTab() {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function WhatsApp() {
-  const [activeTab, setActiveTab] = useState('broadcasts');
+  const [activeTab, setActiveTab] = useState('inbox');
   const activeItem = NAV_ITEMS.find(n => n.key === activeTab);
 
   const renderTab = () => {
     switch (activeTab) {
+      case 'inbox':       return <InboxTab onSendTemplate={() => setActiveTab('templates')} />;
       case 'broadcasts':  return <BroadcastsTab />;
       case 'templates':   return <TemplatesTab />;
       case 'lists':       return <ListsTab />;
@@ -794,7 +1127,7 @@ export default function WhatsApp() {
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: activeTab === 'inbox' ? 'hidden' : 'auto' }}>
         {renderTab()}
       </div>
     </div>
