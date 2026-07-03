@@ -137,12 +137,12 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
         type: 'config',
         data: {
           target_language_code: languageCode,
-          speaker: 'meera',
+          speaker: 'anushka',
           output_audio_codec: 'pcm',
           sample_rate: 8000, // per PDF: matches Exotel audio engine
         },
       }));
-      ws.send(JSON.stringify({ text }));
+      ws.send(JSON.stringify({ type: 'text', data: { text } }));
     });
 
     ws.on('message', (raw) => {
