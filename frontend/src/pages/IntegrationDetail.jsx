@@ -69,6 +69,7 @@ const emptyFieldMapping = () => ({
   name: '', phone: '', alternatePhone: '', email: '', location: '',
   collegeName: '', lastQualification: '', mode: '', budget: '',
 });
+const OAUTH_TYPES = ['facebook', 'google_sheets', 'google_meet'];
 const WEBHOOK_TYPES = ['whatsapp_cloud', 'whatsapp', 'knowlarity', 'callerdesk', 'maqsam'];
 const GENERIC_WEBHOOK_TYPES = ['justdial', '99acres', 'housing', 'indiamart', 'magicbricks', 'sulekha', 'tradeindia', 'webhook'];
 
