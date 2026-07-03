@@ -80,8 +80,25 @@ async function getColumns(integration, sheetIdRaw, rangeRaw) {
     }
     const apiMsg = e.errors?.[0]?.message || e.message || '';
     if (/unable to parse range/i.test(apiMsg)) {
-      const err = new Error(`Tab "${range.split('!')[0]}" doesn't exist in this spreadsheet. Open the sheet and check the exact tab name at the bottom (case-sensitive), then update Sheet Range.`);
-      err.code = 'SHEET_ID_MISSING';
+      const requestedTab = range.split('!')[0].replace(/^'|'$/g, '');
+      let availableTabs = [];
+      try {
+        const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId, fields: 'sheets.properties.title' });
+        availableTabs = (meta.data.sheets || []).map(s => s.properties.title);
+      } catch (_) { /* ignore, fall back to generic message */ }
+
+      let message = `Tab "${requestedTab}" doesn't exist in this spreadsheet.`;
+      if (availableTabs.length === 1) {
+        message += ` This spreadsheet's only tab is named "${availableTabs[0]}". Update Sheet Range to "${availableTabs[0]}!A1:Z1000" and try again.`;
+      } else if (availableTabs.length > 1) {
+        message += ` Available tabs: ${availableTabs.join(', ')}. Update Sheet Range to use one of these, e.g. "${availableTabs[0]}!A1:Z1000".`;
+      } else {
+        message += ` Open the sheet and check the exact tab name at the bottom (case-sensitive), then update Sheet Range.`;
+      }
+
+      const err = new Error(message);
+      err.code = 'SHEET_TAB_NOT_FOUND';
+      err.availableTabs = availableTabs;
       throw err;
     }
     throw e;

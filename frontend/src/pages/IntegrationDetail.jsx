@@ -91,7 +91,7 @@ export default function IntegrationDetail() {
 
   // Multiple Google Sheets sources (google_sheets type only) — each has its own
   // sheetId/sheetRange/fieldMapping and its own fetched column list.
-  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: { name: '', phone: '', email: '', location: '' }, columns: [], columnsLoading: false, columnsError: '' });
+  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: { name: '', phone: '', email: '', location: '' }, columns: [], columnsLoading: false, columnsError: '', availableTabs: [] });
   const [sheetSources, setSheetSources] = useState([emptySheetSource()]);
 
   // Extra states for Google Meet
@@ -246,8 +246,16 @@ export default function IntegrationDetail() {
       const res = await integrationsAPI.getSheetColumns(id, src.sheetId, src.sheetRange);
       updateSheetSource(idx, { columns: res.data.columns || [], columnsLoading: false });
     } catch (err) {
-      updateSheetSource(idx, { columnsLoading: false, columnsError: err.response?.data?.message || 'Could not load columns' });
+      updateSheetSource(idx, {
+        columnsLoading: false,
+        columnsError: err.response?.data?.message || 'Could not load columns',
+        availableTabs: err.response?.data?.availableTabs || [],
+      });
     }
+  };
+
+  const useSuggestedTab = (idx, tabName) => {
+    updateSheetSource(idx, { sheetRange: `${tabName}!A1:Z1000`, columnsError: '', availableTabs: [] });
   };
 
   const startGoogleOAuth = async () => {
@@ -487,6 +495,15 @@ export default function IntegrationDetail() {
                             {src.columnsLoading ? 'Loading columns...' : '↻ Load Columns from this Sheet'}
                           </button>
                           {src.columnsError && <div style={{ color: '#dc2626', fontSize: 13 }}>{src.columnsError}</div>}
+                          {src.availableTabs && src.availableTabs.length > 0 && (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                              {src.availableTabs.map(tab => (
+                                <button key={tab} onClick={() => useSuggestedTab(idx, tab)} style={{ ...s.btnGhost, padding: '4px 10px', fontSize: 12 }}>
+                                  Use "{tab}"
+                                </button>
+                              ))}
+                            </div>
+                          )}
                           {src.columns.length > 0 && (
                             <div style={{ fontSize: 12, color: '#059669' }}>✓ {src.columns.length} columns loaded — map them in Step 2</div>
                           )}
