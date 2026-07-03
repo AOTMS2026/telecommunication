@@ -65,6 +65,10 @@ const leadSchema = new mongoose.Schema({
   // 'completed'   -> last AI call finished (outcome already applied)
   aiCallState: { type: String, enum: ['none', 'queued', 'in_progress', 'completed'], default: 'none' },
 
+  // Exotel CallSid of the currently in-progress AI call (if any). Needed so
+  // ai-pause can actively hang up a live call instead of only stopping new dials.
+  activeCallSid: { type: String, default: null },
+
   // Full structured GPT-4.1-mini output from the most recent AI call. Used by
   // conversationMemory.js to build "last time we spoke..." context for the next call.
   lastAiOutcome: { type: mongoose.Schema.Types.Mixed, default: null },
