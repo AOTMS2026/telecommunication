@@ -178,17 +178,23 @@ export default function IntegrationDetail() {
         const existing = (intg.config?.sheetSources && intg.config.sheetSources.length > 0)
           ? intg.config.sheetSources
           : [{ sheetId: intg.config?.sheetId || '', sheetRange: intg.config?.sheetRange || '', name: '', fieldMapping: intg.fieldMapping || {} }];
-        setSheetSources(existing.map(src => ({
-          sheetId: src.sheetId || '',
-          sheetRange: src.sheetRange || '',
-          name: src.name || '',
-          fieldMapping: { ...emptyFieldMapping(), ...(src.fieldMapping || {}) },
-          extraColumns: src.extraColumns || [],
-          columns: [],
-          columnsLoading: false,
-          columnsError: '',
-          availableTabs: [],
-        })));
+        setSheetSources(prevSources => existing.map(src => {
+          // Preserve already-loaded columns for this sheet (matched by id+range) so
+          // navigating between wizard steps (which silently re-saves/re-fetches)
+          // doesn't wipe out columns the user already loaded in Step 1.
+          const prevMatch = prevSources.find(p => p.sheetId === (src.sheetId || '') && p.sheetRange === (src.sheetRange || ''));
+          return {
+            sheetId: src.sheetId || '',
+            sheetRange: src.sheetRange || '',
+            name: src.name || '',
+            fieldMapping: { ...emptyFieldMapping(), ...(src.fieldMapping || {}) },
+            extraColumns: src.extraColumns || [],
+            columns: prevMatch?.columns || [],
+            columnsLoading: false,
+            columnsError: '',
+            availableTabs: [],
+          };
+        }));
       }
       setDefaultCampaign(intg.defaultCampaign?._id || '');
       setDefaultAssignedTo(intg.defaultAssignedTo?._id || '');
