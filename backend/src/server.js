@@ -26,8 +26,31 @@ connectDB();
 initFCM();
 
 // ── Security ─────────────────────────────────────────────────────────────────
-const allowedOrigin = process.env.FRONTEND_URL || '*';
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+// A single exact-string origin match (the old approach) silently breaks CORS
+// for every route if the configured FRONTEND_URL differs from the browser's
+// origin by so much as a trailing slash or a missing "www." — with no error
+// logged anywhere, since the request is still handled fine, just without the
+// CORS header. This matcher normalizes both sides and accepts the www/non-www
+// variant of whatever's configured, so that class of mismatch can't happen.
+const configuredOrigin = (process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '');
+
+function normalizeOrigin(o) {
+  return (o || '').trim().replace(/\/+$/, '');
+}
+
+function isAllowedOrigin(origin) {
+  if (!configuredOrigin) return true; // no FRONTEND_URL set -> behave like the old '*' fallback
+  if (!origin) return true; // non-browser requests (server-to-server, curl) send no Origin header
+  const o = normalizeOrigin(origin);
+  const withWww = configuredOrigin.replace(/^https?:\/\//, m => m).replace(/^(https?:\/\/)(?!www\.)/, '$1www.');
+  const withoutWww = configuredOrigin.replace(/^(https?:\/\/)www\./, '$1');
+  return o === configuredOrigin || o === withWww || o === withoutWww;
+}
+
+app.use(cors({
+  origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
+  credentials: true,
+}));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -76,7 +99,7 @@ const RECORDINGS_DIR = process.env.RECORDINGS_DIR
     : path.join(__dirname, 'uploads', 'recordings'));
 
 app.use('/uploads/recordings', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin === '*' ? '*' : allowedOrigin);
+  res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin(req.headers.origin) ? (req.headers.origin || '*') : 'null');
   res.setHeader('Access-Control-Allow-Headers', 'Range');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
@@ -92,7 +115,7 @@ app.use('/uploads/recordings', (req, res, next) => {
 
 // Any other (non-recording) uploads still served from the local repo path
 app.use('/uploads', (req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin === '*' ? '*' : allowedOrigin);
+  res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin(req.headers.origin) ? (req.headers.origin || '*') : 'null');
   res.setHeader('Access-Control-Allow-Headers', 'Range');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
