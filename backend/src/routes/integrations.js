@@ -312,7 +312,8 @@ router.get('/:id/sheets/columns', protect, async (req, res) => {
     const columns = await googleSheets.getColumns(integration, sheetId, sheetRange);
     res.json({ columns });
   } catch (err) {
-    res.status(err.code === 'GOOGLE_NOT_CONNECTED' || err.code === 'SHEET_ID_MISSING' ? 400 : 500).json({ message: err.message });
+    const isClientErr = ['GOOGLE_NOT_CONNECTED', 'SHEET_ID_MISSING', 'SHEET_TAB_NOT_FOUND'].includes(err.code);
+    res.status(isClientErr ? 400 : 500).json({ message: err.message, availableTabs: err.availableTabs || [] });
   }
 });
 
