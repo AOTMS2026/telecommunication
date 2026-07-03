@@ -59,46 +59,75 @@ async function exchangeCode(code) {
   return tokens; // { access_token, refresh_token, expiry_date }
 }
 
-// Get sheet rows and import as leads
-async function importLeadsFromSheet(integration) {
-  if (!integration.config?.sheetId) {
-    const err = new Error('No Google Sheet ID set. Enter your Sheet ID in Step 1 and save before importing.');
+// Fetch header row (first row) of a sheet range so the UI can offer a column picker
+async function getColumns(integration, sheetIdRaw, rangeRaw) {
+  const sheetId = extractSheetId(sheetIdRaw || integration.config?.sheetId);
+  if (!sheetId) {
+    const err = new Error('Enter a Sheet ID first.');
     err.code = 'SHEET_ID_MISSING';
     throw err;
   }
+  const range = rangeRaw || 'Sheet1!A1:Z1';
   const auth = getOAuth2Client(integration.config);
   const sheets = google.sheets({ version: 'v4', auth });
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
+    const headerRow = (res.data.values && res.data.values[0]) || [];
+    return headerRow.map(h => String(h).trim()).filter(Boolean);
+  } catch (e) {
+    if (e.code === 404 || e.response?.status === 404) {
+      throw new Error('Sheet not found. Double-check the Sheet ID and make sure the sheet is shared with the Google account you connected.');
+    }
+    const apiMsg = e.errors?.[0]?.message || e.message || '';
+    if (/unable to parse range/i.test(apiMsg)) {
+      const err = new Error(`Tab "${range.split('!')[0]}" doesn't exist in this spreadsheet. Open the sheet and check the exact tab name at the bottom (case-sensitive), then update Sheet Range.`);
+      err.code = 'SHEET_ID_MISSING';
+      throw err;
+    }
+    throw e;
+  }
+}
 
-  const sheetId = extractSheetId(integration.config.sheetId);
-  const range = integration.config.sheetRange || 'Sheet1!A1:Z1000';
+// Import leads from a single {sheetId, sheetRange, fieldMapping} source.
+// Only columns explicitly selected in fieldMapping are read — unmapped fields are left blank.
+async function importFromOneSource(integration, source) {
+  const sheetId = extractSheetId(source.sheetId);
+  if (!sheetId) return { imported: 0, skipped: 0, error: 'No Sheet ID set for this sheet.' };
+
+  const range = source.sheetRange || 'Sheet1!A1:Z1000';
+  const mapping = source.fieldMapping || {};
+  if (!mapping.phone) return { imported: 0, skipped: 0, error: 'Phone column not mapped — this sheet was skipped.' };
+
+  const auth = getOAuth2Client(integration.config);
+  const sheets = google.sheets({ version: 'v4', auth });
 
   const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range });
   const rows = res.data.values || [];
   if (rows.length < 2) return { imported: 0, skipped: 0 };
 
-  const headers = rows[0].map(h => h.toLowerCase().trim());
-  const mapping = integration.fieldMapping || {};
+  const headers = rows[0].map(h => String(h).trim());
+  const colIndex = (colName) => (colName ? headers.indexOf(colName) : -1);
 
-  const nameCol = headers.indexOf(mapping.name || 'name');
-  const phoneCol = headers.indexOf(mapping.phone || 'phone');
-  const emailCol = headers.indexOf(mapping.email || 'email');
-  const locationCol = headers.indexOf(mapping.location || 'location');
+  const nameCol = colIndex(mapping.name);
+  const phoneCol = colIndex(mapping.phone);
+  const emailCol = colIndex(mapping.email);
+  const locationCol = colIndex(mapping.location);
 
   let imported = 0, skipped = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const phone = row[phoneCol]?.trim();
+    const phone = phoneCol >= 0 ? row[phoneCol]?.trim() : '';
     if (!phone) { skipped++; continue; }
 
     const existing = await Lead.findOne({ phone });
     if (existing) { skipped++; continue; }
 
     const lead = await Lead.create({
-      name: row[nameCol]?.trim() || 'Sheet Lead',
+      name: (nameCol >= 0 ? row[nameCol]?.trim() : '') || 'Sheet Lead',
       phone,
-      email: emailCol >= 0 ? row[emailCol]?.trim() : '',
-      location: locationCol >= 0 ? row[locationCol]?.trim() : '',
+      email: emailCol >= 0 ? row[emailCol]?.trim() || '' : '',
+      location: locationCol >= 0 ? row[locationCol]?.trim() || '' : '',
       leadSource: 'Google Sheets',
       status: 'Fresh',
       campaign: integration.defaultCampaign || undefined,
@@ -117,6 +146,33 @@ async function importLeadsFromSheet(integration) {
   }
 
   return { imported, skipped };
+}
+
+// Get sheet rows and import as leads. Supports multiple sheet sources
+// (integration.config.sheetSources) each with its own sheetId/range/fieldMapping,
+// falling back to the single legacy sheetId/sheetRange/fieldMapping if none are set.
+async function importLeadsFromSheet(integration) {
+  const sources = (integration.config?.sheetSources && integration.config.sheetSources.length > 0)
+    ? integration.config.sheetSources
+    : [{ sheetId: integration.config?.sheetId, sheetRange: integration.config?.sheetRange, fieldMapping: integration.fieldMapping }];
+
+  if (!sources.some(s => s.sheetId)) {
+    const err = new Error('No Google Sheet ID set. Enter your Sheet ID in Step 1 and save before importing.');
+    err.code = 'SHEET_ID_MISSING';
+    throw err;
+  }
+
+  let imported = 0, skipped = 0;
+  const perSheet = [];
+
+  for (const source of sources) {
+    const result = await importFromOneSource(integration, source);
+    imported += result.imported;
+    skipped += result.skipped;
+    perSheet.push({ sheetId: source.sheetId, name: source.name || '', ...result });
+  }
+
+  return { imported, skipped, perSheet };
 }
 
 // Append a lead to a Google Sheet (export)
@@ -157,4 +213,4 @@ async function listSheets(integration) {
   }
 }
 
-module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets, extractSheetId };
+module.exports = { getAuthUrl, exchangeCode, importLeadsFromSheet, appendLeadToSheet, listSheets, extractSheetId, getColumns };

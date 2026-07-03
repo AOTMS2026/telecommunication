@@ -166,6 +166,7 @@ export const integrationsAPI = {
   // Google Sheets
   importFromSheet: (id) => api.post(`/integrations/${id}/sheets/import`),
   listSheets: (id) => api.get(`/integrations/${id}/sheets/list`),
+  getSheetColumns: (id, sheetId, sheetRange) => api.get(`/integrations/${id}/sheets/columns`, { params: { sheetId, sheetRange } }),
 
   // Google Meet
   createMeeting: (id, data) => api.post(`/integrations/${id}/meet/create`, data),
@@ -332,8 +333,6 @@ export const recordingsAPI = {
   getAll: (userId) => api.get('/recordings', { params: userId ? { userId } : {} }),
   upload: (formData) => api.post('/recordings', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   transcribe: (id, force) => api.post(`/recordings/${id}/transcribe`, { force: !!force }),
-  rematch: () => api.post('/recordings/rematch'),
-  linkLead: (id, leadId) => api.post(`/recordings/${id}/link-lead`, { leadId }),
 };
 
 export const billingAPI = {
