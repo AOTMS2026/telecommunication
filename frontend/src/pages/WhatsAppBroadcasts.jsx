@@ -38,17 +38,29 @@ export default function WhatsAppBroadcasts() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const [tplRes, campRes, stageRes] = await Promise.all([
-          messageTemplatesAPI.getAll({ type: 'whatsapp' }),
-          campaignsAPI.getAll(),
-          leadStagesAPI.get(),
-        ]);
-        setTemplates(tplRes.data.templates || []);
-        setCampaigns(campRes.data.campaigns || campRes.data || []);
-        setStatuses((stageRes.data.config?.statuses || []).map((s) => s.name));
-      } catch (err) {
-        console.error(err);
+      const [tplRes, campRes, stageRes] = await Promise.allSettled([
+        messageTemplatesAPI.getAll({ type: 'whatsapp' }),
+        campaignsAPI.getAll(),
+        leadStagesAPI.get(),
+      ]);
+
+      if (tplRes.status === 'fulfilled') {
+        setTemplates(tplRes.value.data.templates || []);
+      } else {
+        console.error('Failed to load templates:', tplRes.reason);
+      }
+
+      if (campRes.status === 'fulfilled') {
+        setCampaigns(campRes.value.data.campaigns || campRes.value.data || []);
+      } else {
+        console.error('Failed to load campaigns:', campRes.reason);
+        setFormError((prev) => prev || 'Could not load campaigns — check console for details.');
+      }
+
+      if (stageRes.status === 'fulfilled') {
+        setStatuses((stageRes.value.data.config?.statuses || []).map((s) => s.name));
+      } else {
+        console.error('Failed to load lead statuses:', stageRes.reason);
       }
     })();
   }, []);
@@ -139,7 +151,7 @@ export default function WhatsAppBroadcasts() {
       </div>
 
       {activeTab === 'NEW BROADCAST' && (
-        <div style={{ maxWidth: 640 }}>
+        <div style={{ maxWidth: '100%' }}>
           {sendResult ? (
             <div style={{ padding: 20, borderRadius: 10, background: 'var(--theme-surface-faint3)', border: '1px solid var(--theme-border-tint)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -193,7 +205,7 @@ export default function WhatsAppBroadcasts() {
 
               <div style={{ fontSize: 12, fontWeight: 700, color: '#888', textTransform: 'uppercase', margin: '18px 0 8px' }}>Audience Filters</div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(220px, 1fr))', gap: 12, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle}>Lead Status</label>
                   <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} style={inputStyle}>
