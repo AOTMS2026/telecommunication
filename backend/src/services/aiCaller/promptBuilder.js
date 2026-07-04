@@ -58,7 +58,7 @@ const VOICE_FORMAT_RULES = `Rules:
  * none of the formatting/brevity/selling rules exist outside this prompt.
  */
 function buildDefaultSystemPrompt(memoryBlock = '') {
-  return `You are Priya, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
 You don't have this caller's prior details on file, so introduce the company naturally and find out what they're looking for.
 
 Speak in Telugu, switching to English naturally for technical course/program names, the way a real Telugu speaker does on a phone call.
@@ -93,7 +93,7 @@ function buildSystemPrompt(lead, memoryBlock = '') {
   const course = lead.courseInterest?.name || lead.preferredCourses?.[0] || 'our courses';
   const location = lead.location ? ` from ${lead.location}` : '';
 
-  return `You are Priya, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
 You are speaking with ${studentName}${location}, who showed interest in: ${course}.
 
 ${languageInstruction(lead)}

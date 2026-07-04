@@ -153,63 +153,99 @@ async function sendTts(ws, session, text) {
   const clean = sanitizeForSpeech(text);
   if (!clean) return;
 
-  let pcm16;
-  try {
-    const langCode = session.language === 'English' ? 'en-IN' : 'te-IN';
-    pcm16 = await synthesizeSpeech(clean, langCode);
-  } catch (err) {
-    console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
-    return;
-  }
-
-  if (!pcm16 || pcm16.length === 0) return;
+  const langCode = session.language === 'English' ? 'en-IN' : 'te-IN';
 
   session.agentSpeaking = true;
   session.abortSpeaking = false;
+
+  // STREAMING PLAYBACK: previously this function awaited synthesizeSpeech()
+  // for the FULL reply, then looped over the complete buffer pacing frames
+  // out afterward — meaning nothing was heard on the call until Sarvam had
+  // finished generating the entire sentence. For a multi-sentence answer
+  // that's 1-2+ seconds of pure dead air on every turn, on top of GPT and
+  // STT latency, which is why replies felt like they took 5+ seconds.
+  //
+  // Now audio bytes are forwarded to Exotel via `drain()` the moment enough
+  // of them have arrived (see onChunk callback below), while Sarvam is
+  // still synthesizing the rest of the sentence in the background.
+  let pending = Buffer.alloc(0);
+  let synthesisDone = false;
+  let draining = false;
+  const FRAME_MS = 100; // EXOTEL_FRAME_BYTES (1600) = 100ms of 8kHz/16-bit mono audio
+
+  const drain = async () => {
+    if (draining) return; // a drain loop is already running — it will pick up newly appended bytes
+    draining = true;
+    try {
+      while (!session.abortSpeaking) {
+        if (pending.length >= EXOTEL_FRAME_BYTES) {
+          const frame = pending.slice(0, EXOTEL_FRAME_BYTES);
+          pending = pending.slice(EXOTEL_FRAME_BYTES);
+          ws.send(JSON.stringify({
+            event: 'media',
+            stream_sid: session.streamSid,
+            media: { payload: frame.toString('base64') },
+          }));
+          await new Promise(resolve => setTimeout(resolve, FRAME_MS));
+        } else if (synthesisDone) {
+          // No full frame left, and Sarvam is done — flush the remainder
+          // padded to a 320-byte boundary (Exotel's requirement) and stop.
+          if (pending.length > 0) {
+            const rem = pending.length % 320;
+            let frame = pending;
+            if (rem !== 0) {
+              const padded = Buffer.alloc(frame.length + (320 - rem));
+              frame.copy(padded);
+              frame = padded;
+            }
+            ws.send(JSON.stringify({
+              event: 'media',
+              stream_sid: session.streamSid,
+              media: { payload: frame.toString('base64') },
+            }));
+            pending = Buffer.alloc(0);
+          }
+          break;
+        } else {
+          // Not enough buffered for a full frame yet, and Sarvam hasn't
+          // finished — wait briefly for more chunks to arrive.
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+      }
+    } finally {
+      draining = false;
+    }
+  };
+
   try {
-    // Pace frames to real playback time (each EXOTEL_FRAME_BYTES chunk is
-    // 100ms of 8kHz/16-bit mono audio). Previously this loop sent every
-    // frame back-to-back with no delay, so the whole reply was dumped on
-    // the wire in a few milliseconds and `agentSpeaking` was true for only
-    // that instant — nowhere close to the several real seconds the phone
-    // call actually spends playing it back. That made barge-in detection
-    // (`if agentSpeaking...`) essentially never fire. Pacing sends keeps
-    // agentSpeaking accurate for the whole real duration of the reply, and
-    // lets a caller's barge-in (which sets abortSpeaking) actually cut
-    // playback short instead of frames already being long gone.
-    const FRAME_MS = 100;
-    for (let offset = 0; offset < pcm16.length; offset += EXOTEL_FRAME_BYTES) {
-      if (session.abortSpeaking) break;
-
-      let frame = pcm16.slice(offset, offset + EXOTEL_FRAME_BYTES);
-      const rem = frame.length % 320;
-      if (rem !== 0) {
-        const padded = Buffer.alloc(frame.length + (320 - rem));
-        frame.copy(padded);
-        frame = padded;
-      }
-      ws.send(JSON.stringify({
-        event: 'media',
-        stream_sid: session.streamSid,
-        media: { payload: frame.toString('base64') },
-      }));
-
-      if (offset + EXOTEL_FRAME_BYTES < pcm16.length) {
-        await new Promise(resolve => setTimeout(resolve, FRAME_MS));
-      }
-    }
-    if (!session.abortSpeaking) {
-      // Mark signals end of this utterance (for barge-in re-arming)
-      ws.send(JSON.stringify({
-        event: 'mark',
-        stream_sid: session.streamSid,
-        mark: { name: `reply-${Date.now()}` },
-      }));
-    }
-  } finally {
+    await synthesizeSpeech(clean, langCode, (chunk) => {
+      pending = Buffer.concat([pending, chunk]);
+      drain(); // fire-and-forget; re-entrancy-safe via the `draining` flag
+    });
+  } catch (err) {
+    console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
     session.agentSpeaking = false;
     session.abortSpeaking = false;
+    return;
   }
+
+  synthesisDone = true;
+  // Let the drain loop flush whatever's still buffered.
+  while ((draining || pending.length > 0) && !session.abortSpeaking) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+
+  if (!session.abortSpeaking) {
+    // Mark signals end of this utterance (for barge-in re-arming)
+    ws.send(JSON.stringify({
+      event: 'mark',
+      stream_sid: session.streamSid,
+      mark: { name: `reply-${Date.now()}` },
+    }));
+  }
+
+  session.agentSpeaking = false;
+  session.abortSpeaking = false;
 }
 
 // ─── Speech segment processing ────────────────────────────────────────────────
@@ -322,37 +358,41 @@ async function handleCall(ws, req) {
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
   };
 
-  // Load call context (system prompt, memory) from DB — in-process, no HTTP call.
-  // IMPORTANT: a system prompt + welcome greeting must exist on EVERY call,
-  // not just ones with a resolvable lead. Previously this was entirely
-  // inside `if (leadId) { if (lead) {...} }` with no else branch, so any
-  // call with no leadId (e.g. someone dialing the Exophone directly instead
-  // of going through the campaign dialer) OR a leadId that didn't resolve to
-  // a real lead got session.conversation = [] and no pendingGreeting at all
-  // — no welcome message, no "keep it short/no markdown" rules, no company
-  // intro, no sales-push instructions. That's why those calls got silent
-  // openings and generic markdown-tutorial-style GPT answers.
-  let lead = null;
-  if (leadId) {
-    try {
-      lead = await Lead.findById(leadId).populate('courseInterest', 'name');
-    } catch (err) {
-      console.error('[orchestrator] failed to load lead:', err.message);
+  // Kick off lead/context loading in the BACKGROUND — do not await it here.
+  // Previously this was awaited before ws.on('message', ...) was even
+  // registered, meaning a slow DB lookup sat in the critical path before we
+  // could receive Exotel's 'connected'/'start' events at all, adding to
+  // "AI doesn't start the conversation immediately" delay (and, in the
+  // worst case, risking those early events arriving before any listener
+  // existed). Now the listener is attached immediately below, and the
+  // 'start' handler just awaits this promise — which by then has usually
+  // already resolved during Exotel's own connection handshake time.
+  const contextPromise = (async () => {
+    let lead = null;
+    if (leadId) {
+      try {
+        lead = await Lead.findById(leadId).populate('courseInterest', 'name');
+      } catch (err) {
+        console.error('[orchestrator] failed to load lead:', err.message);
+      }
     }
-  }
 
-  if (lead) {
-    session.language = lead.language || 'Telugu';
-    const memoryBlock = await buildMemoryBlock(leadId).catch(() => '');
-    session.conversation = [{ role: 'system', content: buildSystemPrompt(lead, memoryBlock) }];
-    session.pendingGreeting = buildWelcomeGreeting(lead);
-    session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
-  } else {
+    if (lead) {
+      const memoryBlock = await buildMemoryBlock(leadId).catch(() => '');
+      return {
+        language: lead.language || 'Telugu',
+        systemPrompt: buildSystemPrompt(lead, memoryBlock),
+        greeting: buildWelcomeGreeting(lead),
+      };
+    }
+
     if (leadId) console.warn(`[orchestrator] leadId=${leadId} did not resolve to a lead — using default prompt`);
-    session.conversation = [{ role: 'system', content: buildDefaultSystemPrompt() }];
-    session.pendingGreeting = buildDefaultWelcomeGreeting();
-    session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
-  }
+    return {
+      language: 'Telugu',
+      systemPrompt: buildDefaultSystemPrompt(),
+      greeting: buildDefaultWelcomeGreeting(),
+    };
+  })();
 
   ws.on('message', async (raw) => {
     let message;
@@ -374,18 +414,22 @@ async function handleCall(ws, req) {
 
       console.log(`[orchestrator] call started: ${session.callSid} lead=${session.leadId}`);
 
-      // Send welcome greeting
-      if (session.pendingGreeting) {
-        session.busy = true;
-        session.conversation.push({ role: 'assistant', content: session.pendingGreeting });
-        try {
-          await sendTts(ws, session, session.pendingGreeting);
-        } catch (err) {
-          console.error('[orchestrator] welcome TTS failed:', err.message);
-        } finally {
-          session.busy = false;
-        }
-        session.pendingGreeting = null;
+      // Apply lead context (resolved in the background above — usually
+      // already done by the time 'start' arrives, since it ran in parallel
+      // with Exotel's own connection handshake) and greet immediately.
+      const ctx = await contextPromise;
+      session.language = ctx.language;
+      session.conversation = [{ role: 'system', content: ctx.systemPrompt }];
+      session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
+
+      session.busy = true;
+      session.conversation.push({ role: 'assistant', content: ctx.greeting });
+      try {
+        await sendTts(ws, session, ctx.greeting);
+      } catch (err) {
+        console.error('[orchestrator] welcome TTS failed:', err.message);
+      } finally {
+        session.busy = false;
       }
 
     } else if (event === 'media') {

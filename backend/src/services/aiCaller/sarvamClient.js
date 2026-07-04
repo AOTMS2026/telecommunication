@@ -121,7 +121,15 @@ async function transcribeAudio(pcm16Bytes) {
 // supported "for all models & modes" including streaming — both needed so
 // Sarvam hands back audio already in Exotel's 8kHz/16-bit PCM shape with no
 // resampling needed on our end.
-function synthesizeSpeech(text, languageCode = 'te-IN') {
+//
+// STREAMING PLAYBACK: `onChunk`, if provided, is invoked synchronously with
+// each raw PCM Buffer the instant it arrives from Sarvam — so the caller
+// (orchestrator.js) can start forwarding audio to Exotel while Sarvam is
+// still generating the rest of the reply, instead of waiting for the whole
+// thing. This is the main latency fix for the "AI takes 5+ seconds to
+// respond" issue: previously nothing was heard until the ENTIRE reply had
+// finished synthesizing.
+function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
   return new Promise((resolve, reject) => {
     if (!text || !text.trim()) return resolve(Buffer.alloc(0));
 
@@ -197,10 +205,21 @@ function synthesizeSpeech(text, languageCode = 'te-IN') {
       }
 
       if (data.type === 'audio' && data.data && data.data.audio) {
-        chunks.push(Buffer.from(data.data.audio, 'base64'));
-        // reset idle timer — finish 600ms after the last chunk arrives
+        const buf = Buffer.from(data.data.audio, 'base64');
+        chunks.push(buf);
+        if (onChunk) {
+          try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk handler threw:', e.message); }
+        }
+        // Reset idle timer — finish shortly after the last chunk arrives.
+        // Shortened from 600ms to 250ms: previously this delay gated when
+        // playback could START (since sendTts waited for the whole buffer),
+        // so it was pure added latency on every single reply. Now that
+        // audio streams to Exotel via onChunk as it arrives, this timer is
+        // only a safety margin for detecting end-of-stream (in case the
+        // socket's own 'close' event is slower to fire than the actual gap
+        // between chunks), not something the caller is blocked on.
         clearTimeout(idleTimer);
-        idleTimer = setTimeout(finish, 600);
+        idleTimer = setTimeout(finish, 250);
       } else if (data.type === 'error') {
         const msg = data.data && data.data.message;
         console.log(`[sarvam-tts] ws error frame (after sending "${lastSent}"): ${msg || str.slice(0, 300)}`);
