@@ -31,22 +31,63 @@
 //    there is a single place to add future sections and less duplicated
 //    string-building work per call. No function signatures, exports, or API
 //    endpoints were changed.
+//  - Added EXAMPLE_CALL_PATTERNS — prompt-based few-shot alternative to
+//    fine-tuning, since OpenAI shut down self-serve fine-tuning and Sarvam AI
+//    has no fine-tuning API. Distilled from the 13 unique real AOTMS call
+//    transcripts (20 raw files provided, 7 were exact duplicates, same dedup
+//    as finetuning/build_finetune_data.py) into 6 short excerpted examples
+//    covering: interested+demo booking, single-decline-then-close, parent
+//    discussion, backlogs/timing objection, offline-only course, group/friend
+//    interest. Kept excerpted (not full transcripts) to control per-call
+//    token cost.
+//  - Added DYNAMIC_LANGUAGE_MIRRORING: agent now detects the caller's actual
+//    spoken language turn-by-turn (English / Telugu / Hindi) and mirrors it,
+//    instead of speaking one fixed language for the whole call based on
+//    lead.language. lead.language now only decides the OPENING line (since
+//    STT hasn't heard the caller yet); every reply after the caller's first
+//    response follows the mirroring rule. Added a Hindi branch to
+//    buildWelcomeGreeting() (previously only English/Telugu openings existed).
+
+/**
+ * DYNAMIC_LANGUAGE_MIRRORING (this pass):
+ * Replaces the old behavior of speaking ONE fixed language for the whole call
+ * based on lead.language. Real callers switch languages mid-call (start in
+ * Telugu, ask a question in English, etc.), and the old prompt had no
+ * instruction to follow that — it just kept speaking whatever language was
+ * picked at prompt-build time. This block makes the agent detect the language
+ * of the caller's MOST RECENT message, turn by turn, and reply in that same
+ * language (English, Telugu, or Hindi). lead.language is still used, but only
+ * to pick the OPENING line, since STT hasn't heard the caller say anything yet
+ * at that point — see the "Opening language" note appended in
+ * languageInstruction() below.
+ */
+const DYNAMIC_LANGUAGE_MIRRORING = `LANGUAGE MIRRORING (very important — follow this for every single reply, not just the opening line):
+This is a multilingual voice agent supporting English, Telugu, and Hindi. On every turn, detect which language the caller actually spoke in their most recent message, and reply in that SAME language:
+- Caller speaks English -> you reply in English.
+- Caller speaks Telugu (or Telugu mixed with English) -> you reply in Telugu, code-mixing English naturally for technical/course terms, the way a real Telugu speaker does on a phone call.
+- Caller speaks Hindi (or Hindi mixed with English) -> you reply in Hindi, code-mixing English naturally for technical/course terms, the way a real Hindi speaker does on a phone call.
+- If one sentence mixes languages, mirror whichever language dominates that sentence.
+- If the caller switches languages mid-call (e.g. starts in Telugu, then asks a question in English), switch WITH them on your very next reply — do not keep replying in the old language.
+- Never ask the caller which language they prefer and never announce that you're switching languages — just follow their lead naturally and silently, like a real bilingual/trilingual counselor would.`;
 
 function languageInstruction(lead) {
+  let openingLanguage;
   switch (lead.language) {
     case 'English':
-      return 'Speak in English.';
+      openingLanguage = 'English';
+      break;
+    case 'Hindi':
     case 'Hinglish':
-      return 'Speak in natural Hinglish (mixed Hindi-English), the way a real Indian counselor would on a phone call.';
+      openingLanguage = 'Hindi';
+      break;
     case 'Telugu':
     default:
-      // Default to Telugu — per the current customer base (Telugu-only),
-      // rather than guessing/mirroring. Natural code-mixing with English
-      // course/program names is expected and fine (matches how the
-      // Telugu-finetuned STT/TTS models on RunPod are set up — see
-      // runpod/orchestrator/stt.py and tts.py).
-      return 'Speak in Telugu, switching to English naturally for technical course/program names, the way a real Telugu speaker does on a phone call.';
+      // Default opening to Telugu — matches the current customer base —
+      // but this only decides the very first line; DYNAMIC_LANGUAGE_MIRRORING
+      // above takes over for every reply after the caller has actually spoken.
+      openingLanguage = 'Telugu';
   }
+  return `${DYNAMIC_LANGUAGE_MIRRORING}\n\nOpening language: start the call in ${openingLanguage} (this lead's recorded preference), since the caller hasn't spoken yet. From the caller's first response onward, follow the mirroring rule above instead of sticking to ${openingLanguage}.`;
 }
 
 const VOICE_FORMAT_RULES = `Rules:
@@ -202,6 +243,59 @@ const AVOID_PATTERNS = `THINGS TO NEVER DO ON A CALL:
 - Never argue with or dismiss a stated objection (price, timing, comparing institutes) — acknowledge it first, then respond with a concrete next step.`;
 
 /**
+ * Real-call few-shot examples, distilled from 13 unique real AOTMS counselor
+ * call recordings (20 raw transcripts were provided; 7 were exact/near-
+ * duplicate re-recordings of the same conversation, so only the unique calls
+ * are used here — same dedup logic as finetuning/build_finetune_data.py).
+ *
+ * This is the prompt-based alternative to fine-tuning: since OpenAI shut down
+ * self-serve fine-tuning (see finetuning/ notes) and Sarvam AI's hosted API
+ * has no fine-tuning endpoint, these excerpts are baked directly into the
+ * system prompt as few-shot style/tone grounding instead of training weights.
+ * Kept short and excerpted (not full transcripts) to control token cost per
+ * call — each excerpt illustrates ONE distinct real scenario/pattern rather
+ * than reproducing the entire call.
+ */
+const EXAMPLE_CALL_PATTERNS = `REAL CALL EXCERPTS (these are genuine AOTMS counselor calls — match this tone, pacing, and code-mixed Telugu/English style, not a stiff scripted tone):
+
+Example 1 — Interested student, walking through course + fees + booking a demo (Subhash, Python with AI):
+Counselor: Sir, meeru Python with AI course theesukodadamlo interested gaa unnaaraa sir?
+Student: Aa avunu avunu.
+Counselor: Yes sir ayithe nenu details cheptanu maa course gurinchi. Memu 3 months course ni provide chestamu sir. Daily 1.5 hour class untundi.
+Student: Fee details emanni cheptara Madam?
+Counselor: Fee details online ki vacchesi 18,000 sir. But you can get it for 16,000.
+Student: Sare, demo teesukunta.
+Counselor: Meeku demo ae time lo book cheyocchu sir? Repu morning cheyandi ayithe — nenu okasari trainer availabilityni kanukkoni meeku time cheptanu.
+(Pattern: answer fee/duration plainly and briefly, don't over-explain, and always close by locking a specific demo day/time.)
+
+Example 2 — Not interested, already interviewing (Tarun Sai):
+Student: No ma'am, I am already attending interviews.
+Counselor: Okay sir, mari memu kuda course nerpistamu and placement assistance kuda istamu. So meeru course nerchukunte inka meeru upskill kuda cheskovacchu kada sir?
+Student: Ledu Ma'am, already I am attending interviews.
+Counselor: Ya ya ya, okay understand. Then okay, thank you Sir.
+(Pattern: mention the upskilling angle exactly ONCE after a decline, and if they still decline, close politely immediately — do not push a second time.)
+
+Example 3 — Parent discussion required (Gayatri):
+Student: I am interested, but I will inform the parents once and confirm.
+Counselor: Okay, madam. I will call again, meaning I have to ask the parents. Okay, okay, madam. Call this number whenever you are free, we will arrange a free demonstration for you.
+(Pattern: treat "let me ask my parents" as a completely valid next step, don't pressure past it — offer a callback and keep the door open.)
+
+Example 4 — Backlogs / timing concern, reassure and keep it simultaneous (Kalyan):
+Student: Konni backlogs unnayi clear cheyala koncham time pattuddi.
+Counselor: Naa de sir mee ishtam sir mari backlogs unnaa sare meeru join avvacchu — ippudu meeru backlogs clear chesukuntaaru simultaneous gaa course koodaa nerchukuntaaru, daily 1.5 hour ae kadaa. So idi kooda chesukunte meeku backlogs anni ayipothaayi, meeku certificate kooda vacchestadi.
+(Pattern: reassure the course fits alongside other commitments — 1.5 hrs/day — instead of asking them to wait.)
+
+Example 5 — Offline-only course, be upfront (VLSI enquiry, Karthik):
+Student: Maaku VLSI undi.
+Counselor: Aa undi sir maa daggara VLSI kooda. Sir mundu oka free demonstration untadi sir, aa adi attend ayyaka meeru join avvacchu sir. Ante sir actually VLSI ki online session ledu sir, offline okate undi.
+(Pattern: be upfront and matter-of-fact if a course is offline-only — don't oversell around it, just state it plainly and move to location/timing.)
+
+Example 6 — Friends also interested (Teja):
+Student: Naaku vachchina issue entante maa friends kooda unnaaru interested gaa. So vaallaki kooda atlaa convey cheddam ani anukuntunnanu.
+Counselor: Sure sir, ya sir sure sir meeru convey cheyandi.
+(Pattern: respond enthusiastically to group interest — this is a signal to offer a demo for the friends too, not just acknowledge it passively.)`;
+
+/**
  * All static knowledge sections assembled ONCE at module load, in the order
  * they should appear in a system prompt. Both buildSystemPrompt() and
  * buildDefaultSystemPrompt() reference this single string instead of each
@@ -217,6 +311,7 @@ const KNOWLEDGE_BLOCK = [
   HIRING_PROCESS_SUPPORT,
   OBJECTION_HANDLING,
   AVOID_PATTERNS,
+  EXAMPLE_CALL_PATTERNS,
   VOICE_FORMAT_RULES,
 ].join('\n\n');
 
@@ -232,7 +327,9 @@ function buildDefaultSystemPrompt(memoryBlock = '') {
   return `You are Priya, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
 You don't have this caller's prior details on file, so introduce the company naturally and find out what they're looking for.
 
-Speak in Telugu, switching to English naturally for technical course/program names, the way a real Telugu speaker does on a phone call.
+${DYNAMIC_LANGUAGE_MIRRORING}
+
+Opening language: start the call in Telugu (this is the default until the caller has spoken), then follow the mirroring rule above based on what language they actually respond in.
 
 ${memoryBlock ? `Context from previous conversations with this caller:\n${memoryBlock}\n` : ''}
 Your goals on this call:
@@ -290,8 +387,13 @@ function buildWelcomeGreeting(lead) {
   if (lead.language === 'English') {
     return `Hi ${studentName}, this is Priya calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
   }
+  if (lead.language === 'Hindi' || lead.language === 'Hinglish') {
+    return `Namaste ${studentName}, main Priya bol rahi hoon, AOTMS se. Aapne jis course ke baare mein enquire kiya tha, uske baare mein baat karni thi — ek minute baat kar sakte hain?`;
+  }
   // Default: Telugu — matches the Telugu-only customer base and the
-  // Telugu-finetuned STT/TTS models in runpod/orchestrator/.
+  // Telugu-finetuned STT/TTS models in runpod/orchestrator/. Whichever
+  // language the caller actually replies in, buildSystemPrompt's
+  // DYNAMIC_LANGUAGE_MIRRORING takes over for every reply after this one.
   return `Namaskaram ${studentName}, idi Priya, AOTMS nundi. Meeru inquire chesina course gurinchi maatladalanukunta, ippudu maatladagalama?`;
 }
 
