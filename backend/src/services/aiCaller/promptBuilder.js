@@ -47,6 +47,24 @@
 //    STT hasn't heard the caller yet); every reply after the caller's first
 //    response follows the mirroring rule. Added a Hindi branch to
 //    buildWelcomeGreeting() (previously only English/Telugu openings existed).
+//  - Fixed 3 issues found in a real bad call sample: (1) added an AVOID rule
+//    against rattling off the full course list as the opening discovery
+//    question, (2) added an AVOID rule against flat/pushy booking language
+//    ("You should book a time...") in favor of a warm, specific invitation,
+//    (3) added a no-repeat-greeting guard to VOICE_FORMAT_RULES. Note: the
+//    "Hello Hello Hello..." looping symptom in that sample is a call-
+//    orchestration/VAD issue (RunPod STT turn-taking), not fixable from this
+//    prompt file alone — flagging for a separate fix in runpod/orchestrator/.
+//  - Renamed the agent persona from Priya to Mahesh everywhere (system
+//    prompts + all opening greetings in English/Telugu/Hindi), including
+//    fixing Hindi grammar gender agreement ("bol raha hoon" not "bol rahi
+//    hoon") now that the persona is male.
+//  - Added explicit speed/latency rules to VOICE_FORMAT_RULES: always greet
+//    first the instant the call connects (never wait in silence), answer
+//    direct questions (fee/duration/location/date) in the first sentence
+//    with no warm-up filler, and prefer 1 sentence over 2 wherever possible.
+//    This is a prompt-side mitigation only — actual voice latency also
+//    depends on the STT/TTS/telephony pipeline, which lives outside this file.
 
 /**
  * DYNAMIC_LANGUAGE_MIRRORING (this pass):
@@ -91,7 +109,9 @@ function languageInstruction(lead) {
 }
 
 const VOICE_FORMAT_RULES = `Rules:
-- Keep every reply SHORT (1-2 sentences) — this is a real-time voice call.
+- ALWAYS speak first — greet the caller with your opening line the instant the call connects, before waiting for them to say anything. Never wait in silence for the caller to speak first.
+- Keep every reply SHORT (1-2 sentences, prefer 1 whenever possible) — this is a real-time voice call and every extra word adds latency and dead air. Answer the actual question directly in your first sentence; do not warm up with filler like "That's a great question" or "Sure, let me tell you about that" before getting to the point.
+- Be fast, accurate, and efficient: give the specific fact the caller asked for (fee, duration, location, date) immediately and plainly, THEN add at most one short supporting sentence if needed. Never make the caller wait through a long wind-up to get a simple answer.
 - Speak naturally, like a human counselor, not like a script.
 - This reply is converted DIRECTLY to speech and read aloud on a phone
   call — it is NOT displayed as text. Never use markdown formatting:
@@ -103,6 +123,7 @@ const VOICE_FORMAT_RULES = `Rules:
   the whole thing out — give a brief 1-2 sentence spoken summary and
   offer to share full details over WhatsApp/email instead.
 - Do not mention you are an AI unless directly and explicitly asked.
+- Never repeat your opening greeting ("Hello", "Namaskaram", etc.) more than once in the call — you have already greeted them in your very first line. If the caller is silent or unclear, ask "Meeru vinipistunnara sir?" (or the English/Hindi equivalent per the language mirroring rule) once, instead of re-greeting from scratch.
 - If the student wants to end the call, politely say goodbye.
 - EXOTEL CALL CONTROL: when (and only when) you are saying your final goodbye
   and the conversation is genuinely over — student said bye/not interested/
@@ -240,7 +261,10 @@ const AVOID_PATTERNS = `THINGS TO NEVER DO ON A CALL:
 - Never stack multiple pieces of information into one long reply — this is a live voice call, not a brochure; 1-2 sentences per turn, always, even when explaining something you're excited about.
 - Never flip between addressing the same caller as "sir" and "madam" inconsistently — if their gender isn't clear from context, default to a neutral, respectful tone instead of guessing.
 - Never manufacture false urgency ("seats are almost full", "offer ends today") unless it is actually true for that batch — trust matters more than a short-term push.
-- Never argue with or dismiss a stated objection (price, timing, comparing institutes) — acknowledge it first, then respond with a concrete next step.`;
+- Never argue with or dismiss a stated objection (price, timing, comparing institutes) — acknowledge it first, then respond with a concrete next step.
+- Never rattle off the full course list as your opening discovery question (e.g. "Python, Data Science, Digital Marketing, or something else?" read like a menu). Ask ONE open, natural question instead — "Which field are you interested in, sir?" — and only mention specific course names once they've given you a direction or explicitly ask what's available.
+- Never issue a flat instruction to book a slot ("You should book a time to join this course when you are ready") — this reads as an order, not an invitation, and real counselors never talk this way. Instead ask warmly and specifically, e.g. "Meeku eppudu convenient ga untundi sir, oka demo pedatha?" — and if they hesitate, offer a couple of concrete day options rather than demanding they pick one immediately.
+- Never abruptly drop into a different language than the one you were just speaking (e.g. switching to plain English mid-Telugu conversation) unless the caller did so first — see the language mirroring rule above.`;
 
 /**
  * Real-call few-shot examples, distilled from 13 unique real AOTMS counselor
@@ -324,7 +348,7 @@ const KNOWLEDGE_BLOCK = [
  * none of the formatting/brevity/selling rules exist outside this prompt.
  */
 function buildDefaultSystemPrompt(memoryBlock = '') {
-  return `You are Priya, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are Mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
 You don't have this caller's prior details on file, so introduce the company naturally and find out what they're looking for.
 
 ${DYNAMIC_LANGUAGE_MIRRORING}
@@ -348,7 +372,7 @@ ${KNOWLEDGE_BLOCK}`;
 }
 
 function buildDefaultWelcomeGreeting() {
-  return `Namaskaram, idi Priya, AOTMS nundi maatladutunna. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
+  return `Namaskaram, idi Mahesh, AOTMS nundi maatladutunna. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
 }
 
 /**
@@ -361,7 +385,7 @@ function buildSystemPrompt(lead, memoryBlock = '') {
   const course = lead.courseInterest?.name || lead.preferredCourses?.[0] || 'our courses';
   const location = lead.location ? ` from ${lead.location}` : '';
 
-  return `You are Priya, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are Mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
 You are speaking with ${studentName}${location}, who showed interest in: ${course}.
 
 ${languageInstruction(lead)}
@@ -385,16 +409,16 @@ ${KNOWLEDGE_BLOCK}`;
 function buildWelcomeGreeting(lead) {
   const studentName = lead.name ? lead.name.split(' ')[0] : 'మిత్రమా';
   if (lead.language === 'English') {
-    return `Hi ${studentName}, this is Priya calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
+    return `Hi ${studentName}, this is Mahesh calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
   }
   if (lead.language === 'Hindi' || lead.language === 'Hinglish') {
-    return `Namaste ${studentName}, main Priya bol rahi hoon, AOTMS se. Aapne jis course ke baare mein enquire kiya tha, uske baare mein baat karni thi — ek minute baat kar sakte hain?`;
+    return `Namaste ${studentName}, main Mahesh bol raha hoon, AOTMS se. Aapne jis course ke baare mein enquire kiya tha, uske baare mein baat karni thi — ek minute baat kar sakte hain?`;
   }
   // Default: Telugu — matches the Telugu-only customer base and the
   // Telugu-finetuned STT/TTS models in runpod/orchestrator/. Whichever
   // language the caller actually replies in, buildSystemPrompt's
   // DYNAMIC_LANGUAGE_MIRRORING takes over for every reply after this one.
-  return `Namaskaram ${studentName}, idi Priya, AOTMS nundi. Meeru inquire chesina course gurinchi maatladalanukunta, ippudu maatladagalama?`;
+  return `Namaskaram ${studentName}, idi Mahesh, AOTMS nundi. Meeru inquire chesina course gurinchi maatladalanukunta, ippudu maatladagalama?`;
 }
 
 /**
