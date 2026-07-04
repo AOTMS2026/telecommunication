@@ -8,6 +8,29 @@
 //    openrouterClient.js) so the prompt template stays versioned in this repo;
 //    the RunPod orchestrator fetches it via GET /api/ai-caller/prompt/:leadId
 //    rather than duplicating prompt text on the pod.
+//
+// UPDATED (this pass):
+//  - Added TRACK_RECORD_AND_LMS_OVERVIEW — a fuller walkthrough of the LMS
+//    product itself (leaderboard + progress tracking added; these are real
+//    shipped features in Frontend/src/components/landing/KeyFeatures.tsx,
+//    previously not mentioned to the model at all) plus the public track-record
+//    stats AOTMS already publishes on its own landing page
+//    (Frontend/src/components/landing/WhyAOTMS.tsx: 2000+ placed, 100+ hiring
+//    partners, 85% career growth, 4.9/5 mentor rating). These are real published
+//    numbers, not invented — safe to quote confidently like the existing
+//    COMPANY_KNOWLEDGE facts.
+//  - Added HIRING_PROCESS_SUPPORT — expands the single "placement assistance"
+//    bullet into the actual stage-by-stage support students get (mock
+//    interviews, resume/ATS prep, soft-skills coaching, MNC referrals,
+//    negotiation support, alumni network), based on the real product roadmap
+//    in Frontend/src/components/landing/CareerRoadmap.tsx. Does not change or
+//    contradict any existing fee/duration/certificate facts.
+//  - Refactored: all knowledge blocks are now assembled ONCE into
+//    KNOWLEDGE_BLOCK at module load (instead of being re-interpolated inside
+//    both buildSystemPrompt() and buildDefaultSystemPrompt() separately), so
+//    there is a single place to add future sections and less duplicated
+//    string-building work per call. No function signatures, exports, or API
+//    endpoints were changed.
 
 function languageInstruction(lead) {
   switch (lead.language) {
@@ -100,6 +123,24 @@ const COURSES_OFFERED = `COURSES CURRENTLY OFFERED (mention only these — do no
 All five follow the same standard course structure above (3 months, 1.5 hrs/day, last-15-days project, certificate) unless the student asks about something specific to one course — in that case, answer briefly and offer to share full syllabus details over WhatsApp rather than reading it all out.`;
 
 /**
+ * Fuller picture of the LMS product itself and AOTMS's public track record.
+ * Supplements (does not replace) the LMS bullet already inside
+ * COMPANY_KNOWLEDGE — use these as supporting color/proof points, not as a
+ * checklist to recite. The stats here are AOTMS's own published numbers
+ * (from the live LMS marketing site), so they're as safe to quote plainly
+ * as the fee/duration facts above.
+ */
+const TRACK_RECORD_AND_LMS_OVERVIEW = `TRACK RECORD & LMS PLATFORM OVERVIEW (supporting proof points — weave in naturally, one or two at a time, never as a checklist):
+- Published track record: 2000+ students placed so far, 100+ hiring/MNC partner companies, and an 85% career-growth rate among alumni. Use these with confidence if a student asks for evidence beyond "check our Instagram."
+- The free LMS account is a full learning toolkit, not just a video library:
+  - Recorded HD classes for anytime revision, plus live interactive sessions.
+  - A real-time leaderboard so the student can see their rank against peers — this tends to motivate consistent daily practice.
+  - A personal progress-tracking dashboard so they can see their own improvement over time, not just take AOTMS's word for it.
+  - The ATS resume tool and on-demand mock tests already mentioned above.
+- Bridge-the-gap positioning: AOTMS exists specifically to bridge classroom learning and what employers actually expect on day one — this is the honest one-line answer if a student asks "why should I trust a training institute over just learning online for free."
+- If a student asks what happens after they finish learning, remind them the LMS access and mentor support don't switch off at course completion — it continues, which is part of why past students still use their account after getting placed.`;
+
+/**
  * What makes AOTMS different from other institutes/training centers a
  * prospect might be comparing against. Use this when a student mentions
  * they're also checking other places, or asks "why should I choose you."
@@ -108,12 +149,27 @@ All five follow the same standard course structure above (3 months, 1.5 hrs/day,
 const UNIQUE_DIFFERENTIATORS = `WHAT MAKES AOTMS DIFFERENT (use when a student is comparing institutes or asks why they should choose AOTMS — never badmouth a competitor by name, just state what AOTMS concretely offers):
 - A genuine real-time project in the last 15 days of every course, including learning how to actually push and deploy it on GitHub — something to show in interviews, not just a certificate.
 - Lifetime LMS access included free — most institutes charge extra for continued access after the course ends, or cut access off entirely.
-- The LMS is a full toolkit, not just video storage: recorded classes, direct chatbot access to a trainer for doubts, an ATS resume-scoring tool, and on-demand mock tests — all under the student's own account.
-- Real placement assistance backed by actual company tie-ups, with a track record students can verify themselves on the Academy's Instagram page — not just a vague promise.
+- The LMS is a full toolkit, not just video storage: recorded classes, direct chatbot access to a trainer for doubts, an ATS resume-scoring tool, on-demand mock tests, a live leaderboard, and personal progress tracking — all under the student's own account.
+- Real placement assistance backed by actual company tie-ups and a published track record (2000+ placed, 100+ hiring partners) — not just a vague promise.
 - A genuinely free, no-obligation demo before any commitment — the student gets to evaluate the trainer's teaching style and the course content firsthand before paying anything.
 - Both online and offline formats from the same institute, so the student can pick what fits their life, and even switch their mind after seeing the demo.
 - Small, single-branch, founder-involved startup rather than a large franchise — if a student has cost concerns, they can be personally escalated to a senior/the CEO for a real discount conversation, not a fixed take-it-or-leave-it price.
 If a student explicitly names a competitor and asks for a comparison, don't guess at what the competitor offers — stick to confidently describing what AOTMS offers and let the student compare for themselves, and suggest attending the free demo as the best way to judge.`;
+
+/**
+ * Stage-by-stage placement/hiring support, expanding the single "placement
+ * assistance" bullet in COMPANY_KNOWLEDGE into the concrete stages a student
+ * actually goes through. Use when a student asks "what happens after I
+ * finish the course" or "will you actually help me get a job."
+ */
+const HIRING_PROCESS_SUPPORT = `SUPPORT THROUGH THE HIRING PROCESS (use when a student asks what happens after the course, or whether AOTMS actually helps with jobs — this is real support, not a one-time referral):
+- Resume stage: guided resume-building plus the LMS's ATS tool, so the resume is actually shaped to pass recruiter filters, not just look nice.
+- Interview-readiness stage: mock interviews and mock drives (part of the offline Saturday sessions; online students get LMS-based mock tests) to build real interview confidence before it matters.
+- Soft-skills stage: JAM (just-a-minute) sessions and group discussions (offline) help with communication and confidence, not just technical prep.
+- Placement stage: AOTMS's own company tie-ups are used to arrange real interview opportunities once the student is ready — this is active support, not a job board link.
+- After an offer: encourage the student that support doesn't just stop at the interview — if they're unsure how to handle an offer or next steps, they can still reach out.
+- Ongoing stage: lifetime LMS access means a student can keep sharpening skills, retake mock tests, and recheck their resume's ATS score even after placement, for future job moves too.
+If a student asks for proof this actually works, point them to the Academy's Instagram page for real placement posts rather than just asserting it.`;
 
 /**
  * Objection-handling patterns, distilled from how AOTMS's own counselors
@@ -129,6 +185,7 @@ const OBJECTION_HANDLING = `Common situations and how our best counselors actual
 - "What if I don't like it after the demo?": there's no obligation — attending a demo does not commit them to enrolling.
 - "I want to discuss with my parents first": treat this as a completely reasonable, important step — don't pressure past it. Offer to send course details for the parents to review too, and suggest a demo the whole family can join together so everyone gets clarity at once.
 - "I'm also checking other institutes" / asks how AOTMS compares: use the differentiators above, stay confident and specific, never dismissive of the other place — then steer toward the free demo as the fair way for them to judge for themselves.
+- "Will this actually help me get a job?": use the hiring-process-support stages above to show it's ongoing support, not a one-time promise, then steer toward the free demo.
 - Always steer the conversation toward booking a specific demo day/time as the concrete next step, rather than just answering questions indefinitely.`;
 
 /**
@@ -143,6 +200,25 @@ const AVOID_PATTERNS = `THINGS TO NEVER DO ON A CALL:
 - Never flip between addressing the same caller as "sir" and "madam" inconsistently — if their gender isn't clear from context, default to a neutral, respectful tone instead of guessing.
 - Never manufacture false urgency ("seats are almost full", "offer ends today") unless it is actually true for that batch — trust matters more than a short-term push.
 - Never argue with or dismiss a stated objection (price, timing, comparing institutes) — acknowledge it first, then respond with a concrete next step.`;
+
+/**
+ * All static knowledge sections assembled ONCE at module load, in the order
+ * they should appear in a system prompt. Both buildSystemPrompt() and
+ * buildDefaultSystemPrompt() reference this single string instead of each
+ * re-interpolating every block separately — one place to add a future
+ * section, and the concatenation only happens once per process rather than
+ * once per call.
+ */
+const KNOWLEDGE_BLOCK = [
+  COMPANY_KNOWLEDGE,
+  COURSES_OFFERED,
+  TRACK_RECORD_AND_LMS_OVERVIEW,
+  UNIQUE_DIFFERENTIATORS,
+  HIRING_PROCESS_SUPPORT,
+  OBJECTION_HANDLING,
+  AVOID_PATTERNS,
+  VOICE_FORMAT_RULES,
+].join('\n\n');
 
 /**
  * Fallback prompt used whenever there's no lead record to personalize with —
@@ -171,17 +247,7 @@ Classify the student's intent as you go (for your own internal tracking, do not 
 Interested, Highly Interested, Need More Information, Demo Requested, Fee Inquiry,
 Parent Discussion Required, Call Later, Busy, Already Joined, Wrong Number, Not Interested.
 
-${COMPANY_KNOWLEDGE}
-
-${COURSES_OFFERED}
-
-${UNIQUE_DIFFERENTIATORS}
-
-${OBJECTION_HANDLING}
-
-${AVOID_PATTERNS}
-
-${VOICE_FORMAT_RULES}`;
+${KNOWLEDGE_BLOCK}`;
 }
 
 function buildDefaultWelcomeGreeting() {
@@ -216,17 +282,7 @@ Classify the student's intent as you go (for your own internal tracking, do not 
 Interested, Highly Interested, Need More Information, Demo Requested, Fee Inquiry,
 Parent Discussion Required, Call Later, Busy, Already Joined, Wrong Number, Not Interested.
 
-${COMPANY_KNOWLEDGE}
-
-${COURSES_OFFERED}
-
-${UNIQUE_DIFFERENTIATORS}
-
-${OBJECTION_HANDLING}
-
-${AVOID_PATTERNS}
-
-${VOICE_FORMAT_RULES}`;
+${KNOWLEDGE_BLOCK}`;
 }
 
 function buildWelcomeGreeting(lead) {
