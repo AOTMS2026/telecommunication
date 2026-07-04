@@ -412,6 +412,21 @@ async function handleCall(ws, req) {
       if (params.leadId) session.leadId = params.leadId;
       if (params.campaignId) session.campaignId = params.campaignId;
 
+      // Final fallback: resolve via CallSid if leadId is still unknown
+      // (belt-and-suspenders alongside the /stream-url CallSid lookup —
+      // covers any Exotel App Bazaar config that skips that step).
+      if (!session.leadId && session.callSid) {
+        try {
+          const byCallSid = await Lead.findOne({ activeCallSid: session.callSid }).select('_id campaign');
+          if (byCallSid) {
+            session.leadId = byCallSid._id.toString();
+            session.campaignId = session.campaignId || (byCallSid.campaign ? byCallSid.campaign.toString() : null);
+          }
+        } catch (err) {
+          console.error('[orchestrator] CallSid lead lookup failed:', err.message);
+        }
+      }
+
       console.log(`[orchestrator] call started: ${session.callSid} lead=${session.leadId}`);
 
       // Apply lead context (resolved in the background above — usually

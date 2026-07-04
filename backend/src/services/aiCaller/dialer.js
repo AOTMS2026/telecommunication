@@ -1,10 +1,11 @@
 // backend/src/services/aiCaller/dialer.js
 //
-// Per Sarvam+Exotel integration PDF:
-// Pass StreamUrl directly in the Calls/connect API call.
-// DO NOT use App Bazaar Url= flow for AI calls.
-// StreamType=bidirectional tells Exotel to connect the call directly
-// to our WebSocket orchestrator at /ai-caller/stream.
+// Uses Exotel's App Bazaar Voicebot Applet flow: From/CallerId/Url on
+// Calls/connect. Exotel calls Url (our exoml app), which dynamically fetches
+// the wss:// orchestrator address from /api/ai-caller/stream-url.
+// (A prior attempt passed StreamUrl/StreamType directly instead of Url —
+// Exotel accepted it and returned a success SID, but the phone never
+// actually rang on this account. Do not switch back without re-verifying.)
 
 const axios = require('axios');
 const Lead = require('../../models/Lead');
@@ -14,12 +15,7 @@ function getExotelConfig() {
   const apiKey = process.env.EXOTEL_API_KEY;
   const apiToken = process.env.EXOTEL_API_TOKEN;
   const accountSid = process.env.EXOTEL_ACCOUNT_SID;
-  // IMPORTANT: streaming/Voicebot calls (StreamUrl + StreamType) must go to
-  // Exotel's AgentStream host, NOT the classic api.exotel.com host used for
-  // plain Calls/connect. Using api.exotel.com here silently accepts the
-  // request (returns Status=in-progress) but never actually rings the lead,
-  // since that host doesn't process StreamUrl.
-  const subdomain = process.env.EXOTEL_SUBDOMAIN || 'api-stream.exotel.com';
+  const subdomain = process.env.EXOTEL_SUBDOMAIN || 'api.exotel.com';
   if (!apiKey || !apiToken || !accountSid) {
     throw new Error('Exotel credentials not configured (EXOTEL_API_KEY / EXOTEL_API_TOKEN / EXOTEL_ACCOUNT_SID)');
   }
@@ -28,14 +24,6 @@ function getExotelConfig() {
 
 function getBaseUrl() {
   return (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
-}
-
-function getOrchestratorWsBase() {
-  const base = getBaseUrl();
-  if (!base) throw new Error('PUBLIC_BASE_URL is not configured');
-  return base
-    .replace(/^https:\/\//, 'wss://')
-    .replace(/^http:\/\//, 'ws://');
 }
 
 function normalizePhone(rawPhone) {
@@ -52,26 +40,30 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   if (!lead.phone) throw new Error('Lead has no phone number');
 
   const baseUrl = getBaseUrl();
-  const wsBase = getOrchestratorWsBase();
   const exophone = process.env.EXOTEL_EXOPHONE;
   if (!exophone) throw new Error('EXOTEL_EXOPHONE is not configured');
+
+  const appId = process.env.EXOTEL_APP_BAZAAR_ID;
+  if (!appId) throw new Error('EXOTEL_APP_BAZAAR_ID is not configured');
 
   const toNumber = normalizePhone(lead.phone);
   const campaignQuery = campaign ? `&campaignId=${campaign._id}` : '';
 
-  // Per PDF: StreamUrl is the WebSocket endpoint of our orchestrator.
-  // Exotel connects directly to this WS — no App Bazaar flow needed.
-  const streamUrl = `${wsBase}/ai-caller/stream?leadId=${lead._id}${campaignQuery}`;
+  // REVERTED: the direct StreamUrl/StreamType approach ("per PDF") never
+  // actually rang the phone on this Exotel account — it silently returned a
+  // success SID but no real call happened. The App Bazaar Voicebot Applet
+  // flow below is the one proven to work (confirmed via manual curl test)
+  // and matches the still-live /api/ai-caller/stream-url resolver route,
+  // which the App itself calls to fetch the real wss:// orchestrator URL.
+  const flowUrl = `http://my.exotel.com/${process.env.EXOTEL_ACCOUNT_SID}/exoml/start_voice/${appId}?leadId=${lead._id}${campaignQuery}`;
 
   try {
     const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
 
-    // From PDF: exact field names for Calls/connect with StreamType=bidirectional
     const params = new URLSearchParams({
       From: toNumber,        // caller's number (who gets the call)
       CallerId: exophone,    // your Exophone virtual number
-      StreamUrl: streamUrl,  // our WS orchestrator
-      StreamType: 'bidirectional',
+      Url: flowUrl,          // App Bazaar Voicebot Applet — resolves the WS stream URL dynamically
       StatusCallback: `${baseUrl}/api/ai-caller/status?leadId=${lead._id}${campaignQuery}`,
       StatusCallbackEvent: 'terminal',
       Record: 'true',
@@ -79,8 +71,8 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
 
     const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/Accounts/${accountSid}/Calls/connect`;
     console.log(`[dialer] POST ${url.replace(apiToken, '***')}`);
-    console.log(`[dialer] To=${toNumber} CallerId=${exophone}`);
-    console.log(`[dialer] StreamUrl=${streamUrl}`);
+    console.log(`[dialer] From=${toNumber} CallerId=${exophone}`);
+    console.log(`[dialer] Url=${flowUrl}`);
 
     const response = await axios.post(url, params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
