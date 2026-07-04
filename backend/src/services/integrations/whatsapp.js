@@ -49,6 +49,43 @@ async function sendTemplateMessage(phoneNumberId, accessToken, to, templateName,
   return res.data;
 }
 
+// ── Send an interactive List message ────────────────────────────────────────────
+// list = { header, body, footer, buttonLabel, sections: [{ title, rows: [{ title, description }] }] }
+// Meta interactive "list" messages are only deliverable within the 24h customer
+// service window (i.e. after the lead has messaged in). Outside that window use
+// an approved template instead.
+async function sendListMessage(phoneNumberId, accessToken, to, list) {
+  const interactive = {
+    type: 'list',
+    body: { text: list.body },
+    action: {
+      button: list.buttonLabel,
+      sections: (list.sections || []).map((s, idx) => ({
+        title: s.title || undefined,
+        rows: (s.rows || []).map((r, ridx) => ({
+          id: r.id || `${idx}-${ridx}`,
+          title: r.title,
+          description: r.description || undefined,
+        })),
+      })),
+    },
+  };
+  if (list.header) interactive.header = { type: 'text', text: list.header };
+  if (list.footer) interactive.footer = { text: list.footer };
+
+  const res = await axios.post(
+    `${WA_API}/${phoneNumberId}/messages`,
+    {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'interactive',
+      interactive,
+    },
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  return res.data;
+}
+
 // ── List approved message templates for a WABA ─────────────────────────────────
 async function getTemplates(wabaId, accessToken) {
   const res = await axios.get(`${WA_API}/${wabaId}/message_templates`, {
@@ -172,6 +209,7 @@ module.exports = {
   verifyWebhookToken,
   sendTextMessage,
   sendTemplateMessage,
+  sendListMessage,
   getTemplates,
   submitTemplate,
   handleWhatsAppWebhookEvent,
