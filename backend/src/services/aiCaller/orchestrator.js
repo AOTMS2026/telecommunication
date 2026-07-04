@@ -15,7 +15,13 @@
 
 const axios = require('axios');
 const { transcribeAudio, synthesizeSpeech } = require('./sarvamClient');
-const { buildSystemPrompt, buildWelcomeGreeting, buildOutcomeExtractionPrompt } = require('./promptBuilder');
+const {
+  buildSystemPrompt,
+  buildWelcomeGreeting,
+  buildOutcomeExtractionPrompt,
+  buildDefaultSystemPrompt,
+  buildDefaultWelcomeGreeting,
+} = require('./promptBuilder');
 const { buildMemoryBlock } = require('./conversationMemory');
 const { applyAiCallOutcome, applyNoConnectOutcome } = require('./outcomeService');
 const Lead = require('../../models/Lead');
@@ -46,7 +52,7 @@ async function getAgentReply(messages) {
       model: 'gpt-4.1-mini',
       messages,
       temperature: 0.6,
-      max_tokens: 120,
+      max_tokens: 80, // hard backstop for "1-2 sentence" replies — a 176-chunk (~17s) reply in the logs was this being uncapped in practice
     },
     {
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -316,26 +322,36 @@ async function handleCall(ws, req) {
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
   };
 
-  // Load call context (system prompt, memory) from DB — in-process, no HTTP call
+  // Load call context (system prompt, memory) from DB — in-process, no HTTP call.
+  // IMPORTANT: a system prompt + welcome greeting must exist on EVERY call,
+  // not just ones with a resolvable lead. Previously this was entirely
+  // inside `if (leadId) { if (lead) {...} }` with no else branch, so any
+  // call with no leadId (e.g. someone dialing the Exophone directly instead
+  // of going through the campaign dialer) OR a leadId that didn't resolve to
+  // a real lead got session.conversation = [] and no pendingGreeting at all
+  // — no welcome message, no "keep it short/no markdown" rules, no company
+  // intro, no sales-push instructions. That's why those calls got silent
+  // openings and generic markdown-tutorial-style GPT answers.
+  let lead = null;
   if (leadId) {
     try {
-      const lead = await Lead.findById(leadId).populate('courseInterest', 'name');
-      if (lead) {
-        session.language = lead.language || 'Telugu';
-        const memoryBlock = await buildMemoryBlock(leadId);
-        const systemPrompt = buildSystemPrompt(lead, memoryBlock);
-        const welcomeGreeting = buildWelcomeGreeting(lead);
-        session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
-        session.conversation = [{ role: 'system', content: systemPrompt }];
-        session.pendingGreeting = welcomeGreeting;
-      }
+      lead = await Lead.findById(leadId).populate('courseInterest', 'name');
     } catch (err) {
-      console.error('[orchestrator] failed to load call context:', err.message);
-      session.conversation = [{
-        role: 'system',
-        content: 'You are Priya, a friendly course counselor from AOTMS. Keep replies short. Speak in Telugu.',
-      }];
+      console.error('[orchestrator] failed to load lead:', err.message);
     }
+  }
+
+  if (lead) {
+    session.language = lead.language || 'Telugu';
+    const memoryBlock = await buildMemoryBlock(leadId).catch(() => '');
+    session.conversation = [{ role: 'system', content: buildSystemPrompt(lead, memoryBlock) }];
+    session.pendingGreeting = buildWelcomeGreeting(lead);
+    session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
+  } else {
+    if (leadId) console.warn(`[orchestrator] leadId=${leadId} did not resolve to a lead — using default prompt`);
+    session.conversation = [{ role: 'system', content: buildDefaultSystemPrompt() }];
+    session.pendingGreeting = buildDefaultWelcomeGreeting();
+    session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
   }
 
   ws.on('message', async (raw) => {
