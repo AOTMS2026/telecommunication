@@ -303,6 +303,7 @@ function formatRecording(r) {
     transcript: r.transcript || '',
     transcriptStatus: r.transcriptStatus || 'none',
     transcriptError: r.transcriptError || '',
+    lastCallIqReport: r.lastCallIqReport && r.lastCallIqReport.runAt ? r.lastCallIqReport : null,
   };
 }
 

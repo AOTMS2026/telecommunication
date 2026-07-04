@@ -139,6 +139,64 @@ router.get('/facebook/oauth/callback', async (req, res) => {
   }
 });
 
+// ---------- Public inbound webhook (JustDial, 99acres, Housing, IndiaMart, MagicBricks, Sulekha, TradeIndia) ----------
+
+router.post('/webhook/:webhookKey', async (req, res) => {
+  try {
+    const integration = await Integration.findOne({ webhookKey: req.params.webhookKey });
+    if (!integration) return res.status(404).json({ message: 'Invalid webhook key' });
+
+    const payload = req.body || {};
+    const mapping = integration.fieldMapping || {};
+    const leadData = {};
+
+    for (const [srcField, leadField] of Object.entries(mapping)) {
+      if (leadField && payload[srcField] !== undefined && payload[srcField] !== '') {
+        leadData[leadField] = payload[srcField];
+      }
+    }
+
+    if (!leadData.name || !leadData.phone) {
+      const fallbackMap = {
+        name: 'name', full_name: 'name', fullName: 'name', customer_name: 'name', customername: 'name',
+        phone: 'phone', mobile: 'phone', mobileno: 'phone', mobile_no: 'phone', phone_number: 'phone', contact: 'phone', contact_no: 'phone',
+        email: 'email', email_id: 'email', emailid: 'email',
+        city: 'location', location: 'location',
+      };
+      for (const [k, v] of Object.entries(payload)) {
+        const key = String(k).toLowerCase();
+        if (fallbackMap[key] && !leadData[fallbackMap[key]]) leadData[fallbackMap[key]] = v;
+      }
+    }
+
+    if (!leadData.phone) {
+      await Integration.findByIdAndUpdate(integration._id, { lastAutoSyncError: 'Webhook payload missing phone number' });
+      return res.status(400).json({ message: 'Could not map a phone number from payload' });
+    }
+    if (!leadData.name) leadData.name = 'Unknown';
+
+    const lead = await Lead.create({
+      ...leadData,
+      leadSource: integration.name,
+      status: leadData.status || 'Fresh',
+      campaign: integration.defaultCampaign || undefined,
+      assignedTo: integration.defaultAssignedTo || undefined,
+    });
+
+    await Integration.findByIdAndUpdate(integration._id, {
+      $inc: { totalLeadsImported: 1 },
+      lastLeadAt: new Date(),
+      lastAutoSyncError: '',
+      ...(integration.status === 'pending' ? { status: 'active' } : {}),
+    });
+
+    res.json({ success: true, leadId: lead._id });
+  } catch (err) {
+    console.error('Integration webhook error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // ---------- Single integration CRUD ----------
 
 router.get('/:id', protect, async (req, res) => {
@@ -218,7 +276,7 @@ router.post('/:id/test-webhook', protect, async (req, res) => {
     if (!integration) return res.status(404).json({ message: 'Integration not found' });
     if (!integration.webhookKey) return res.status(400).json({ message: 'No webhook key set for this integration' });
     const base = process.env.BACKEND_URL || '';
-    res.json({ webhookUrl: `${base}/api/webhooks/inbound/${integration.webhookKey}`, message: 'Send a test POST with lead fields to this URL' });
+    res.json({ webhookUrl: `${base}/api/integrations/webhook/${integration.webhookKey}`, message: 'Send a test POST with lead fields to this URL' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

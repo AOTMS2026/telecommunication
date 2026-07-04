@@ -275,7 +275,11 @@ export default function CallRecordings() {
                   <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 600 }} title={r.transcriptError}>Transcription failed</span>
                 )}
               </div>
-              {r.transcript && (
+              {r.lastCallIqReport?.status === 'success' && r.lastCallIqReport?.result?.summary ? (
+                <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8, background: BG, borderRadius: 8, padding: '8px 10px', fontStyle: 'italic' }}>
+                  "{r.lastCallIqReport.result.summary}"
+                </p>
+              ) : r.transcript && (
                 <p style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 8, background: BG, borderRadius: 8, padding: '8px 10px', fontStyle: 'italic' }}>
                   "{r.transcript.slice(0, 220)}{r.transcript.length > 220 ? '…' : ''}"
                 </p>
@@ -292,7 +296,7 @@ export default function CallRecordings() {
                   </div>
                   {r.lastCallIqReport.status === 'success' && r.lastCallIqReport.result ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {Object.entries(r.lastCallIqReport.result).map(([key, val]) => (
+                      {Object.entries(r.lastCallIqReport.result).filter(([key]) => key !== 'summary').map(([key, val]) => (
                         val === undefined || val === null || val === '' ? null : (
                           <div key={key} style={{ fontSize: 12, color: TEXT_MAIN }}>
                             <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{key}: </span>

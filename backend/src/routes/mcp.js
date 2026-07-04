@@ -31,6 +31,7 @@ router.get('/status', protect, async (req, res) => {
       betaEnabled: BETA_ENABLED,
       providers: PROVIDERS,
       readOnly: true,
+      mcpServerUrl: `${process.env.BACKEND_URL || ''}/mcp`,
       requests: userRequests,          // all requests by this user
       connections: approvedConnections, // approved ones
       avgApprovalDays: 2,
