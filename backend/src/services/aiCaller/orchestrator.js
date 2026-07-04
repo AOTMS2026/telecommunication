@@ -159,9 +159,22 @@ async function sendTts(ws, session, text) {
   if (!pcm16 || pcm16.length === 0) return;
 
   session.agentSpeaking = true;
+  session.abortSpeaking = false;
   try {
-    // Chunk into EXOTEL_FRAME_BYTES multiples, pad last frame to 320-byte boundary
+    // Pace frames to real playback time (each EXOTEL_FRAME_BYTES chunk is
+    // 100ms of 8kHz/16-bit mono audio). Previously this loop sent every
+    // frame back-to-back with no delay, so the whole reply was dumped on
+    // the wire in a few milliseconds and `agentSpeaking` was true for only
+    // that instant — nowhere close to the several real seconds the phone
+    // call actually spends playing it back. That made barge-in detection
+    // (`if agentSpeaking...`) essentially never fire. Pacing sends keeps
+    // agentSpeaking accurate for the whole real duration of the reply, and
+    // lets a caller's barge-in (which sets abortSpeaking) actually cut
+    // playback short instead of frames already being long gone.
+    const FRAME_MS = 100;
     for (let offset = 0; offset < pcm16.length; offset += EXOTEL_FRAME_BYTES) {
+      if (session.abortSpeaking) break;
+
       let frame = pcm16.slice(offset, offset + EXOTEL_FRAME_BYTES);
       const rem = frame.length % 320;
       if (rem !== 0) {
@@ -174,15 +187,22 @@ async function sendTts(ws, session, text) {
         stream_sid: session.streamSid,
         media: { payload: frame.toString('base64') },
       }));
+
+      if (offset + EXOTEL_FRAME_BYTES < pcm16.length) {
+        await new Promise(resolve => setTimeout(resolve, FRAME_MS));
+      }
     }
-    // Mark signals end of this utterance (for barge-in re-arming)
-    ws.send(JSON.stringify({
-      event: 'mark',
-      stream_sid: session.streamSid,
-      mark: { name: `reply-${Date.now()}` },
-    }));
+    if (!session.abortSpeaking) {
+      // Mark signals end of this utterance (for barge-in re-arming)
+      ws.send(JSON.stringify({
+        event: 'mark',
+        stream_sid: session.streamSid,
+        mark: { name: `reply-${Date.now()}` },
+      }));
+    }
   } finally {
     session.agentSpeaking = false;
+    session.abortSpeaking = false;
   }
 }
 
@@ -292,6 +312,8 @@ async function handleCall(ws, req) {
     audioBuffer: Buffer.alloc(0),
     silenceRun: 0,
     agentSpeaking: false,
+    busy: false,          // true while an STT→GPT→TTS turn is in flight — gates new turns
+    abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
   };
 
   // Load call context (system prompt, memory) from DB — in-process, no HTTP call
@@ -338,10 +360,15 @@ async function handleCall(ws, req) {
 
       // Send welcome greeting
       if (session.pendingGreeting) {
+        session.busy = true;
         session.conversation.push({ role: 'assistant', content: session.pendingGreeting });
-        await sendTts(ws, session, session.pendingGreeting).catch(err =>
-          console.error('[orchestrator] welcome TTS failed:', err.message)
-        );
+        try {
+          await sendTts(ws, session, session.pendingGreeting);
+        } catch (err) {
+          console.error('[orchestrator] welcome TTS failed:', err.message);
+        } finally {
+          session.busy = false;
+        }
         session.pendingGreeting = null;
       }
 
@@ -358,15 +385,21 @@ async function handleCall(ws, req) {
       if (!isSilent && session.agentSpeaking) {
         ws.send(JSON.stringify({ event: 'clear', stream_sid: session.streamSid }));
         session.agentSpeaking = false;
+        session.abortSpeaking = true; // tell the in-progress sendTts frame loop to stop early
       }
 
       session.audioBuffer = Buffer.concat([session.audioBuffer, chunk]);
       session.silenceRun = isSilent ? session.silenceRun + 1 : 0;
 
-      if (session.silenceRun >= SILENCE_FRAME_THRESHOLD && session.audioBuffer.length > 0) {
+      if (
+        !session.busy &&
+        session.silenceRun >= SILENCE_FRAME_THRESHOLD &&
+        session.audioBuffer.length > 0
+      ) {
         const segment = Buffer.from(session.audioBuffer);
         session.audioBuffer = Buffer.alloc(0);
         session.silenceRun = 0;
+        session.busy = true; // block any other segment from being cut/processed until this turn finishes
 
         let shouldEnd = false;
         try {
@@ -376,6 +409,8 @@ async function handleCall(ws, req) {
           ]);
         } catch (err) {
           console.error('[orchestrator] processSpeechSegment error:', err.message);
+        } finally {
+          session.busy = false;
         }
 
         if (shouldEnd) {
