@@ -49,13 +49,14 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   const toNumber = normalizePhone(lead.phone);
   const campaignQuery = campaign ? `&campaignId=${campaign._id}` : '';
 
-  // REVERTED: the direct StreamUrl/StreamType approach ("per PDF") never
-  // actually rang the phone on this Exotel account — it silently returned a
-  // success SID but no real call happened. The App Bazaar Voicebot Applet
-  // flow below is the one proven to work (confirmed via manual curl test)
-  // and matches the still-live /api/ai-caller/stream-url resolver route,
-  // which the App itself calls to fetch the real wss:// orchestrator URL.
-  const flowUrl = `http://my.exotel.com/${process.env.EXOTEL_ACCOUNT_SID}/exoml/start_voice/${appId}?leadId=${lead._id}${campaignQuery}`;
+  // Exotel's App Bazaar Url= param rejects a query string with 400/34001
+  // ("Bad or missing parameters") — it must be the clean app path, nothing
+  // appended. We don't need leadId/campaignId here anyway: dialer sets
+  // lead.activeCallSid right after this call succeeds, and
+  // /api/ai-caller/stream-url + orchestrator.js both resolve the lead by
+  // looking up that CallSid (Exotel always forwards CallSid reliably,
+  // unlike custom query params).
+  const flowUrl = `http://my.exotel.com/${process.env.EXOTEL_ACCOUNT_SID}/exoml/start_voice/${appId}`;
 
   try {
     const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
