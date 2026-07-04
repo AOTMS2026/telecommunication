@@ -6,10 +6,15 @@ const McpConnection = require('../models/McpConnection');
 async function protectMcp(req, res, next) {
   const id = req.body?.id ?? null;
   const header = req.headers.authorization || '';
-  if (!header.startsWith('Bearer ')) {
+  let raw = null;
+  if (header.startsWith('Bearer ')) {
+    raw = header.slice(7).trim();
+  } else if (typeof req.query.token === 'string' && req.query.token.startsWith('mcp_')) {
+    raw = req.query.token.trim();
+  }
+  if (!raw) {
     return res.status(401).json({ jsonrpc: '2.0', id, error: { code: -32001, message: 'Missing bearer token' } });
   }
-  const raw = header.slice(7).trim();
   if (!raw.startsWith('mcp_')) {
     return res.status(401).json({ jsonrpc: '2.0', id, error: { code: -32001, message: 'Invalid token format' } });
   }
