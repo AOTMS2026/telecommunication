@@ -407,6 +407,7 @@ ${user?.name || ''}`;
       {showConnectModal && (
         <ConnectModal
           conn={showConnectModal}
+          serverUrl={status?.mcpServerUrl}
           onClose={() => setShowConnectModal(null)}
           copied={copied}
           copyToClipboard={copyToClipboard}
@@ -417,8 +418,9 @@ ${user?.name || ''}`;
 }
 
 /* ── Connect Setup Modal ── */
-function ConnectModal({ conn, onClose, copied, copyToClipboard }) {
+function ConnectModal({ conn, serverUrl, onClose, copied, copyToClipboard }) {
   const provObj = PROVIDERS.find(p => p.key === conn.provider) || {};
+  const effectiveUrl = serverUrl || provObj.serverUrl;
   const [activeTab, setActiveTab] = useState('setup');
 
   return (
@@ -478,8 +480,8 @@ function ConnectModal({ conn, onClose, copied, copyToClipboard }) {
               <div style={{ marginTop: 24 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', marginBottom: 8, letterSpacing: '0.04em' }}>SERVER / ENDPOINT URL</div>
                 <div style={{ background: '#f9fafb', border: '1px solid var(--theme-border-tint)', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <code style={{ fontSize: 13, color: 'var(--theme-text-strongest)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{provObj.serverUrl}</code>
-                  <button onClick={() => copyToClipboard(provObj.serverUrl, 'url')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, flexShrink: 0 }}>
+                  <code style={{ fontSize: 13, color: 'var(--theme-text-strongest)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{effectiveUrl}</code>
+                  <button onClick={() => copyToClipboard(effectiveUrl, 'url')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, flexShrink: 0 }}>
                     {copied === 'url' ? '✓' : '⧉'}
                   </button>
                 </div>
