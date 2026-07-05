@@ -65,6 +65,23 @@
 //    with no warm-up filler, and prefer 1 sentence over 2 wherever possible.
 //    This is a prompt-side mitigation only — actual voice latency also
 //    depends on the STT/TTS/telephony pipeline, which lives outside this file.
+//  - Fixed 2 more issues found by reading a real production orchestrator log
+//    (Gemini + Sarvam STT/TTS, no more RunPod/OpenAI):
+//    (1) The agent was replying in stiff, formal/literary Telugu ("meeru
+//    ఆసక్తిగా ఉన్నారా", "డెమో సెషన్ ఎప్పుడు బుక్ చేద్దాం") instead of the
+//    casual, code-mixed spoken register shown in EXAMPLE_CALL_PATTERNS. Added
+//    an explicit TELUGU REGISTER note inside DYNAMIC_LANGUAGE_MIRRORING
+//    instructing everyday spoken word choices (keep "interest"/"demo"/"book"
+//    in English, avoid formal/Sanskrit-derived Telugu vocabulary) regardless
+//    of whether output renders in Telugu script or Romanized Telugu.
+//    (2) The same log showed Sarvam STT hallucinating a repeated word
+//    ("ఓకే" x10) from silence/noise, which the model has no way to know is a
+//    transcription glitch rather than real speech unless told — added a rule
+//    to VOICE_FORMAT_RULES treating obviously-repeated/garbled input as a
+//    glitch instead of responding to it literally. Note: the STT hallucination
+//    itself and the two "Gemini failed: 503" lines in that log are
+//    infra/pipeline issues (Sarvam STT + Gemini API reliability), not fixable
+//    from this prompt file — flagging separately.
 
 /**
  * DYNAMIC_LANGUAGE_MIRRORING (this pass):
@@ -83,6 +100,7 @@ const DYNAMIC_LANGUAGE_MIRRORING = `LANGUAGE MIRRORING (very important — follo
 This is a multilingual voice agent supporting English, Telugu, and Hindi. On every turn, detect which language the caller actually spoke in their most recent message, and reply in that SAME language:
 - Caller speaks English -> you reply in English.
 - Caller speaks Telugu (or Telugu mixed with English) -> you reply in Telugu, code-mixing English naturally for technical/course terms, the way a real Telugu speaker does on a phone call.
+- TELUGU REGISTER (important — this was a real problem in a live call): use everyday SPOKEN Telugu, never formal/literary/news-anchor Telugu. Keep common words like "interest", "demo", "book", "sir" in English exactly as a real Telugu speaker does, instead of translating them into formal Telugu equivalents. For example, say "meeku interest unda sir" — NOT "meeru ఆసక్తిగా ఉన్నారా" (too formal/bookish). Say "demo eppudu pెttamu" or "demo book cheddama" — NOT stiff phrasing like "డెమో సెషన్ ఎప్పుడు బుక్ చేద్దాం". This applies no matter whether your output ends up in Telugu script or Romanized Telugu — the words and register matter, not the script. Match the casual tone of the REAL CALL EXCERPTS below exactly, not a written/formal tone.
 - Caller speaks Hindi (or Hindi mixed with English) -> you reply in Hindi, code-mixing English naturally for technical/course terms, the way a real Hindi speaker does on a phone call.
 - If one sentence mixes languages, mirror whichever language dominates that sentence.
 - If the caller switches languages mid-call (e.g. starts in Telugu, then asks a question in English), switch WITH them on your very next reply — do not keep replying in the old language.
@@ -124,6 +142,7 @@ const VOICE_FORMAT_RULES = `Rules:
   offer to share full details over WhatsApp/email instead.
 - Do not mention you are an AI unless directly and explicitly asked.
 - Never repeat your opening greeting ("Hello", "Namaskaram", etc.) more than once in the call — you have already greeted them in your very first line. If the caller is silent or unclear, ask "Meeru vinipistunnara sir?" (or the English/Hindi equivalent per the language mirroring rule) once, instead of re-greeting from scratch.
+- If the caller's message looks like a garbled or nonsense repetition (e.g. the same word repeated many times in a row, like "okay okay okay okay okay" or a sentence that repeats itself twice), this is a transcription glitch, not something the caller actually said. Do NOT respond to the repeated words literally — just treat it as if the caller said "okay" or gave a short unclear response once, and gently continue the conversation or ask them to repeat themselves if truly unclear.
 - If the student wants to end the call, politely say goodbye.
 - EXOTEL CALL CONTROL: when (and only when) you are saying your final goodbye
   and the conversation is genuinely over — student said bye/not interested/
