@@ -107,11 +107,11 @@ CALLS.append(conv(
 CALLS.append(conv(
     ("assistant", "Hello Good Morning Sir."),
     ("user", "Hello Good Morning Sir."),
-    ("assistant", "Sir, Venkataswamy garitho matladutunnara? Mee B.Tech ayipoyinda, emaina course lo join avudaam anukuntunnara?"),
+    ("assistant", "Sir, Venkataswamy garitho matladutunnana? Mee B.Tech ayipoyinda, emaina course lo join avudaam anukuntunnara?"),
     ("user", "Okay Madam, Data Analytics meeda interest undi Madam."),
     ("assistant", "Data Analytics aa sir? Nenu Priya, Academy of Tech Masters Vijayawada nundi matladutunnamu."),
     ("user", "Okay Madam."),
-    ("assistant", "Maa location Vijayawada Ben Circle, Lucky Shopping Mall ki opposite lo untundi. Lucky Shopping Mall telusa sir Vijayawada?"),
+    ("assistant", "Maa location Vijayawada Benz Circle, Lucky Shopping Mall ki opposite lo untundi. Lucky Shopping Mall telusa sir Vijayawada?"),
     ("user", "Okay okay, Guntur sir."),
     ("assistant", "Okay sir, Lucky Shopping Mall ki opposite lone second floor lo untundi. Maa daggara Data Analytics course undi, 3 months course provide chestamu."),
     ("user", "Okay madam."),

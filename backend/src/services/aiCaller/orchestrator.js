@@ -40,47 +40,83 @@ const EXOTEL_FRAME_BYTES = 1600;
 // Marker GPT inserts when it wants to end the call naturally.
 const END_CALL_MARKER = '[[END_CALL]]';
 
-// ─── OpenAI (GPT-4.1-mini) via axios ─────────────────────────────────────────
+// ─── Gemini via axios ─────────────────────────────────────────────────────
+//
+// MIGRATED FROM OPENAI: OpenAI's self-serve fine-tuning is blocked on this
+// account, so both live-call generation and the fine-tuned model target moved
+// to Gemini. This uses the plain Gemini API (generativelanguage.googleapis.com)
+// with an API key — no GCP project / Vertex AI service account needed.
+//
+// AI_CALLER_MODEL defaults to a fast Flash model for low voice-call latency.
+// Once backend/finetuning/upload_and_finetune.js finishes training a tuned
+// model, point this at it, e.g. AI_CALLER_MODEL=tunedModels/aotms-counselor-xxxx
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gemini-2.5-flash-lite';
+
+// Converts the OpenAI-style {role: 'system'|'user'|'assistant', content}[]
+// array used everywhere else in this file (promptBuilder.js, session.conversation)
+// into Gemini's { systemInstruction, contents: [{role:'user'|'model', parts}] }
+// shape, so no other file in the aiCaller pipeline has to change its message format.
+function toGeminiPayload(messages) {
+  const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+  return { systemText, contents };
+}
 
 async function getAgentReply(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
+
+  const { systemText, contents } = toGeminiPayload(messages);
 
   const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
+    `${GEMINI_API_BASE}/models/${AI_CALLER_MODEL}:generateContent`,
     {
-      model: 'gpt-4.1-mini',
-      messages,
-      temperature: 0.6,
-      max_tokens: 80, // hard backstop for "1-2 sentence" replies — a 176-chunk (~17s) reply in the logs was this being uncapped in practice
+      ...(systemText ? { systemInstruction: { role: 'system', parts: [{ text: systemText }] } } : {}),
+      contents,
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 80, // hard backstop for "1-2 sentence" replies — a 176-chunk (~17s) reply in the logs was this being uncapped in practice
+      },
     },
     {
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
       timeout: 12000,
     }
   );
-  return (response.data.choices?.[0]?.message?.content || '').trim() || 'Sorry, could you say that again?';
+  const text = (response.data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  return text.trim() || 'Sorry, could you say that again?';
 }
 
 async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   try {
+    const { systemText, contents } = toGeminiPayload([outcomeExtractionPrompt, ...transcriptMessages]);
+
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      `${GEMINI_API_BASE}/models/${AI_CALLER_MODEL}:generateContent`,
       {
-        model: 'gpt-4.1-mini',
-        messages: [outcomeExtractionPrompt, ...transcriptMessages],
-        temperature: 0.2,
-        max_tokens: 300,
+        systemInstruction: { role: 'system', parts: [{ text: systemText }] },
+        contents,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 300,
+          responseMimeType: 'application/json', // Gemini JSON mode — no markdown fences to strip, unlike the old OpenAI path
+        },
       },
       {
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
         timeout: 20000,
       }
     );
-    const raw = (response.data.choices?.[0]?.message?.content || '').replace(/```json|```/g, '').trim();
+    const raw = (response.data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
     return JSON.parse(raw);
   } catch {
     return {
@@ -264,19 +300,19 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
-  // GPT-4.1-mini
+  // Gemini
   let reply;
   try {
     reply = await getAgentReply(session.conversation);
   } catch (err) {
-    console.error(`[orchestrator] GPT failed (${session.callSid}):`, err.message);
+    console.error(`[orchestrator] Gemini failed (${session.callSid}):`, err.message);
     reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?'; // "One moment, could you repeat that?" in Telugu
   }
 
   const shouldEnd = reply.includes(END_CALL_MARKER);
   const spokenReply = reply.replace(END_CALL_MARKER, '').trim();
 
-  console.log(`[orchestrator] GPT (${session.callSid}): "${spokenReply}"${shouldEnd ? ' [END]' : ''}`);
+  console.log(`[orchestrator] Gemini (${session.callSid}): "${spokenReply}"${shouldEnd ? ' [END]' : ''}`);
   session.conversation.push({ role: 'assistant', content: spokenReply });
 
   try {
