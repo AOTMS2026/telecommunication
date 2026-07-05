@@ -82,6 +82,39 @@
 //    itself and the two "Gemini failed: 503" lines in that log are
 //    infra/pipeline issues (Sarvam STT + Gemini API reliability), not fixable
 //    from this prompt file — flagging separately.
+//  - Fixed 1 issue + flagged 2 infra issues found in a real production log
+//    (call ba81569e00ba97fefc94ae2ab1d71a75):
+//    (1) Both buildDefaultWelcomeGreeting() and buildWelcomeGreeting() only
+//    said "AOTMS" in the opening line, never the full company name. A cold
+//    caller who has never heard the acronym has no idea who's calling until
+//    much later in the call (if at all) — updated all four greeting variants
+//    (Telugu/English/Hindi + the no-lead default) to say "Academy of Tech
+//    Masters" once up front, while keeping the line short. Also trimmed each
+//    greeting to the fewest words possible: this is a real (if partial)
+//    latency mitigation, since the greeting is the very first thing TTS has
+//    to synthesize before the caller hears ANY audio, so fewer words here
+//    measurably shortens time-to-first-audio.
+//    (2) FLAGGING, not fixed here: the log shows the bot's greeting IS
+//    already spoken first (TTS synthesis starts immediately on
+//    "call started", before any STT line) — the reported "it doesn't greet
+//    first" symptom is actually the ~15-20s gap between Exotel handshake and
+//    that first TTS audio actually reaching the caller's ear (cold
+//    websocket open + first-chunk latency), during which a caller
+//    understandably says "Hello?" first, making it SEEM like the bot only
+//    responds to them. This is an orchestrator/telephony pipeline issue
+//    (Exotel handshake time + Sarvam TTS ws cold-open), not something
+//    promptBuilder.js can fix — needs a fix in runpod/orchestrator/ (e.g.
+//    pre-warm the TTS websocket at call-ringing time instead of at
+//    call-answered time).
+//    (3) FLAGGING, not fixed here: the same log shows a long chain of
+//    "Gemini failed: 503" / "Gemini failed: 429" (rate-limited) errors, each
+//    one falling back to the exact same hardcoded filler line
+//    ("ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?") repeated 10+ times in a row while the
+//    caller kept trying to book a demo slot — the call never recovered and
+//    the demo never got booked. That fallback string and retry/backoff
+//    behavior live in the orchestrator's Gemini-call wrapper, not in this
+//    prompt file — flagging for a fix there (e.g. retry with backoff before
+//    falling back, vary the filler line, or failover to a secondary model).
 
 /**
  * DYNAMIC_LANGUAGE_MIRRORING (this pass):
@@ -128,6 +161,7 @@ function languageInstruction(lead) {
 
 const VOICE_FORMAT_RULES = `Rules:
 - ALWAYS speak first — greet the caller with your opening line the instant the call connects, before waiting for them to say anything. Never wait in silence for the caller to speak first.
+- Keep your OPENING GREETING as short as physically possible (ideally under 10 words) — it is the very first audio the caller hears and every extra word delays that first sound reaching their ear. State who you are and where you're calling from in one short breath, nothing more, then move straight into the conversation.
 - Keep every reply SHORT (1-2 sentences, prefer 1 whenever possible) — this is a real-time voice call and every extra word adds latency and dead air. Answer the actual question directly in your first sentence; do not warm up with filler like "That's a great question" or "Sure, let me tell you about that" before getting to the point.
 - Be fast, accurate, and efficient: give the specific fact the caller asked for (fee, duration, location, date) immediately and plainly, THEN add at most one short supporting sentence if needed. Never make the caller wait through a long wind-up to get a simple answer.
 - Speak naturally, like a human counselor, not like a script.
@@ -367,7 +401,7 @@ const KNOWLEDGE_BLOCK = [
  * none of the formatting/brevity/selling rules exist outside this prompt.
  */
 function buildDefaultSystemPrompt(memoryBlock = '') {
-  return `You are Mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are Mahesh, a friendly course counselor calling from Academy of Tech Masters (AOTMS) on a phone call.
 You don't have this caller's prior details on file, so introduce the company naturally and find out what they're looking for.
 
 ${DYNAMIC_LANGUAGE_MIRRORING}
@@ -376,7 +410,7 @@ Opening language: start the call in Telugu (this is the default until the caller
 
 ${memoryBlock ? `Context from previous conversations with this caller:\n${memoryBlock}\n` : ''}
 Your goals on this call:
-1. Greet them warmly, introduce yourself and AOTMS briefly.
+1. Greet them warmly, introduce yourself and Academy of Tech Masters briefly.
 2. Find out what course or skill they're interested in.
 3. Briefly answer questions about the course (duration, mode, fees) in general, friendly terms.
 4. Your job is to actively convince them to enroll — highlight concrete benefits (placement support, hands-on projects, expert trainers, flexible batches), address hesitations, and guide the conversation toward signing up rather than just answering questions passively.
@@ -391,7 +425,10 @@ ${KNOWLEDGE_BLOCK}`;
 }
 
 function buildDefaultWelcomeGreeting() {
-  return `Namaskaram, idi Mahesh, AOTMS nundi maatladutunna. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
+  // Kept deliberately short — this is the first audio the caller hears, and
+  // it must name the full company once ("Academy of Tech Masters") so a
+  // cold caller isn't left wondering who's calling.
+  return `Namaskaram sir, idi Mahesh, Academy of Tech Masters nundi. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
 }
 
 /**
@@ -404,7 +441,7 @@ function buildSystemPrompt(lead, memoryBlock = '') {
   const course = lead.courseInterest?.name || lead.preferredCourses?.[0] || 'our courses';
   const location = lead.location ? ` from ${lead.location}` : '';
 
-  return `You are Mahesh, a friendly course counselor calling from AOTMS (a learning platform) on a phone call.
+  return `You are Mahesh, a friendly course counselor calling from Academy of Tech Masters (AOTMS) on a phone call.
 You are speaking with ${studentName}${location}, who showed interest in: ${course}.
 
 ${languageInstruction(lead)}
@@ -426,18 +463,21 @@ ${KNOWLEDGE_BLOCK}`;
 }
 
 function buildWelcomeGreeting(lead) {
-  const studentName = lead.name ? lead.name.split(' ')[0] : 'మిత్రమా';
+  const studentName = lead.name ? lead.name.split(' ')[0] : 'sir';
+  // All three variants below are kept short and now name the company in
+  // full ("Academy of Tech Masters") once, since this is the very first
+  // audio the caller hears and a bare "AOTMS" means nothing to a cold caller.
   if (lead.language === 'English') {
-    return `Hi ${studentName}, this is Mahesh calling from AOTMS regarding the course you enquired about. Is this a good time to talk for a minute?`;
+    return `Hi ${studentName}, this is Mahesh from Academy of Tech Masters, calling about the course you enquired about — is now an okay time to talk?`;
   }
   if (lead.language === 'Hindi' || lead.language === 'Hinglish') {
-    return `Namaste ${studentName}, main Mahesh bol raha hoon, AOTMS se. Aapne jis course ke baare mein enquire kiya tha, uske baare mein baat karni thi — ek minute baat kar sakte hain?`;
+    return `Namaste ${studentName}, main Mahesh bol raha hoon, Academy of Tech Masters se. Aapne enquiry kiya tha course ke baare mein baat karni thi, ek minute baat kar sakte hain?`;
   }
   // Default: Telugu — matches the Telugu-only customer base and the
   // Telugu-finetuned STT/TTS models in runpod/orchestrator/. Whichever
   // language the caller actually replies in, buildSystemPrompt's
   // DYNAMIC_LANGUAGE_MIRRORING takes over for every reply after this one.
-  return `Namaskaram ${studentName}, idi Mahesh, AOTMS nundi. Meeru inquire chesina course gurinchi maatladalanukunta, ippudu maatladagalama?`;
+  return `Namaskaram ${studentName}, idi Mahesh, Academy of Tech Masters nundi. Meeru inquire chesina course gurinchi maatladalanukunta.`;
 }
 
 /**
