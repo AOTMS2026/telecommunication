@@ -29,8 +29,12 @@ WRONG_DURATION_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-MAX_TURN_WORDS = 220     # very long single turn -> likely garbled/rambling
-MAX_TOTAL_WORDS = 1200   # very long conversation -> drop
+MAX_TURN_WORDS = 60      # a single turn this long on real ASR data is almost
+                         # always a mis-split merge of 2+ speakers, not one person talking
+MAX_TOTAL_WORDS = 500    # a real 1-2 minute cold-call, cleaned, should not exceed this
+MIN_USER_SHARE = 0.15    # if the "user" side is less than 15% of total words, the
+                         # turn-split almost certainly collapsed both speakers into
+                         # one role — drop rather than keep bad data
 
 
 def collapse_repeats(text):
@@ -54,6 +58,8 @@ def clean_text(t):
     t = re.sub(r"\.{2,}", ".", t)
     t = re.sub(r"\s+", " ", t)
     t = re.sub(r"\s+([.,?!])", r"\1", t)
+    t = re.sub(r"\bMem Academy\b", "Memu Academy", t)
+    t = re.sub(r"\bMemu Academy of Tech Masters\b", "Memu Academy of Tech Masters", t)
     t = re.sub(r"₹?\s?18[,.]?000", "18,000", t)
     t = re.sub(r"₹?\s?15[,.]?000", "15,000", t)
     t = re.sub(r"₹?\s?16[,.]?000", "16,000", t)
@@ -89,7 +95,20 @@ AGENT_MARKERS = [
 
 def split_sentences(t):
     parts = re.split(r"(?<=[.?!])\s+", t)
-    return [p.strip() for p in parts if p.strip() and len(p.strip()) > 1]
+    parts = [p.strip() for p in parts if p.strip() and len(p.strip()) > 1]
+    # further split any run-on sentence (common in raw ASR text with no
+    # punctuation) at commas / "sir"/"madam"/"andi" boundaries, so the
+    # turn-classifier gets small enough pieces to assign correctly instead
+    # of merging two speakers' lines into one giant turn
+    refined = []
+    for p in parts:
+        if len(p.split()) <= 25:
+            refined.append(p)
+            continue
+        sub = re.split(r",\s*|\b(?:sir|madam|andi)\b\s*", p, flags=re.IGNORECASE)
+        sub = [s.strip(" ,") for s in sub if s.strip(" ,")]
+        refined.extend(sub if sub else [p])
+    return refined
 
 
 def classify(sentence):
@@ -154,6 +173,17 @@ def is_too_long(turns):
     return False
 
 
+def is_imbalanced(turns):
+    """Drop conversations where the split collapsed almost everything into
+    one role — a strong signal the automatic speaker-split failed, since a
+    real cold-call always has the customer actually talking sometimes."""
+    total = sum(len(t.split()) for _, t in turns)
+    if total == 0:
+        return True
+    user_words = sum(len(t.split()) for role, t in turns if role == "user")
+    return (user_words / total) < MIN_USER_SHARE
+
+
 def has_empty_turn(turns):
     return any(not t.strip() for _, t in turns)
 
@@ -179,7 +209,8 @@ def main():
     examples = []
     seen_hashes = set()
     stats = {"total": len(files), "kept": 0, "dup": 0, "offensive": 0,
-              "wrong_facts": 0, "incomplete": 0, "too_long": 0, "empty_turn": 0}
+              "wrong_facts": 0, "incomplete": 0, "too_long": 0, "empty_turn": 0,
+              "imbalanced_split": 0}
 
     for path in files:
         with open(path, "r", encoding="utf-8") as f:
@@ -203,6 +234,9 @@ def main():
             continue
         if is_too_long(turns):
             stats["too_long"] += 1
+            continue
+        if is_imbalanced(turns):
+            stats["imbalanced_split"] += 1
             continue
 
         example = to_example(turns)
