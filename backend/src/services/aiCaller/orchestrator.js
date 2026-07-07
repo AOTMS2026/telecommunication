@@ -15,7 +15,13 @@
 
 const axios = require('axios');
 const { transcribeAudio, synthesizeSpeech } = require('./sarvamClient');
-const { buildSystemPrompt, buildWelcomeGreeting, buildOutcomeExtractionPrompt } = require('./promptBuilder');
+const {
+  buildSystemPrompt,
+  buildWelcomeGreeting,
+  buildOutcomeExtractionPrompt,
+  buildDefaultSystemPrompt,
+  buildDefaultWelcomeGreeting,
+} = require('./promptBuilder');
 const { buildMemoryBlock } = require('./conversationMemory');
 const { applyAiCallOutcome, applyNoConnectOutcome } = require('./outcomeService');
 const Lead = require('../../models/Lead');
@@ -34,47 +40,83 @@ const EXOTEL_FRAME_BYTES = 1600;
 // Marker GPT inserts when it wants to end the call naturally.
 const END_CALL_MARKER = '[[END_CALL]]';
 
-// ─── OpenAI (GPT-4.1-mini) via axios ─────────────────────────────────────────
+// ─── Gemini via axios ─────────────────────────────────────────────────────
+//
+// MIGRATED FROM OPENAI: OpenAI's self-serve fine-tuning is blocked on this
+// account, so both live-call generation and the fine-tuned model target moved
+// to Gemini. This uses the plain Gemini API (generativelanguage.googleapis.com)
+// with an API key — no GCP project / Vertex AI service account needed.
+//
+// AI_CALLER_MODEL defaults to a fast Flash model for low voice-call latency.
+// Once backend/finetuning/upload_and_finetune.js finishes training a tuned
+// model, point this at it, e.g. AI_CALLER_MODEL=tunedModels/aotms-counselor-xxxx
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gemini-2.5-flash-lite';
+
+// Converts the OpenAI-style {role: 'system'|'user'|'assistant', content}[]
+// array used everywhere else in this file (promptBuilder.js, session.conversation)
+// into Gemini's { systemInstruction, contents: [{role:'user'|'model', parts}] }
+// shape, so no other file in the aiCaller pipeline has to change its message format.
+function toGeminiPayload(messages) {
+  const systemText = messages.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+  const contents = messages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+  return { systemText, contents };
+}
 
 async function getAgentReply(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not configured');
+
+  const { systemText, contents } = toGeminiPayload(messages);
 
   const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
+    `${GEMINI_API_BASE}/models/${AI_CALLER_MODEL}:generateContent`,
     {
-      model: 'gpt-4.1-mini',
-      messages,
-      temperature: 0.6,
-      max_tokens: 120,
+      ...(systemText ? { systemInstruction: { role: 'system', parts: [{ text: systemText }] } } : {}),
+      contents,
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 80, // hard backstop for "1-2 sentence" replies — a 176-chunk (~17s) reply in the logs was this being uncapped in practice
+      },
     },
     {
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
       timeout: 12000,
     }
   );
-  return (response.data.choices?.[0]?.message?.content || '').trim() || 'Sorry, could you say that again?';
+  const text = (response.data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  return text.trim() || 'Sorry, could you say that again?';
 }
 
 async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   try {
+    const { systemText, contents } = toGeminiPayload([outcomeExtractionPrompt, ...transcriptMessages]);
+
     const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
+      `${GEMINI_API_BASE}/models/${AI_CALLER_MODEL}:generateContent`,
       {
-        model: 'gpt-4.1-mini',
-        messages: [outcomeExtractionPrompt, ...transcriptMessages],
-        temperature: 0.2,
-        max_tokens: 300,
+        systemInstruction: { role: 'system', parts: [{ text: systemText }] },
+        contents,
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 300,
+          responseMimeType: 'application/json', // Gemini JSON mode — no markdown fences to strip, unlike the old OpenAI path
+        },
       },
       {
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
         timeout: 20000,
       }
     );
-    const raw = (response.data.choices?.[0]?.message?.content || '').replace(/```json|```/g, '').trim();
+    const raw = (response.data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
     return JSON.parse(raw);
   } catch {
     return {
@@ -147,43 +189,99 @@ async function sendTts(ws, session, text) {
   const clean = sanitizeForSpeech(text);
   if (!clean) return;
 
-  let pcm16;
+  const langCode = session.language === 'English' ? 'en-IN' : 'te-IN';
+
+  session.agentSpeaking = true;
+  session.abortSpeaking = false;
+
+  // STREAMING PLAYBACK: previously this function awaited synthesizeSpeech()
+  // for the FULL reply, then looped over the complete buffer pacing frames
+  // out afterward — meaning nothing was heard on the call until Sarvam had
+  // finished generating the entire sentence. For a multi-sentence answer
+  // that's 1-2+ seconds of pure dead air on every turn, on top of GPT and
+  // STT latency, which is why replies felt like they took 5+ seconds.
+  //
+  // Now audio bytes are forwarded to Exotel via `drain()` the moment enough
+  // of them have arrived (see onChunk callback below), while Sarvam is
+  // still synthesizing the rest of the sentence in the background.
+  let pending = Buffer.alloc(0);
+  let synthesisDone = false;
+  let draining = false;
+  const FRAME_MS = 100; // EXOTEL_FRAME_BYTES (1600) = 100ms of 8kHz/16-bit mono audio
+
+  const drain = async () => {
+    if (draining) return; // a drain loop is already running — it will pick up newly appended bytes
+    draining = true;
+    try {
+      while (!session.abortSpeaking) {
+        if (pending.length >= EXOTEL_FRAME_BYTES) {
+          const frame = pending.slice(0, EXOTEL_FRAME_BYTES);
+          pending = pending.slice(EXOTEL_FRAME_BYTES);
+          ws.send(JSON.stringify({
+            event: 'media',
+            stream_sid: session.streamSid,
+            media: { payload: frame.toString('base64') },
+          }));
+          await new Promise(resolve => setTimeout(resolve, FRAME_MS));
+        } else if (synthesisDone) {
+          // No full frame left, and Sarvam is done — flush the remainder
+          // padded to a 320-byte boundary (Exotel's requirement) and stop.
+          if (pending.length > 0) {
+            const rem = pending.length % 320;
+            let frame = pending;
+            if (rem !== 0) {
+              const padded = Buffer.alloc(frame.length + (320 - rem));
+              frame.copy(padded);
+              frame = padded;
+            }
+            ws.send(JSON.stringify({
+              event: 'media',
+              stream_sid: session.streamSid,
+              media: { payload: frame.toString('base64') },
+            }));
+            pending = Buffer.alloc(0);
+          }
+          break;
+        } else {
+          // Not enough buffered for a full frame yet, and Sarvam hasn't
+          // finished — wait briefly for more chunks to arrive.
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+      }
+    } finally {
+      draining = false;
+    }
+  };
+
   try {
-    const langCode = session.language === 'English' ? 'en-IN' : 'te-IN';
-    pcm16 = await synthesizeSpeech(clean, langCode);
+    await synthesizeSpeech(clean, langCode, (chunk) => {
+      pending = Buffer.concat([pending, chunk]);
+      drain(); // fire-and-forget; re-entrancy-safe via the `draining` flag
+    });
   } catch (err) {
     console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
+    session.agentSpeaking = false;
+    session.abortSpeaking = false;
     return;
   }
 
-  if (!pcm16 || pcm16.length === 0) return;
+  synthesisDone = true;
+  // Let the drain loop flush whatever's still buffered.
+  while ((draining || pending.length > 0) && !session.abortSpeaking) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
 
-  session.agentSpeaking = true;
-  try {
-    // Chunk into EXOTEL_FRAME_BYTES multiples, pad last frame to 320-byte boundary
-    for (let offset = 0; offset < pcm16.length; offset += EXOTEL_FRAME_BYTES) {
-      let frame = pcm16.slice(offset, offset + EXOTEL_FRAME_BYTES);
-      const rem = frame.length % 320;
-      if (rem !== 0) {
-        const padded = Buffer.alloc(frame.length + (320 - rem));
-        frame.copy(padded);
-        frame = padded;
-      }
-      ws.send(JSON.stringify({
-        event: 'media',
-        stream_sid: session.streamSid,
-        media: { payload: frame.toString('base64') },
-      }));
-    }
+  if (!session.abortSpeaking) {
     // Mark signals end of this utterance (for barge-in re-arming)
     ws.send(JSON.stringify({
       event: 'mark',
       stream_sid: session.streamSid,
       mark: { name: `reply-${Date.now()}` },
     }));
-  } finally {
-    session.agentSpeaking = false;
   }
+
+  session.agentSpeaking = false;
+  session.abortSpeaking = false;
 }
 
 // ─── Speech segment processing ────────────────────────────────────────────────
@@ -202,19 +300,19 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
-  // GPT-4.1-mini
+  // Gemini
   let reply;
   try {
     reply = await getAgentReply(session.conversation);
   } catch (err) {
-    console.error(`[orchestrator] GPT failed (${session.callSid}):`, err.message);
+    console.error(`[orchestrator] Gemini failed (${session.callSid}):`, err.message);
     reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?'; // "One moment, could you repeat that?" in Telugu
   }
 
   const shouldEnd = reply.includes(END_CALL_MARKER);
   const spokenReply = reply.replace(END_CALL_MARKER, '').trim();
 
-  console.log(`[orchestrator] GPT (${session.callSid}): "${spokenReply}"${shouldEnd ? ' [END]' : ''}`);
+  console.log(`[orchestrator] Gemini (${session.callSid}): "${spokenReply}"${shouldEnd ? ' [END]' : ''}`);
   session.conversation.push({ role: 'assistant', content: spokenReply });
 
   try {
@@ -292,29 +390,45 @@ async function handleCall(ws, req) {
     audioBuffer: Buffer.alloc(0),
     silenceRun: 0,
     agentSpeaking: false,
+    busy: false,          // true while an STT→GPT→TTS turn is in flight — gates new turns
+    abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
   };
 
-  // Load call context (system prompt, memory) from DB — in-process, no HTTP call
-  if (leadId) {
-    try {
-      const lead = await Lead.findById(leadId).populate('courseInterest', 'name');
-      if (lead) {
-        session.language = lead.language || 'Telugu';
-        const memoryBlock = await buildMemoryBlock(leadId);
-        const systemPrompt = buildSystemPrompt(lead, memoryBlock);
-        const welcomeGreeting = buildWelcomeGreeting(lead);
-        session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
-        session.conversation = [{ role: 'system', content: systemPrompt }];
-        session.pendingGreeting = welcomeGreeting;
+  // Kick off lead/context loading in the BACKGROUND — do not await it here.
+  // Previously this was awaited before ws.on('message', ...) was even
+  // registered, meaning a slow DB lookup sat in the critical path before we
+  // could receive Exotel's 'connected'/'start' events at all, adding to
+  // "AI doesn't start the conversation immediately" delay (and, in the
+  // worst case, risking those early events arriving before any listener
+  // existed). Now the listener is attached immediately below, and the
+  // 'start' handler just awaits this promise — which by then has usually
+  // already resolved during Exotel's own connection handshake time.
+  const contextPromise = (async () => {
+    let lead = null;
+    if (leadId) {
+      try {
+        lead = await Lead.findById(leadId).populate('courseInterest', 'name');
+      } catch (err) {
+        console.error('[orchestrator] failed to load lead:', err.message);
       }
-    } catch (err) {
-      console.error('[orchestrator] failed to load call context:', err.message);
-      session.conversation = [{
-        role: 'system',
-        content: 'You are Priya, a friendly course counselor from AOTMS. Keep replies short. Speak in Telugu.',
-      }];
     }
-  }
+
+    if (lead) {
+      const memoryBlock = await buildMemoryBlock(leadId).catch(() => '');
+      return {
+        language: lead.language || 'Telugu',
+        systemPrompt: buildSystemPrompt(lead, memoryBlock),
+        greeting: buildWelcomeGreeting(lead),
+      };
+    }
+
+    if (leadId) console.warn(`[orchestrator] leadId=${leadId} did not resolve to a lead — using default prompt`);
+    return {
+      language: 'Telugu',
+      systemPrompt: buildDefaultSystemPrompt(),
+      greeting: buildDefaultWelcomeGreeting(),
+    };
+  })();
 
   ws.on('message', async (raw) => {
     let message;
@@ -334,15 +448,39 @@ async function handleCall(ws, req) {
       if (params.leadId) session.leadId = params.leadId;
       if (params.campaignId) session.campaignId = params.campaignId;
 
+      // Final fallback: resolve via CallSid if leadId is still unknown
+      // (belt-and-suspenders alongside the /stream-url CallSid lookup —
+      // covers any Exotel App Bazaar config that skips that step).
+      if (!session.leadId && session.callSid) {
+        try {
+          const byCallSid = await Lead.findOne({ activeCallSid: session.callSid }).select('_id campaign');
+          if (byCallSid) {
+            session.leadId = byCallSid._id.toString();
+            session.campaignId = session.campaignId || (byCallSid.campaign ? byCallSid.campaign.toString() : null);
+          }
+        } catch (err) {
+          console.error('[orchestrator] CallSid lead lookup failed:', err.message);
+        }
+      }
+
       console.log(`[orchestrator] call started: ${session.callSid} lead=${session.leadId}`);
 
-      // Send welcome greeting
-      if (session.pendingGreeting) {
-        session.conversation.push({ role: 'assistant', content: session.pendingGreeting });
-        await sendTts(ws, session, session.pendingGreeting).catch(err =>
-          console.error('[orchestrator] welcome TTS failed:', err.message)
-        );
-        session.pendingGreeting = null;
+      // Apply lead context (resolved in the background above — usually
+      // already done by the time 'start' arrives, since it ran in parallel
+      // with Exotel's own connection handshake) and greet immediately.
+      const ctx = await contextPromise;
+      session.language = ctx.language;
+      session.conversation = [{ role: 'system', content: ctx.systemPrompt }];
+      session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
+
+      session.busy = true;
+      session.conversation.push({ role: 'assistant', content: ctx.greeting });
+      try {
+        await sendTts(ws, session, ctx.greeting);
+      } catch (err) {
+        console.error('[orchestrator] welcome TTS failed:', err.message);
+      } finally {
+        session.busy = false;
       }
 
     } else if (event === 'media') {
@@ -358,15 +496,21 @@ async function handleCall(ws, req) {
       if (!isSilent && session.agentSpeaking) {
         ws.send(JSON.stringify({ event: 'clear', stream_sid: session.streamSid }));
         session.agentSpeaking = false;
+        session.abortSpeaking = true; // tell the in-progress sendTts frame loop to stop early
       }
 
       session.audioBuffer = Buffer.concat([session.audioBuffer, chunk]);
       session.silenceRun = isSilent ? session.silenceRun + 1 : 0;
 
-      if (session.silenceRun >= SILENCE_FRAME_THRESHOLD && session.audioBuffer.length > 0) {
+      if (
+        !session.busy &&
+        session.silenceRun >= SILENCE_FRAME_THRESHOLD &&
+        session.audioBuffer.length > 0
+      ) {
         const segment = Buffer.from(session.audioBuffer);
         session.audioBuffer = Buffer.alloc(0);
         session.silenceRun = 0;
+        session.busy = true; // block any other segment from being cut/processed until this turn finishes
 
         let shouldEnd = false;
         try {
@@ -376,6 +520,8 @@ async function handleCall(ws, req) {
           ]);
         } catch (err) {
           console.error('[orchestrator] processSpeechSegment error:', err.message);
+        } finally {
+          session.busy = false;
         }
 
         if (shouldEnd) {

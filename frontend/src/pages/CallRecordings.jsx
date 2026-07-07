@@ -23,6 +23,14 @@ function fmtDate(d) {
   });
 }
 
+// "YYYY-MM-DD" from a recording's recordedAt, read in UTC (matches fmtDate above)
+function toDateKey(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  const pad = n => String(n).padStart(2, '0');
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
 function AudioPlayer({ url }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -97,6 +105,7 @@ export default function CallRecordings() {
   const [users, setUsers] = useState([]);
   const [filterUser, setFilterUser] = useState('');
   const [search, setSearch] = useState('');
+  const [filterDate, setFilterDate] = useState(''); // "YYYY-MM-DD" from <input type="date">
   const [rematching, setRematching] = useState(false);
   const [rematchResult, setRematchResult] = useState(null);
   const [runCallIqRecordingId, setRunCallIqRecordingId] = useState(null);
@@ -133,6 +142,7 @@ export default function CallRecordings() {
   };
 
   const filtered = recordings.filter(r => {
+    if (filterDate && toDateKey(r.recordedAt) !== filterDate) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return (
@@ -191,7 +201,7 @@ export default function CallRecordings() {
       )}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"
           placeholder="Search by lead name, phone, agent..."
@@ -208,6 +218,21 @@ export default function CallRecordings() {
             <option value="">All Callers</option>
             {users.map(u => <option key={u._id} value={u._id}>{u.name}</option>)}
           </select>
+        )}
+        <input
+          type="date"
+          value={filterDate}
+          onChange={e => setFilterDate(e.target.value)}
+          style={{ padding: '9px 14px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, color: TEXT_MAIN, background: '#fff' }}
+          title="Filter by call date"
+        />
+        {filterDate && (
+          <button
+            onClick={() => setFilterDate('')}
+            style={{ padding: '9px 12px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 12, color: TEXT_MUTED, background: '#fff', cursor: 'pointer' }}
+          >
+            Clear date
+          </button>
         )}
       </div>
 

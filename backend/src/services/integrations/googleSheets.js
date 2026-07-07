@@ -140,6 +140,11 @@ async function importFromOneSource(integration, source) {
     .map(col => ({ col, i: headers.indexOf(col) }))
     .filter(({ i }) => i >= 0);
 
+  // Per-sheet campaign/assignee (Step 2/3 set per sheet) fall back to the
+  // integration-level defaults for backward compatibility with single-sheet setups.
+  const sheetCampaign = source.campaign || integration.defaultCampaign;
+  const sheetAssignedTo = source.assignedTo || integration.defaultAssignedTo;
+
   let imported = 0, skipped = 0, updated = 0;
 
   for (let i = 1; i < rows.length; i++) {
@@ -150,15 +155,17 @@ async function importFromOneSource(integration, source) {
     const existing = await Lead.findOne({ phone });
     if (existing) {
       // Lead already exists. Always sync it to whatever campaign/assignee is
-      // currently set in Step 3 / Step 4 of this integration's config — so
-      // changing those and re-importing actually re-assigns the lead, instead
-      // of only filling in blanks.
+      // currently set for THIS sheet — so changing those and re-importing
+      // actually re-assigns the lead, instead of only filling in blanks.
       const backfill = {};
-      if (integration.defaultCampaign && String(existing.campaign || '') !== String(integration.defaultCampaign)) {
-        backfill.campaign = integration.defaultCampaign;
+      if (sheetCampaign && String(existing.campaign || '') !== String(sheetCampaign)) {
+        backfill.campaign = sheetCampaign;
       }
-      if (integration.defaultAssignedTo && String(existing.assignedTo || '') !== String(integration.defaultAssignedTo)) {
-        backfill.assignedTo = integration.defaultAssignedTo;
+      if (sheetAssignedTo && String(existing.assignedTo || '') !== String(sheetAssignedTo)) {
+        backfill.assignedTo = sheetAssignedTo;
+      }
+      if (source.name && existing.sourceSheetName !== source.name) {
+        backfill.sourceSheetName = source.name;
       }
       if (Object.keys(backfill).length > 0) {
         await Lead.findByIdAndUpdate(existing._id, { $set: backfill });
@@ -190,9 +197,10 @@ async function importFromOneSource(integration, source) {
       budget: rawBudget && !isNaN(Number(rawBudget)) ? Number(rawBudget) : 0,
       customFields,
       leadSource: 'Google Sheets',
+      sourceSheetName: source.name || '',
       status: 'Fresh',
-      campaign: integration.defaultCampaign || undefined,
-      assignedTo: integration.defaultAssignedTo || undefined,
+      campaign: sheetCampaign || undefined,
+      assignedTo: sheetAssignedTo || undefined,
     });
 
     await Integration.findByIdAndUpdate(integration._id, {
@@ -212,10 +220,20 @@ async function importFromOneSource(integration, source) {
 // Get sheet rows and import as leads. Supports multiple sheet sources
 // (integration.config.sheetSources) each with its own sheetId/range/fieldMapping,
 // falling back to the single legacy sheetId/sheetRange/fieldMapping if none are set.
-async function importLeadsFromSheet(integration) {
-  const sources = (integration.config?.sheetSources && integration.config.sheetSources.length > 0)
+async function importLeadsFromSheet(integration, onlySheetId) {
+  let sources = (integration.config?.sheetSources && integration.config.sheetSources.length > 0)
     ? integration.config.sheetSources
     : [{ sheetId: integration.config?.sheetId, sheetRange: integration.config?.sheetRange, fieldMapping: integration.fieldMapping }];
+
+  if (onlySheetId) {
+    const wanted = extractSheetId(onlySheetId);
+    sources = sources.filter(s => extractSheetId(s.sheetId) === wanted);
+    if (sources.length === 0) {
+      const err = new Error('That sheet was not found on this integration.');
+      err.code = 'SHEET_ID_MISSING';
+      throw err;
+    }
+  }
 
   if (!sources.some(s => s.sheetId)) {
     const err = new Error('No Google Sheet ID set. Enter your Sheet ID in Step 1 and save before importing.');

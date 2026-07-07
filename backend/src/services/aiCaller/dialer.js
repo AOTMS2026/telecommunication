@@ -1,10 +1,11 @@
 // backend/src/services/aiCaller/dialer.js
 //
-// Per Sarvam+Exotel integration PDF:
-// Pass StreamUrl directly in the Calls/connect API call.
-// DO NOT use App Bazaar Url= flow for AI calls.
-// StreamType=bidirectional tells Exotel to connect the call directly
-// to our WebSocket orchestrator at /ai-caller/stream.
+// Uses Exotel's App Bazaar Voicebot Applet flow: From/CallerId/Url on
+// Calls/connect. Exotel calls Url (our exoml app), which dynamically fetches
+// the wss:// orchestrator address from /api/ai-caller/stream-url.
+// (A prior attempt passed StreamUrl/StreamType directly instead of Url —
+// Exotel accepted it and returned a success SID, but the phone never
+// actually rang on this account. Do not switch back without re-verifying.)
 
 const axios = require('axios');
 const Lead = require('../../models/Lead');
@@ -25,14 +26,6 @@ function getBaseUrl() {
   return (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
 }
 
-function getOrchestratorWsBase() {
-  const base = getBaseUrl();
-  if (!base) throw new Error('PUBLIC_BASE_URL is not configured');
-  return base
-    .replace(/^https:\/\//, 'wss://')
-    .replace(/^http:\/\//, 'ws://');
-}
-
 function normalizePhone(rawPhone) {
   let toNumber = (rawPhone || '').trim();
   if (toNumber.startsWith('+')) {
@@ -47,26 +40,31 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
   if (!lead.phone) throw new Error('Lead has no phone number');
 
   const baseUrl = getBaseUrl();
-  const wsBase = getOrchestratorWsBase();
   const exophone = process.env.EXOTEL_EXOPHONE;
   if (!exophone) throw new Error('EXOTEL_EXOPHONE is not configured');
+
+  const appId = process.env.EXOTEL_APP_BAZAAR_ID;
+  if (!appId) throw new Error('EXOTEL_APP_BAZAAR_ID is not configured');
 
   const toNumber = normalizePhone(lead.phone);
   const campaignQuery = campaign ? `&campaignId=${campaign._id}` : '';
 
-  // Per PDF: StreamUrl is the WebSocket endpoint of our orchestrator.
-  // Exotel connects directly to this WS — no App Bazaar flow needed.
-  const streamUrl = `${wsBase}/ai-caller/stream?leadId=${lead._id}${campaignQuery}`;
+  // Exotel's App Bazaar Url= param rejects a query string with 400/34001
+  // ("Bad or missing parameters") — it must be the clean app path, nothing
+  // appended. We don't need leadId/campaignId here anyway: dialer sets
+  // lead.activeCallSid right after this call succeeds, and
+  // /api/ai-caller/stream-url + orchestrator.js both resolve the lead by
+  // looking up that CallSid (Exotel always forwards CallSid reliably,
+  // unlike custom query params).
+  const flowUrl = `http://my.exotel.com/${process.env.EXOTEL_ACCOUNT_SID}/exoml/start_voice/${appId}`;
 
   try {
     const { apiKey, apiToken, accountSid, subdomain } = getExotelConfig();
 
-    // From PDF: exact field names for Calls/connect with StreamType=bidirectional
     const params = new URLSearchParams({
       From: toNumber,        // caller's number (who gets the call)
       CallerId: exophone,    // your Exophone virtual number
-      StreamUrl: streamUrl,  // our WS orchestrator
-      StreamType: 'bidirectional',
+      Url: flowUrl,          // App Bazaar Voicebot Applet — resolves the WS stream URL dynamically
       StatusCallback: `${baseUrl}/api/ai-caller/status?leadId=${lead._id}${campaignQuery}`,
       StatusCallbackEvent: 'terminal',
       Record: 'true',
@@ -74,8 +72,8 @@ async function triggerAiCall(lead, campaign = null, { performedBy = null } = {})
 
     const url = `https://${apiKey}:${apiToken}@${subdomain}/v1/Accounts/${accountSid}/Calls/connect`;
     console.log(`[dialer] POST ${url.replace(apiToken, '***')}`);
-    console.log(`[dialer] To=${toNumber} CallerId=${exophone}`);
-    console.log(`[dialer] StreamUrl=${streamUrl}`);
+    console.log(`[dialer] From=${toNumber} CallerId=${exophone}`);
+    console.log(`[dialer] Url=${flowUrl}`);
 
     const response = await axios.post(url, params.toString(), {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

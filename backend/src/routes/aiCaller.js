@@ -47,9 +47,30 @@ router.post('/trigger/:leadId', protect, async (req, res) => {
  * Returns { "url": "wss://..." }.
  * NOT protected — called by Exotel directly.
  */
-router.all(['/stream-url', '/stream-url/:leadId'], (req, res) => {
-  const leadId = req.params.leadId || req.query.leadId || req.body?.leadId || '';
-  const campaignId = req.query.campaignId || req.body?.campaignId || '';
+router.all(['/stream-url', '/stream-url/:leadId'], async (req, res) => {
+  const callSid = req.query.CallSid || req.body?.CallSid || req.query.CallSID || req.body?.CallSID || '';
+
+  // Exotel's App Bazaar Voicebot Applet does NOT forward the ?leadId= we put
+  // on the outer Url= through to this dynamic-URL fetch — it only sends its
+  // own standard call params (CallSid, From, To, etc). So CallSid, which
+  // Exotel DOES always send here, is the reliable way to resolve the lead
+  // (dialer.js stores it on lead.activeCallSid right after placing the call).
+  let leadId = req.params.leadId || req.query.leadId || req.body?.leadId || '';
+  let campaignId = req.query.campaignId || req.body?.campaignId || '';
+
+  if (!leadId && callSid) {
+    try {
+      const lead = await Lead.findOne({ activeCallSid: callSid }).select('_id campaign');
+      if (lead) {
+        leadId = lead._id.toString();
+        campaignId = lead.campaign ? lead.campaign.toString() : campaignId;
+      } else {
+        console.warn(`[ai-caller] stream-url: no lead found for CallSid=${callSid}`);
+      }
+    } catch (err) {
+      console.error('[ai-caller] stream-url lookup failed:', err.message);
+    }
+  }
 
   const baseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
   if (!baseUrl) return res.status(500).json({ message: 'PUBLIC_BASE_URL not configured' });

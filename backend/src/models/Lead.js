@@ -61,6 +61,9 @@ const leadSchema = new mongoose.Schema({
   rating: { type: Number, min: 0, max: 5, default: 0 },
   leadSource: { type: String, default: 'Manual' },
   leadSourceNote: { type: String, default: '' }, // custom message when leadSource is "Other"
+  // Which Google Sheet (by its Sheet Label / name) this lead was imported from,
+  // when leadSource === 'Google Sheets' and the integration has multiple sheets.
+  sourceSheetName: { type: String, default: '' },
   preferredCourses: [{ type: String }],
   courseInterest: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
   mode: { type: String, enum: ['Online', 'Offline', 'Hybrid', ''], default: '' },
@@ -92,6 +95,18 @@ const leadSchema = new mongoose.Schema({
   // 'in_progress' -> Twilio call placed, RunPod session active
   // 'completed'   -> last AI call finished (outcome already applied)
   aiCallState: { type: String, enum: ['none', 'queued', 'in_progress', 'completed'], default: 'none' },
+
+  // CallSid of the currently in-flight Exotel call for this lead. This is the
+  // ONLY reliable way to map an incoming orchestrator WS connection back to a
+  // lead — Exotel's App Bazaar Voicebot Applet does NOT forward the custom
+  // ?leadId= query string we put on Url= through to its dynamic Url fetch
+  // (/api/ai-caller/stream-url) or on to the final WS connect. CallSid *is*
+  // always forwarded by Exotel at every hop, so routes/aiCaller.js resolves
+  // leadId by looking up whichever lead currently holds this CallSid.
+  // NOTE: this field was being set in dialer.js before but was never actually
+  // declared here, so under Mongoose's default strict mode it was silently
+  // dropped on every .save() — never persisted.
+  activeCallSid: { type: String, default: null },
 
   // Full structured GPT-4.1-mini output from the most recent AI call. Used by
   // conversationMemory.js to build "last time we spoke..." context for the next call.

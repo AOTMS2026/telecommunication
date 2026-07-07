@@ -115,7 +115,20 @@ function AddTemplateForm({ onCancel, onSave, integrationId }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const fileRef = useRef(null);
+
+  const hasUnsavedChanges = Boolean(
+    name.trim() || headerText.trim() || mediaFile || message.trim() || footer.trim() || buttons.length > 0
+  );
+
+  const handleCancelClick = () => {
+    if (hasUnsavedChanges) {
+      setShowDiscardConfirm(true);
+    } else {
+      onCancel();
+    }
+  };
 
   const addVariable = (setter) => setter(p => p + ' {{' + (p.match(/\{\{(\d+)\}\}/g)?.length + 1 || 1) + '}}');
 
@@ -305,7 +318,7 @@ function AddTemplateForm({ onCancel, onSave, integrationId }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 12 }}>
-          <button onClick={onCancel}
+          <button onClick={handleCancelClick}
             style={{ padding: '10px 28px', background: '#fff', color: TEXT_MUTED, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Cancel
           </button>
@@ -394,6 +407,49 @@ function AddTemplateForm({ onCancel, onSave, integrationId }) {
           )}
         </div>
       </div>
+      {showDiscardConfirm && (
+        <div
+          onClick={() => setShowDiscardConfirm(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,15,25,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 16, padding: '32px 36px', width: 400,
+              maxWidth: '90vw', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', background: '#fee2e2',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px',
+            }}>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_MAIN, marginBottom: 8 }}>Discard your changes?</div>
+            <div style={{ fontSize: 13, color: TEXT_MUTED, marginBottom: 24, lineHeight: 1.5 }}>
+              Your changes haven't been saved, so you'll lose them if you navigate away.
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowDiscardConfirm(false)}
+                style={{ padding: '10px 24px', background: '#fff', color: TEXT_MAIN, border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowDiscardConfirm(false); onCancel(); }}
+                style={{ padding: '10px 24px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Discard changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -617,21 +673,46 @@ function TemplatesTab() {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [previewId, setPreviewId] = useState(null);
+  const [broadcastStats, setBroadcastStats] = useState({});
+
+  useEffect(() => {
+    api.get('/broadcasts', { params: { limit: 200 } }).then(res => {
+      const list = res.data?.broadcasts || [];
+      const stats = {};
+      list.forEach(b => {
+        const tid = b.template?._id || b.template;
+        if (!tid) return;
+        stats[tid] = (stats[tid] || 0) + (b.sentCount || 0);
+      });
+      setBroadcastStats(stats);
+    }).catch(() => {});
+  }, []);
 
   const loadTemplates = () => {
     setLoading(true);
     api.get('/message-templates', { params: { type: 'whatsapp' } })
       .then(res => {
         const raw = res.data?.templates || res.data || [];
-        setTemplates(raw.map(t => ({
-          id: t._id,
-          name: t.shortcut,
-          category: t.category || 'MARKETING',
-          status: t.waStatus || 'LOCAL',
-          language: t.language || 'en_US',
-          body: t.message,
-          rejectedReason: t.rejectedReason,
-        })));
+        setTemplates(raw.map(t => {
+          const comps = Array.isArray(t.components) ? t.components : [];
+          const header = comps.find(c => c.type === 'HEADER');
+          const footerComp = comps.find(c => c.type === 'FOOTER');
+          const buttonsComp = comps.find(c => c.type === 'BUTTONS');
+          return {
+            id: t._id,
+            name: t.shortcut,
+            category: t.category || 'MARKETING',
+            status: t.waStatus || 'LOCAL',
+            language: t.language || 'en_US',
+            body: t.message,
+            rejectedReason: t.rejectedReason,
+            headerText: header?.text || '',
+            footer: footerComp?.text || '',
+            buttons: buttonsComp?.buttons || [],
+          };
+        }));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -685,22 +766,58 @@ function TemplatesTab() {
               style={{ ...inputStyle, fontSize: 12, padding: '7px 10px' }} />
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {filtered.map(t => (
-              <div key={t.id} style={{ padding: '12px 14px', borderBottom: `1px solid #f5f5f5`, cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = BG}
-                onMouseLeave={e => e.currentTarget.style.background = '#fff'}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 6, background: BG, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            {filtered.map(t => {
+              const isExpanded = expandedId === t.id;
+              return (
+                <div key={t.id} style={{ borderBottom: `1px solid #f5f5f5` }}>
+                  <div
+                    style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 8 }}
+                    onMouseEnter={e => e.currentTarget.style.background = BG}
+                    onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+                    onClick={() => setExpandedId(isExpanded ? null : t.id)}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: 6, background: BG, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN }}>{t.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, background: statusBg(t.status), color: statusColor(t.status), borderRadius: 4, padding: '1px 6px' }}>{t.category}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: TEXT_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.body}</div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      style={{ flexShrink: 0, marginTop: 8, transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN }}>{t.name}</span>
+                  {isExpanded && (
+                    <div style={{ padding: '0 14px 14px 50px', fontSize: 11.5, color: TEXT_MAIN }}>
+                      {t.headerText && (
+                        <div style={{ marginBottom: 6 }}><strong>Header:</strong> {t.headerText}</div>
+                      )}
+                      <div style={{ marginBottom: 6, whiteSpace: 'pre-wrap', color: TEXT_MUTED }}>{t.body}</div>
+                      {t.footer && (
+                        <div style={{ marginBottom: 6, color: TEXT_MUTED }}><strong>Footer:</strong> {t.footer}</div>
+                      )}
+                      {t.buttons?.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {t.buttons.map((b, i) => (
+                            <span key={i} style={{ fontSize: 10.5, background: '#f0ecff', color: PURPLE, borderRadius: 5, padding: '2px 8px', fontWeight: 600 }}>{b.text || b.type}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 6, fontSize: 10.5, color: TEXT_MUTED }}>Language: {t.language}</div>
+                      {t.status === 'REJECTED' && t.rejectedReason && (
+                        <div style={{ marginTop: 6, color: '#e53e3e' }}>Rejected: {t.rejectedReason}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, background: statusBg(t.status), color: statusColor(t.status), borderRadius: 4, padding: '1px 6px' }}>{t.category}</span>
-                </div>
-                <div style={{ fontSize: 11, color: TEXT_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.body}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         {/* Right: Add Template form */}
@@ -717,58 +834,171 @@ function TemplatesTab() {
   }
 
   return (
-    <div style={{ padding: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+      {/* Left: template list */}
+      <div style={{ width: 300, borderRight: `1px solid ${BORDER}`, background: '#fff', display: 'flex', flexDirection: 'column', flexShrink: 0, overflowY: 'auto' }}>
+        <div style={{ padding: '20px 20px 12px' }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: TEXT_MAIN }}>Message Templates</div>
-          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Pre-approved WhatsApp Business message templates</div>
+          <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>Pre-approved WhatsApp Business templates</div>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ padding: '0 16px 12px', display: 'flex', gap: 8 }}>
           {integrationId && (
             <button onClick={syncWithMeta} disabled={syncing}
-              style={{ padding: '9px 16px', background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer' }}>
-              {syncing ? 'Syncing…' : '↻ Sync with Meta'}
+              style={{ flex: 1, padding: '8px 10px', background: '#fff', color: PURPLE, border: `1.5px solid ${PURPLE}`, borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: syncing ? 'not-allowed' : 'pointer' }}>
+              {syncing ? 'Syncing…' : '↻ Sync'}
             </button>
           )}
           <button onClick={() => setCreating(true)}
-            style={{ padding: '9px 18px', background: GREEN, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            + Create Template
+            style={{ flex: 1, padding: '8px 10px', background: GREEN, color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            + Create
           </button>
         </div>
-      </div>
-      {!integrationId && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: '#92400e' }}>
-          No active WhatsApp Cloud integration found — templates you create here will be saved locally but not submitted to Meta until you connect one in Setup.
+        {!integrationId && (
+          <div style={{ margin: '0 16px 12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px', fontSize: 11.5, color: '#92400e' }}>
+            No active WhatsApp Cloud integration — templates save locally until you connect one in Setup.
+          </div>
+        )}
+        <div style={{ padding: '0 16px 12px' }}>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search template(s) by name or description"
+            style={{ ...inputStyle, fontSize: 12, padding: '8px 10px' }} />
         </div>
-      )}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={TEXT_MUTED} strokeWidth="2" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}>
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates..."
-          style={{ width: '100%', padding: '9px 12px 9px 36px', border: `1px solid ${BORDER}`, borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-      </div>
-      {loading && <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>Loading templates…</div>}
-      {!loading && filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: 40, color: TEXT_MUTED, fontSize: 13 }}>No templates yet. Create your first one.</div>
-      )}
-      <div style={{ display: 'grid', gap: 12 }}>
-        {!loading && filtered.map(t => (
-          <div key={t.id} style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN }}>{t.name}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, background: statusBg(t.status), color: statusColor(t.status), borderRadius: 5, padding: '2px 8px' }}>{t.status}</span>
-                <span style={{ fontSize: 10, background: '#f0ecff', color: PURPLE, borderRadius: 5, padding: '2px 8px', fontWeight: 600 }}>{t.category}</span>
+        {loading && <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>Loading…</div>}
+        {!loading && filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 30, color: TEXT_MUTED, fontSize: 13 }}>No templates yet. Create your first one.</div>
+        )}
+        <div style={{ flex: 1 }}>
+          {!loading && filtered.map(t => {
+            const isSelected = previewId === t.id;
+            return (
+              <div
+                key={t.id}
+                onClick={() => setPreviewId(t.id)}
+                style={{
+                  padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 8,
+                  borderBottom: `1px solid #f5f5f5`, background: isSelected ? BG : '#fff',
+                  borderLeft: isSelected ? `3px solid ${PURPLE}` : '3px solid transparent',
+                }}
+                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#fafafa'; }}
+                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = '#fff'; }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: BG, border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: TEXT_MAIN, marginBottom: 3 }}>{t.name}</div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: statusBg(t.status), color: statusColor(t.status), borderRadius: 4, padding: '1px 6px' }}>{t.status === 'LOCAL' ? t.category : t.status}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: TEXT_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.body}</div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={isSelected ? PURPLE : TEXT_MUTED} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 8 }}>
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
               </div>
-              <span style={{ fontSize: 11, color: TEXT_MUTED }}>{t.language}</span>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right: preview panel */}
+      <div style={{ flex: 1, overflowY: 'auto', background: BG }}>
+        {!previewId ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: TEXT_MUTED, fontSize: 13 }}>
+            Select a template on the left to preview it
+          </div>
+        ) : (
+          <TemplatePreviewPanel
+            template={templates.find(t => t.id === previewId)}
+            sentCount={broadcastStats[previewId] || 0}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Template preview panel (right-hand side, matches the reference detail view) ──
+function TemplatePreviewPanel({ template, sentCount }) {
+  if (!template) return null;
+  const t = template;
+
+  return (
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 8, background: '#fff', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        </div>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: TEXT_MAIN }}>{t.name}</div>
+          <span style={{ fontSize: 10.5, background: '#f0ecff', color: PURPLE, borderRadius: 5, padding: '2px 8px', fontWeight: 700 }}>
+            {t.category}-({t.language?.split('_')[0] || 'en'})
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 24, marginTop: 24, alignItems: 'flex-start' }}>
+        {/* WhatsApp bubble render */}
+        <div style={{ width: 340, flexShrink: 0, background: '#ece5dd', borderRadius: 16, padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
+            {t.headerText && (
+              <div style={{ padding: '10px 12px 4px', fontSize: 13, fontWeight: 700, color: '#111' }}>{t.headerText}</div>
+            )}
+            <div style={{ padding: '8px 12px', fontSize: 12.5, color: '#333', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{t.body}</div>
+            {t.footer && (
+              <div style={{ padding: '2px 12px 8px', fontSize: 11, color: TEXT_MUTED }}>{t.footer}</div>
+            )}
+            <div style={{ padding: '0 10px 6px', textAlign: 'right', fontSize: 10, color: TEXT_MUTED }}>
+              {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} ✓✓
             </div>
-            <div style={{ fontSize: 12, color: TEXT_MUTED, lineHeight: 1.5 }}>{t.body}</div>
-            {t.status === 'REJECTED' && t.rejectedReason && (
-              <div style={{ marginTop: 8, fontSize: 11.5, color: '#e53e3e' }}>Rejected: {t.rejectedReason}</div>
+            {t.buttons?.length > 0 && (
+              <div style={{ borderTop: '1px solid #f0f0f0' }}>
+                {t.buttons.map((b, i) => (
+                  <div key={i} style={{ padding: '10px 12px', textAlign: 'center', fontSize: 13, color: '#0a8dff', fontWeight: 600, borderBottom: i < t.buttons.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                    {b.text || b.type}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        ))}
+          {t.status === 'REJECTED' && t.rejectedReason && (
+            <div style={{ marginTop: 10, fontSize: 12, color: '#e53e3e', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 10px' }}>
+              Rejected: {t.rejectedReason}
+            </div>
+          )}
+        </div>
+
+        {/* Performance */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: TEXT_MAIN, marginBottom: 14 }}>Performance</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 16 }}>
+            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>{sentCount}</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>SENT</div>
+            </div>
+            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MUTED }}>—</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>DELIVERED</div>
+            </div>
+            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MUTED }}>—</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>READ</div>
+            </div>
+            <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MUTED }}>—</div>
+              <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4, fontWeight: 600 }}>REPLIED</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 11.5, color: TEXT_MUTED, marginBottom: 20 }}>
+            Sent count is totaled from broadcasts using this template. Delivered / Read / Replied require Meta's delivery-status webhooks, which aren't wired up yet.
+          </div>
+          {t.headerText && (
+            <div style={{ marginBottom: 10, fontSize: 12.5 }}><strong style={{ color: TEXT_MAIN }}>Header:</strong> <span style={{ color: TEXT_MUTED }}>{t.headerText}</span></div>
+          )}
+          {t.footer && (
+            <div style={{ marginBottom: 10, fontSize: 12.5 }}><strong style={{ color: TEXT_MAIN }}>Footer:</strong> <span style={{ color: TEXT_MUTED }}>{t.footer}</span></div>
+          )}
+          <div style={{ fontSize: 12.5, color: TEXT_MUTED }}>Language: {t.language}</div>
+        </div>
       </div>
     </div>
   );
@@ -784,6 +1014,7 @@ function BroadcastsTab() {
   const [leadSource, setLeadSource] = useState('');
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
   const [preview, setPreview] = useState(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
@@ -792,6 +1023,9 @@ function BroadcastsTab() {
   useEffect(() => {
     api.get('/message-templates', { params: { type: 'whatsapp' } })
       .then(res => setTemplates(res.data?.templates || res.data || []))
+      .catch(() => {});
+    api.get('/campaigns')
+      .then(res => setCampaigns(res.data?.campaigns || res.data || []))
       .catch(() => {});
   }, []);
 
@@ -852,7 +1086,7 @@ function BroadcastsTab() {
       </div>
 
       {subTab === 'new' && (
-        <div style={{ maxWidth: 600 }}>
+        <div style={{ maxWidth: '100%' }}>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Broadcast Name</label>
             <input value={broadcastName} onChange={e => setBroadcastName(e.target.value)}
@@ -877,7 +1111,8 @@ function BroadcastsTab() {
             <div>
               <label style={labelStyle}>Campaign</label>
               <select value={campaign} onChange={e => setCampaign(e.target.value)} style={inputStyle}>
-                <option value="">Any campaign</option><option>Facebook</option><option>Google</option><option>Instagram</option>
+                <option value="">Any campaign</option>
+                {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
               </select>
             </div>
           </div>
