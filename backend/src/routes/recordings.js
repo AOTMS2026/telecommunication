@@ -73,6 +73,16 @@ function extractPhoneFromFilename(filename) {
   return null;
 }
 
+// ─── Split a Date into plain "YYYY-MM-DD" / "HH:mm:ss" strings ─────────────
+// Uses local (server) time components so the stored callDate/callTime match
+// the same wall-clock date and time shown for recordedAt elsewhere.
+function splitDateTime(date) {
+  const pad = n => String(n).padStart(2, '0');
+  const callDate = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  const callTime = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return { callDate, callTime };
+}
+
 // ─── Match phone to lead (format/separator agnostic) ───────────────────────
 // Builds a regex that matches the 10 digits in order, allowing any
 // non-digit characters (spaces, dashes, +country code, etc.) in between,
@@ -120,6 +130,9 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       if (matched) resolvedLead = matched._id;
     }
 
+    const resolvedRecordedAt = recordedAt ? new Date(recordedAt) : new Date();
+    const { callDate, callTime } = splitDateTime(resolvedRecordedAt);
+
     const doc = await CallRecording.create({
       user: req.user.id,
       lead: resolvedLead || null,
@@ -130,7 +143,9 @@ router.post('/', protect, upload.single('audio'), async (req, res) => {
       url: `/uploads/recordings/${req.file.filename}`,
       size: req.file.size,
       mimeType: req.file.mimetype || 'audio/mpeg',
-      recordedAt: recordedAt ? new Date(recordedAt) : new Date(),
+      recordedAt: resolvedRecordedAt,
+      callDate,
+      callTime,
     });
 
     // Populate lead info for response
@@ -292,6 +307,8 @@ function formatRecording(r) {
   return {
     _id: r._id,
     recordedAt: r.recordedAt,
+    callDate: r.callDate || null,
+    callTime: r.callTime || null,
     url: absoluteUrl(r.url),
     size: r.size,
     mimeType: r.mimeType,

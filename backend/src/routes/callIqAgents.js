@@ -113,21 +113,13 @@ router.post('/:id/run', protect, async (req, res) => {
       recording = await CallRecording.findById(recordingId);
       if (!recording) return res.status(404).json({ message: 'Recording not found' });
 
-      if (recording.transcriptStatus === 'done' && recording.transcript) {
-        transcript = recording.transcript;
-      } else {
-        // Auto-transcribe on demand (cached on the recording for next time)
+      if (!transcript) {
+        // Transcribe on demand for this run only — no longer cached on the
+        // recording document (transcript text is not persisted/shown).
         try {
           const absolutePath = path.join(UPLOAD_DIR, recording.storedName);
           transcript = await transcribeAudioFile(absolutePath, agent.apiKey);
-          recording.transcript = transcript;
-          recording.transcriptStatus = 'done';
-          recording.transcriptError = '';
-          await recording.save();
         } catch (sttErr) {
-          recording.transcriptStatus = 'failed';
-          recording.transcriptError = sttErr.message || 'Transcription failed';
-          await recording.save();
           return res.status(500).json({ message: `Could not transcribe recording: ${sttErr.message}` });
         }
       }

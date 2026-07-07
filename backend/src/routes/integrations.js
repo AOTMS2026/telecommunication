@@ -17,21 +17,11 @@ const router = express.Router();
 const CALL_SERVICES = { knowlarity, callerdesk, maqsam };
 
 const CATALOG = [
+  { type: 'whatsapp_cloud', name: 'Whatsapp Cloud API', category: 'webhook', description: 'Integrate WhatsApp Cloud API in your AOTMS account' },
   { type: 'facebook', name: 'Facebook', category: 'oauth', description: 'Auto-import leads from Facebook Lead Ads' },
+  { type: 'justdial', name: 'JustDial', category: 'generic_webhook', description: 'Auto-import leads from JustDial' },
   { type: 'google_sheets', name: 'Google Sheets', category: 'oauth', description: 'Sync leads to/from Google Sheets automatically' },
   { type: 'google_meet', name: 'Google Meet', category: 'oauth', description: 'Schedule and manage Google Meet calls from leads' },
-  { type: 'whatsapp_cloud', name: 'Whatsapp Cloud API', category: 'webhook', description: 'Integrate WhatsApp Cloud API in your AOTMS account' },
-  { type: 'whatsapp', name: 'Whatsapp', category: 'webhook', description: 'Integrate Whatsapp in your TeleCRM account' },
-  { type: 'knowlarity', name: 'Knowlarity', category: 'webhook', description: 'Connect Knowlarity cloud telephony' },
-  { type: 'callerdesk', name: 'CallerDesk', category: 'webhook', description: 'Connect CallerDesk cloud telephony' },
-  { type: 'maqsam', name: 'Maqsam', category: 'webhook', description: 'Connect Maqsam cloud telephony' },
-  { type: 'justdial', name: 'JustDial', category: 'generic_webhook', description: 'Auto-import leads from JustDial' },
-  { type: '99acres', name: '99acres', category: 'generic_webhook', description: 'Auto-import leads from 99acres' },
-  { type: 'housing', name: 'Housing', category: 'generic_webhook', description: 'Auto-import leads from Housing.com' },
-  { type: 'indiamart', name: 'IndiaMart', category: 'generic_webhook', description: 'Auto-import leads from IndiaMart' },
-  { type: 'magicbricks', name: 'MagicBricks', category: 'generic_webhook', description: 'Auto-import leads from MagicBricks' },
-  { type: 'sulekha', name: 'Sulekha', category: 'generic_webhook', description: 'Auto-import leads from Sulekha' },
-  { type: 'tradeindia', name: 'TradeIndia', category: 'generic_webhook', description: 'Auto-import leads from TradeIndia' },
 ];
 
 function frontendBase() {

@@ -443,12 +443,12 @@ export default function CampaignDetail() {
   if (!campaign) return <div style={{ textAlign: 'center', padding: 48, color: MUTED }}>Campaign not found</div>;
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', fontFamily: 'inherit', overflow: 'hidden', boxSizing: 'border-box' }}>
 
       {/* ─── LEFT PANEL: Student List ─────────────────────────────────────────── */}
-      <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, borderTopLeftRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Back + campaign info */}
-        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ padding: '16px 16px 14px', borderBottom: `1px solid ${BORDER}` }}>
           <button onClick={() => navigate('/campaigns')}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: MUTED, marginBottom: 10, padding: 0 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>

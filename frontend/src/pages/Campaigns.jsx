@@ -584,7 +584,7 @@ export default function Campaigns() {
   const activeCampaigns = campaigns.filter(c => (c.progress || 0) < 100).length;
 
   return (
-    <div className="campaign-page" style={{ padding: '28px 28px 40px', background: BG, minHeight: '100vh' }}>
+    <div className="campaign-page" style={{ padding: '28px 28px 40px', background: BG, minHeight: 'calc(100vh - 64px)', boxSizing: 'border-box' }}>
       <style>{globalStyles}</style>
 
       {/* ── Header ── */}

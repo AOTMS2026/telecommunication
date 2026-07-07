@@ -59,6 +59,13 @@ const callRecordingSchema = new mongoose.Schema(
     // When the call actually happened (sent by the app), vs createdAt = upload time
     recordedAt: { type: Date, required: true },
 
+    // Same moment as recordedAt, split out into plain date/time strings so
+    // the exact call date and call time are stored directly in the schema
+    // (not just derivable from a Date object) and always render exactly as
+    // the call happened, independent of any timezone conversion.
+    callDate: { type: String, required: true },  // "YYYY-MM-DD"
+    callTime: { type: String, required: true },  // "HH:mm:ss" (24-hour)
+
     // Speech-to-text result (via OpenAI Whisper), populated on demand the
     // first time someone runs a Call IQ agent against this recording, then
     // cached here so repeat audits don't re-transcribe the same audio.
