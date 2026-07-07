@@ -145,9 +145,11 @@ export default function IntegrationDetail() {
   const [integration, setIntegration] = useState(null);
   const [leads, setLeads] = useState([]);
   const [leadsTotal, setLeadsTotal] = useState(0);
+  const [sheetFilter, setSheetFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [step, setStep] = useState(0);
+  const [activeSheetIdx, setActiveSheetIdx] = useState(0);
   const [campaigns, setCampaigns] = useState([]);
   const [users, setUsers] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -166,7 +168,7 @@ export default function IntegrationDetail() {
 
   // Multiple Google Sheets sources (google_sheets type only) — each has its own
   // sheetId/sheetRange/fieldMapping and its own fetched column list.
-  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: emptyFieldMapping(), extraColumns: [], columns: [], columnsLoading: false, columnsError: '', availableTabs: [] });
+  const emptySheetSource = () => ({ sheetId: '', sheetRange: '', name: '', fieldMapping: emptyFieldMapping(), extraColumns: [], columns: [], columnsLoading: false, columnsError: '', availableTabs: [], campaign: '', assignedTo: '', showNewCampaign: false, newCampaignName: '', creatingCampaign: false });
   const [sheetSources, setSheetSources] = useState([emptySheetSource()]);
 
   // Extra states for Google Meet
@@ -247,6 +249,11 @@ export default function IntegrationDetail() {
             columnsLoading: false,
             columnsError: '',
             availableTabs: [],
+            campaign: src.campaign || '',
+            assignedTo: src.assignedTo || '',
+            showNewCampaign: false,
+            newCampaignName: '',
+            creatingCampaign: false,
           };
         }));
       }
@@ -272,7 +279,7 @@ export default function IntegrationDetail() {
       if (type === 'google_sheets') {
         const cleanSources = sheetSources
           .filter(src => src.sheetId)
-          .map(({ columns, columnsLoading, columnsError, ...rest }) => rest);
+          .map(({ columns, columnsLoading, columnsError, availableTabs, showNewCampaign, newCampaignName, creatingCampaign, ...rest }) => rest);
         payloadConfig = { ...config, sheetSources: cleanSources, sheetId: cleanSources[0]?.sheetId || '', sheetRange: cleanSources[0]?.sheetRange || '' };
         payloadMapping = cleanSources[0]?.fieldMapping || fieldMapping;
       }
@@ -329,9 +336,25 @@ export default function IntegrationDetail() {
     }
   };
 
-  const addSheetSource = () => setSheetSources(prev => [...prev, emptySheetSource()]);
+  const addSheetSource = () => setSheetSources(prev => { const next = [...prev, emptySheetSource()]; setActiveSheetIdx(next.length - 1); return next; });
 
-  const removeSheetSource = (idx) => setSheetSources(prev => prev.filter((_, i) => i !== idx));
+  const removeSheetSource = async (idx) => {
+    if (!window.confirm('Remove this sheet? It will be permanently deleted and will not sync again.')) return;
+    const next = sheetSources.filter((_, i) => i !== idx);
+    setSheetSources(next);
+    setActiveSheetIdx(a => Math.min(a, Math.max(next.length - 1, 0)));
+    try {
+      const cleanSources = next
+        .filter(src => src.sheetId)
+        .map(({ columns, columnsLoading, columnsError, availableTabs, showNewCampaign, newCampaignName, creatingCampaign, ...rest }) => rest);
+      await integrationsAPI.update(id, {
+        config: { ...config, sheetSources: cleanSources, sheetId: cleanSources[0]?.sheetId || '', sheetRange: cleanSources[0]?.sheetRange || '' },
+      });
+      fetchAll();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete sheet from server');
+    }
+  };
 
   const updateSheetSource = (idx, patch) => setSheetSources(prev => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
 
@@ -344,6 +367,22 @@ export default function IntegrationDetail() {
     const has = s.extraColumns.includes(col);
     return { ...s, extraColumns: has ? s.extraColumns.filter(c => c !== col) : [...s.extraColumns, col] };
   }));
+
+  const createCampaignForSource = async (idx) => {
+    const nameVal = sheetSources[idx]?.newCampaignName?.trim();
+    if (!nameVal) return;
+    updateSheetSource(idx, { creatingCampaign: true });
+    try {
+      const res = await campaignsAPI.create({ name: nameVal });
+      const created = res.data.campaign || res.data;
+      setCampaigns(prev => [...prev, created]);
+      updateSheetSource(idx, { campaign: created._id, newCampaignName: '', showNewCampaign: false, creatingCampaign: false });
+      await handleSave({}, true);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create campaign');
+      updateSheetSource(idx, { creatingCampaign: false });
+    }
+  };
 
   const fetchColumnsForSource = async (idx) => {
     const src = sheetSources[idx];
@@ -507,6 +546,25 @@ export default function IntegrationDetail() {
       {/* ── Configuration ── */}
       {activeTab === 'configuration' && (
         <div>
+          {type === 'google_sheets' && step > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+              {sheetSources.map((src, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveSheetIdx(idx)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                    border: `1.5px solid ${idx === activeSheetIdx ? 'var(--theme-primary-alt)' : 'var(--theme-border-tint)'}`,
+                    background: idx === activeSheetIdx ? 'var(--theme-primary-alt)' : '#fff',
+                    color: idx === activeSheetIdx ? '#fff' : 'var(--theme-text-strongest)',
+                  }}
+                >
+                  {src.name || `Sheet ${idx + 1}`}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, overflowX: 'auto', paddingBottom: 4 }}>
             {STEPS.map((st, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
@@ -665,7 +723,9 @@ export default function IntegrationDetail() {
 
                 {type === 'google_sheets' ? (
                   <div style={{ display: 'grid', gap: 20 }}>
-                    {sheetSources.map((src, idx) => (
+                    {sheetSources.filter((_, idx) => idx === activeSheetIdx).map((src) => {
+                      const idx = activeSheetIdx;
+                      return (
                       <div key={idx} style={s.card}>
                         <h5 style={{ margin: '0 0 4px' }}>{src.name || `Sheet ${idx + 1}`}</h5>
                         <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12, wordBreak: 'break-all' }}>{src.sheetId || 'No Sheet ID set'}</div>
@@ -721,7 +781,8 @@ export default function IntegrationDetail() {
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                     <div style={{ fontSize: 12, color: '#9ca3af' }}>* Phone must be mapped or that sheet is skipped on import.</div>
                   </div>
                 ) : (
@@ -746,27 +807,68 @@ export default function IntegrationDetail() {
             {/* Step 2: Campaign */}
             {step === 2 && (
               <div>
-                <h4 style={{ margin: '0 0 8px' }}>Default Campaign</h4>
-                <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>Leads from this integration will be added to this campaign.</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <select value={defaultCampaign} onChange={e => setDefaultCampaign(e.target.value)} style={{ ...s.inp, flex: 1 }}>
-                    <option value="">No campaign</option>
-                    {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                  </select>
-                  <button onClick={() => setShowNewCampaign(v => !v)} style={s.btnGhost}>+ New Campaign</button>
-                </div>
-                {showNewCampaign && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <input
-                      value={newCampaignName}
-                      onChange={e => setNewCampaignName(e.target.value)}
-                      placeholder="Campaign name"
-                      style={{ ...s.inp, flex: 1 }}
-                      onKeyDown={e => { if (e.key === 'Enter') createCampaignInline(); }}
-                    />
-                    <button onClick={createCampaignInline} style={s.btnPrimary} disabled={creatingCampaign || !newCampaignName.trim()}>
-                      {creatingCampaign ? 'Creating...' : 'Create'}
-                    </button>
+                <h4 style={{ margin: '0 0 8px' }}>{type === 'google_sheets' ? 'Campaign per Sheet' : 'Default Campaign'}</h4>
+                <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>
+                  {type === 'google_sheets'
+                    ? 'Each sheet has its own campaign — leads imported from that sheet go to that sheet\'s campaign.'
+                    : 'Leads from this integration will be added to this campaign.'}
+                </p>
+
+                {type === 'google_sheets' ? (
+                  <div style={{ display: 'grid', gap: 16 }}>
+                    {sheetSources.filter((_, idx) => idx === activeSheetIdx).map((src) => {
+                      const idx = activeSheetIdx;
+                      return (
+                      <div key={idx} style={s.card}>
+                        <h5 style={{ margin: '0 0 12px' }}>{src.name || `Sheet ${idx + 1}`}</h5>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <select value={src.campaign} onChange={e => updateSheetSource(idx, { campaign: e.target.value })} style={{ ...s.inp, flex: 1 }}>
+                            <option value="">No campaign</option>
+                            {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                          </select>
+                          <button onClick={() => updateSheetSource(idx, { showNewCampaign: !src.showNewCampaign })} style={s.btnGhost}>+ New Campaign</button>
+                        </div>
+                        {src.showNewCampaign && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                            <input
+                              value={src.newCampaignName}
+                              onChange={e => updateSheetSource(idx, { newCampaignName: e.target.value })}
+                              placeholder="Campaign name"
+                              style={{ ...s.inp, flex: 1 }}
+                              onKeyDown={e => { if (e.key === 'Enter') createCampaignForSource(idx); }}
+                            />
+                            <button onClick={() => createCampaignForSource(idx)} style={s.btnPrimary} disabled={src.creatingCampaign || !src.newCampaignName?.trim()}>
+                              {src.creatingCampaign ? 'Creating...' : 'Create'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <select value={defaultCampaign} onChange={e => setDefaultCampaign(e.target.value)} style={{ ...s.inp, flex: 1 }}>
+                        <option value="">No campaign</option>
+                        {campaigns.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                      </select>
+                      <button onClick={() => setShowNewCampaign(v => !v)} style={s.btnGhost}>+ New Campaign</button>
+                    </div>
+                    {showNewCampaign && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <input
+                          value={newCampaignName}
+                          onChange={e => setNewCampaignName(e.target.value)}
+                          placeholder="Campaign name"
+                          style={{ ...s.inp, flex: 1 }}
+                          onKeyDown={e => { if (e.key === 'Enter') createCampaignInline(); }}
+                        />
+                        <button onClick={createCampaignInline} style={s.btnPrimary} disabled={creatingCampaign || !newCampaignName.trim()}>
+                          {creatingCampaign ? 'Creating...' : 'Create'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -775,12 +877,31 @@ export default function IntegrationDetail() {
             {/* Step 3: Lead distribution */}
             {step === 3 && (
               <div>
-                <h4 style={{ margin: '0 0 8px' }}>Lead Distribution</h4>
-                <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>Auto-assign leads to a team member.</p>
-                <select value={defaultAssignedTo} onChange={e => setDefaultAssignedTo(e.target.value)} style={s.inp}>
-                  <option value="">Auto assign / None</option>
-                  {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
-                </select>
+                <h4 style={{ margin: '0 0 8px' }}>{type === 'google_sheets' ? 'Lead Distribution per Sheet' : 'Lead Distribution'}</h4>
+                <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>
+                  {type === 'google_sheets' ? 'Auto-assign leads from each sheet to a team member.' : 'Auto-assign leads to a team member.'}
+                </p>
+                {type === 'google_sheets' ? (
+                  <div style={{ display: 'grid', gap: 16 }}>
+                    {sheetSources.filter((_, idx) => idx === activeSheetIdx).map((src) => {
+                      const idx = activeSheetIdx;
+                      return (
+                      <div key={idx} style={s.card}>
+                        <h5 style={{ margin: '0 0 12px' }}>{src.name || `Sheet ${idx + 1}`}</h5>
+                        <select value={src.assignedTo} onChange={e => updateSheetSource(idx, { assignedTo: e.target.value })} style={s.inp}>
+                          <option value="">Auto assign / None</option>
+                          {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+                        </select>
+                      </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <select value={defaultAssignedTo} onChange={e => setDefaultAssignedTo(e.target.value)} style={s.inp}>
+                    <option value="">Auto assign / None</option>
+                    {users.map(u => <option key={u._id} value={u._id}>{u.name} ({u.role})</option>)}
+                  </select>
+                )}
               </div>
             )}
 
@@ -837,7 +958,7 @@ export default function IntegrationDetail() {
                     )}
                     <div style={{ height: 1, background: 'var(--theme-border-tint)', margin: '4px 0' }} />
                     <div style={{ padding: 12, background: '#f0fdf4', borderRadius: 8, fontSize: 13, color: '#166534' }}>
-                      ⚡ Auto-sync is on. New rows students fill in the sheet are picked up automatically every ~2 minutes and land straight into <strong>{integration.defaultCampaign?.name || 'the selected campaign'}</strong>, assigned to <strong>{integration.defaultAssignedTo?.name || 'the selected assignee'}</strong>. No manual import needed.
+                      ⚡ Auto-sync is on. New rows in <strong>{sheetSources[activeSheetIdx]?.name || `Sheet ${activeSheetIdx + 1}`}</strong> are picked up automatically every ~2 minutes → campaign <strong>{campaigns.find(c => c._id === sheetSources[activeSheetIdx]?.campaign)?.name || 'none'}</strong>, assigned to <strong>{users.find(u => u._id === sheetSources[activeSheetIdx]?.assignedTo)?.name || 'auto/none'}</strong>.
                     </div>
                     {integration.lastAutoSyncAt && (
                       <div style={{ fontSize: 12, color: '#6b7280' }}>
@@ -847,11 +968,11 @@ export default function IntegrationDetail() {
                       </div>
                     )}
                     <button
-                      onClick={() => doAction('import', async () => { await handleSave({}, true); return api.post(`/integrations/${id}/sheets/import`); })}
+                      onClick={() => doAction('import', async () => { await handleSave({}, true); return api.post(`/integrations/${id}/sheets/import`, { sheetId: sheetSources[activeSheetIdx]?.sheetId }); })}
                       style={s.btnGhost}
                       disabled={!!actionLoading}
                     >
-                      {actionLoading === 'import' ? 'Syncing...' : '↓ Sync Now (optional, for testing)'}
+                      {actionLoading === 'import' ? 'Syncing...' : `↓ Sync Now: ${sheetSources[activeSheetIdx]?.name || `Sheet ${activeSheetIdx + 1}`} (optional, for testing)`}
                     </button>
                   </div>
                 )}
@@ -1096,28 +1217,43 @@ export default function IntegrationDetail() {
       {/* ── Leads tab ── */}
       {activeTab === 'leads' && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--theme-text-strongest)' }}>
               Leads from {integration.name} ({leadsTotal})
             </h3>
+            {type === 'google_sheets' && sheetSources.length > 0 && (
+              <select value={sheetFilter} onChange={e => setSheetFilter(e.target.value)} style={{ ...s.inp, width: 220 }}>
+                <option value="">All sheets</option>
+                {sheetSources.filter(src => src.sheetId).map((src, idx) => (
+                  <option key={idx} value={src.name || `Sheet ${idx + 1}`}>{src.name || `Sheet ${idx + 1}`}</option>
+                ))}
+              </select>
+            )}
           </div>
-          {leads.length === 0 ? (
-            <div style={{ ...s.card, padding: 40, textAlign: 'center', color: '#9ca3af' }}>
-              No leads yet from {integration.name}.
-            </div>
-          ) : (
+          {(() => {
+            const filteredLeads = (type === 'google_sheets' && sheetFilter)
+              ? leads.filter(lead => (lead.sourceSheetName || '') === sheetFilter)
+              : leads;
+            if (filteredLeads.length === 0) {
+              return (
+                <div style={{ ...s.card, padding: 40, textAlign: 'center', color: '#9ca3af' }}>
+                  {sheetFilter ? `No leads yet from "${sheetFilter}".` : `No leads yet from ${integration.name}.`}
+                </div>
+              );
+            }
+            return (
             <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: 'var(--theme-surface-faint2)' }}>
-                    {['Name', 'Phone', 'Email', 'Status', 'Campaign', 'Assigned To', 'Date'].map(h => (
+                    {['Name', 'Phone', 'Email', 'Status', 'Campaign', 'Assigned To', ...(type === 'google_sheets' ? ['Source Sheet'] : []), 'Date'].map(h => (
                       <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--theme-surface-faint5)' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead, idx) => (
-                    <tr key={lead._id} style={{ borderBottom: idx < leads.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none', cursor: 'pointer' }}
+                  {filteredLeads.map((lead, idx) => (
+                    <tr key={lead._id} style={{ borderBottom: idx < filteredLeads.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none', cursor: 'pointer' }}
                       onClick={() => navigate(`/leads/${lead._id}`)}>
                       <td style={{ padding: '12px 16px', fontWeight: 500 }}>{lead.name}</td>
                       <td style={{ padding: '12px 16px', color: '#4f46e5' }}>{lead.phone}</td>
@@ -1127,13 +1263,17 @@ export default function IntegrationDetail() {
                       </td>
                       <td style={{ padding: '12px 16px', color: '#6b7280' }}>{lead.campaign?.name || '-'}</td>
                       <td style={{ padding: '12px 16px', color: '#6b7280' }}>{lead.assignedTo?.name || '-'}</td>
+                      {type === 'google_sheets' && (
+                        <td style={{ padding: '12px 16px', color: '#6b7280' }}>{lead.sourceSheetName || '-'}</td>
+                      )}
                       <td style={{ padding: '12px 16px', color: '#6b7280' }}>{new Date(lead.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
     </div>
