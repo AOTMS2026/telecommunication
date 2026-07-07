@@ -61,6 +61,9 @@ const leadSchema = new mongoose.Schema({
   rating: { type: Number, min: 0, max: 5, default: 0 },
   leadSource: { type: String, default: 'Manual' },
   leadSourceNote: { type: String, default: '' }, // custom message when leadSource is "Other"
+  // Which Google Sheet (by its Sheet Label / name) this lead was imported from,
+  // when leadSource === 'Google Sheets' and the integration has multiple sheets.
+  sourceSheetName: { type: String, default: '' },
   preferredCourses: [{ type: String }],
   courseInterest: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
   mode: { type: String, enum: ['Online', 'Offline', 'Hybrid', ''], default: '' },
