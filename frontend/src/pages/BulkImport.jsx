@@ -93,6 +93,25 @@ export default function BulkImport() {
   const [campaigns, setCampaigns] = useState([]);
   const [callers, setCallers] = useState([]);
 
+  // Keep the browser's Back button inside the Import Leads wizard: without this,
+  // pressing Back mid-upload pops the *actual* previous page in history (another
+  // module) instead of going to the previous wizard step.
+  const poppingRef = useRef(false);
+  useEffect(() => {
+    window.history.replaceState({ step: 0 }, '');
+    const onPopState = (e) => {
+      poppingRef.current = true;
+      setStep(typeof e.state?.step === 'number' ? e.state.step : 0);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (poppingRef.current) { poppingRef.current = false; return; }
+    window.history.pushState({ step }, '');
+  }, [step]);
+
   // Step 1
   const [sheetNames, setSheetNames] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState('');
@@ -151,28 +170,6 @@ export default function BulkImport() {
     api.get('/lead-fields').then(r => setSavedCustomFields((r.data.fields || []).map(f => f.name))).catch(console.error);
   }, []);
 
-  // ── Browser back-button support for wizard steps ────────────────────────────
-  // Without this, pressing the browser Back button mid-wizard exits the whole
-  // page instead of moving to the previous step. We push one history entry per
-  // step so Back steps backward through the wizard, only leaving the page once
-  // the user is back at step 0.
-  const isPopRef = useRef(false);
-  const goStep = (n) => {
-    if (!isPopRef.current) window.history.pushState({ bulkImportStep: n }, '');
-    isPopRef.current = false;
-    setStep(n);
-  };
-  useEffect(() => {
-    window.history.replaceState({ bulkImportStep: 0 }, '');
-    const onPopState = (e) => {
-      const n = e.state && typeof e.state.bulkImportStep === 'number' ? e.state.bulkImportStep : 0;
-      isPopRef.current = true;
-      setStep(n);
-    };
-    window.addEventListener('popstate', onPopState);
-    return () => window.removeEventListener('popstate', onPopState);
-  }, []);
-
   const loadHistory = async (page=1) => {
     setLoadingHistory(true);
     try {
@@ -199,7 +196,7 @@ export default function BulkImport() {
       setTotalRows(r.data.totalRows||0);
       setFieldMapping(autoMap(r.data.columns||[]));
       setCustomLabels({});
-      goStep(1);
+      setStep(1);
     } catch(e){ alert('Failed to parse file: '+(e.response?.data?.message||e.message)); }
     setLoadingSheet(false);
   };
@@ -238,7 +235,7 @@ export default function BulkImport() {
   };
 
   // ── Step navigation ────────────────────────────────────────────────────────
-  const goToStep2 = () => { if (!selectedSheet) { alert('Please select a sheet'); return; } goStep(2); };
+  const goToStep2 = () => { if (!selectedSheet) { alert('Please select a sheet'); return; } setStep(2); };
 
   const goToStep3 = async () => {
     const finalMapping = buildFinalMapping();
@@ -249,13 +246,13 @@ export default function BulkImport() {
     try {
       const fd = new FormData(); fd.append('file',file); fd.append('sheetName',selectedSheet); fd.append('fieldMapping',JSON.stringify(finalMapping));
       const r = await api.post('/bulk-import/check-duplicates', fd);
-      setDupSummary(r.data); goStep(3);
+      setDupSummary(r.data); setStep(3);
     } catch(e){ alert(e.response?.data?.message||e.message); }
     setLoadingDup(false);
   };
 
-  const goToStep4 = () => goStep(4);
-  const goToStep5 = () => { if (!selectedCampaign) { alert('Please select a campaign'); return; } goStep(5); };
+  const goToStep4 = () => setStep(4);
+  const goToStep5 = () => { if (!selectedCampaign) { alert('Please select a campaign'); return; } setStep(5); };
 
   // ── Create new campaign ────────────────────────────────────────────────────
   const handleCreateCampaign = async () => {
@@ -301,13 +298,12 @@ export default function BulkImport() {
       fd.append('importName',file.name);
       fd.append('callerAssignments',JSON.stringify(selectedCallers.map(c=>({ callerId:c.id, pct:c.pct }))));
       const r = await api.post('/bulk-import/import', fd);
-      setResult(r.data); goStep(6); loadHistory(1);
+      setResult(r.data); setStep(6); loadHistory(1);
     } catch(e){ alert('Import failed: '+(e.response?.data?.message||e.message)); }
     setImporting(false);
   };
 
   const resetWizard = () => {
-    window.history.replaceState({ bulkImportStep: 0 }, '');
     setStep(0); setFile(null); setSheetNames([]); setSelectedSheet(''); setColumns([]); setPreview([]);
     setTotalRows(0); setFieldMapping({}); setCustomLabels({}); setDupSummary(null);
     setSelectedCampaign(''); setSelectedCallers([]); setResult(null); setViewingImport(null);
@@ -663,7 +659,8 @@ export default function BulkImport() {
               </div>
             </div>
           )}
-          <div style={{ display:'flex', justifyContent:'flex-end', marginTop:24 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:24 }}>
+            <Btn onClick={()=>setStep(0)} variant="outline">← Back</Btn>
             <Btn onClick={goToStep2} disabled={!selectedSheet||loadingSheet}>Next →</Btn>
           </div>
         </Card>
@@ -758,7 +755,7 @@ export default function BulkImport() {
             </div>
           </div>
           <div style={{ display:'flex', justifyContent:'space-between' }}>
-            <Btn onClick={()=>goStep(1)} variant="outline">← Back</Btn>
+            <Btn onClick={()=>setStep(1)} variant="outline">← Back</Btn>
             <Btn onClick={goToStep3} disabled={loadingDup}>{loadingDup?'Checking…':'Next →'}</Btn>
           </div>
         </Card>
@@ -819,7 +816,7 @@ export default function BulkImport() {
             </div>
           )}
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:24 }}>
-            <Btn onClick={()=>goStep(2)} variant="outline">← Back</Btn>
+            <Btn onClick={()=>setStep(2)} variant="outline">← Back</Btn>
             <Btn onClick={goToStep4}>Next →</Btn>
           </div>
         </Card>
@@ -851,7 +848,7 @@ export default function BulkImport() {
             </div>
           )}
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:24 }}>
-            <Btn onClick={()=>goStep(3)} variant="outline">← Back</Btn>
+            <Btn onClick={()=>setStep(3)} variant="outline">← Back</Btn>
             <Btn onClick={goToStep5} disabled={!selectedCampaign}>Next →</Btn>
           </div>
         </Card>
@@ -895,7 +892,7 @@ export default function BulkImport() {
           )}
           {!selectedCallers.length&&<InfoBox type="warning">Please add at least one caller.</InfoBox>}
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:24 }}>
-            <Btn onClick={()=>goStep(4)} variant="outline">← Back</Btn>
+            <Btn onClick={()=>setStep(4)} variant="outline">← Back</Btn>
             <Btn onClick={handleImport} disabled={importing||!selectedCallers.length||totalPct!==100} variant="success">
               {importing?'⏳ Importing…':'🚀 Start Import'}
             </Btn>
