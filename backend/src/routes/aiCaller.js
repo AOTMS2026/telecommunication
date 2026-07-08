@@ -17,6 +17,7 @@ const Campaign = require('../models/Campaign');
 const { protect } = require('../middleware/auth');
 const { applyNoConnectOutcome } = require('../services/aiCaller/outcomeService');
 const { triggerAiCall } = require('../services/aiCaller/dialer');
+const { consumeTransfer } = require('../services/aiCaller/transferState');
 
 const router = express.Router();
 
@@ -83,6 +84,27 @@ router.all(['/stream-url', '/stream-url/:leadId'], async (req, res) => {
   const url = `${wsBase}/ai-caller/stream?leadId=${leadId}${campaignQuery}`;
 
   res.json({ url });
+});
+
+/**
+ * GET/POST /api/ai-caller/passthru
+ * Call-transfer feature: place a Passthru applet immediately after the
+ * Voicebot applet in Exotel's App Bazaar flow. Exotel calls this the moment
+ * the orchestrator's WebSocket closes. We answer with a plain HTTP status —
+ * Exotel's Passthru applet is a pure binary switch on that status code:
+ *   - 302 (or 404) -> wire this branch to a Connect applet that dials HR
+ *     (6300667834), so the call is transferred to a human.
+ *   - 200          -> wire this branch to a Hangup applet, so the call just
+ *     ends normally (no transfer requested).
+ * The actual "should we transfer?" decision was already made and stashed by
+ * orchestrator.js (see transferState.js) right before it closed the WS.
+ * NOT protected — called by Exotel directly.
+ */
+router.all('/passthru', (req, res) => {
+  const callSid = req.query.CallSid || req.body?.CallSid || req.query.CallSID || req.body?.CallSID || '';
+  const transfer = consumeTransfer(callSid);
+  console.log(`[ai-caller] passthru: callSid=${callSid} transfer=${transfer}`);
+  res.sendStatus(transfer ? 302 : 200);
 });
 
 /**

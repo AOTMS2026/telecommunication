@@ -46,6 +46,7 @@ async function applyAiCallOutcome(leadId, outcome, {
   transcript = '',
   campaignId = null,
   callSid = '',
+  transferredToHr = false,
 } = {}) {
   const lead = await Lead.findById(leadId);
   if (!lead) {
@@ -70,6 +71,13 @@ async function applyAiCallOutcome(leadId, outcome, {
     callDuration: durationSeconds,
     callStatus,
   });
+
+  if (transferredToHr) {
+    lead.activities.unshift({
+      type: 'note',
+      description: 'Call transferred to HR — student showed genuine interest (AI handoff).',
+    });
+  }
 
   lead.totalCalls += 1;
   lead.totalCallDuration += durationSeconds;

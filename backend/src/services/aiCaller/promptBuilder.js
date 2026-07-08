@@ -185,7 +185,17 @@ const VOICE_FORMAT_RULES = `Rules:
   (after your goodbye sentence, with a space before it, e.g. "Thank you,
   have a great day! [[END_CALL]]"). Do NOT include this marker on any reply
   where the conversation is still continuing. This marker is stripped before
-  you're heard — it's only read by the calling system to know when to hang up.`;
+  you're heard — it's only read by the calling system to know when to hang up.
+- HUMAN HANDOFF: if the student clearly shows genuine interest in enrolling
+  (e.g. asks how to join/pay, says they want to enroll, agrees to join,
+  asks to speak to someone about admission), append the exact literal
+  marker "[[TRANSFER_TO_HR]]" to the very end of that reply (after your
+  sentence, with a space before it). Say a brief natural line first — e.g.
+  "Great! Let me connect you to my colleague who can help you enroll right
+  away." — then the marker, e.g. "...enroll right away. [[TRANSFER_TO_HR]]".
+  Only use this once genuine interest is clear, not for casual questions.
+  This marker is stripped before you're heard — it tells the calling system
+  to transfer the call to a human counselor.`;
 
 /**
  * Grounded company facts, extracted from real AOTMS counselor call

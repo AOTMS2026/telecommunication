@@ -24,6 +24,7 @@ const {
 } = require('./promptBuilder');
 const { buildMemoryBlock } = require('./conversationMemory');
 const { applyAiCallOutcome, applyNoConnectOutcome } = require('./outcomeService');
+const { markForTransfer } = require('./transferState');
 const Lead = require('../../models/Lead');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -39,6 +40,15 @@ const EXOTEL_FRAME_BYTES = 1600;
 
 // Marker GPT inserts when it wants to end the call naturally.
 const END_CALL_MARKER = '[[END_CALL]]';
+
+// Marker GPT inserts when the student shows genuine interest and should be
+// handed off to a human (HR) instead of the AI continuing to burn credits.
+const TRANSFER_MARKER = '[[TRANSFER_TO_HR]]';
+
+// Only transfer once the call has run at least this long — an AI call that
+// converts in under 3 minutes is cheaper to just let the AI finish/schedule
+// than to also spend a human's time on it this early.
+const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
 
 // ─── Gemini via axios ─────────────────────────────────────────────────────
 //
@@ -310,9 +320,21 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   }
 
   const shouldEnd = reply.includes(END_CALL_MARKER);
-  const spokenReply = reply.replace(END_CALL_MARKER, '').trim();
+  const wantsTransfer = reply.includes(TRANSFER_MARKER);
+  const spokenReply = reply.replace(END_CALL_MARKER, '').replace(TRANSFER_MARKER, '').trim();
 
-  console.log(`[orchestrator] Gemini (${session.callSid}): "${spokenReply}"${shouldEnd ? ' [END]' : ''}`);
+  if (wantsTransfer) session.studentInterested = true;
+
+  const elapsedMs = Date.now() - session.startedAt;
+  const shouldTransferNow =
+    session.studentInterested &&
+    !session.transferPending &&
+    elapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS;
+
+  console.log(
+    `[orchestrator] Gemini (${session.callSid}): "${spokenReply}"` +
+    `${shouldEnd ? ' [END]' : ''}${wantsTransfer ? ' [INTERESTED]' : ''}${shouldTransferNow ? ' [TRANSFER-NOW]' : ''}`
+  );
   session.conversation.push({ role: 'assistant', content: spokenReply });
 
   try {
@@ -321,12 +343,26 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     console.error(`[orchestrator] sendTts failed (${session.callSid}):`, err.message);
   }
 
+  if (shouldTransferNow) {
+    session.transferPending = true;
+    // Short handoff line so the caller isn't just cut off mid-conversation.
+    const handoffLine = session.language === 'English'
+      ? 'Sure, please hold — connecting you to my colleague now.'
+      : 'సరే sir, ఒక్క నిమిషం hold చేయండి, మా HR మేడమ్ కి కనెక్ట్ చేస్తున్నాను.';
+    try {
+      await sendTts(ws, session, handoffLine);
+    } catch (err) {
+      console.error(`[orchestrator] handoff TTS failed (${session.callSid}):`, err.message);
+    }
+    return 'transfer';
+  }
+
   return shouldEnd;
 }
 
 // ─── Call end — save outcome to MongoDB directly ─────────────────────────────
 
-async function finalizeCall(session) {
+async function finalizeCall(session, { transferredToHr = false } = {}) {
   const durationSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
   const hadConversation = session.conversation.some(m => m.role === 'user');
 
@@ -359,6 +395,7 @@ async function finalizeCall(session) {
       transcript: transcriptText,
       campaignId: session.campaignId || undefined,
       callSid: session.callSid,
+      transferredToHr,
     }).catch(err => console.error('[orchestrator] applyAiCallOutcome failed:', err.message));
   }
 }
@@ -392,6 +429,8 @@ async function handleCall(ws, req) {
     agentSpeaking: false,
     busy: false,          // true while an STT→GPT→TTS turn is in flight — gates new turns
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
+    studentInterested: false, // set once GPT emits TRANSFER_MARKER at any point in the call
+    transferPending: false,   // set once the handoff has actually been triggered (guards against double-trigger)
   };
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
@@ -512,9 +551,9 @@ async function handleCall(ws, req) {
         session.silenceRun = 0;
         session.busy = true; // block any other segment from being cut/processed until this turn finishes
 
-        let shouldEnd = false;
+        let outcome = false;
         try {
-          shouldEnd = await Promise.race([
+          outcome = await Promise.race([
             processSpeechSegment(ws, session, segment),
             new Promise(resolve => setTimeout(() => resolve(false), 12000)),
           ]);
@@ -524,7 +563,16 @@ async function handleCall(ws, req) {
           session.busy = false;
         }
 
-        if (shouldEnd) {
+        if (outcome === 'transfer') {
+          // Mark the handoff BEFORE closing the socket — Exotel's Passthru
+          // applet (configured right after the Voicebot applet) will hit
+          // /api/ai-caller/passthru within seconds of the WS closing, and
+          // that route reads this same in-memory flag to route the call
+          // into the Connect applet that dials HR.
+          markForTransfer(session.callSid);
+          await finalizeCall(session, { transferredToHr: true });
+          ws.close();
+        } else if (outcome) {
           await finalizeCall(session);
           ws.close();
         }
