@@ -88,6 +88,14 @@ export const reportsAPI = {
   leadViewFilters: () => api.get('/reports/lead-view-filters'),
 };
 
+// ====================== NEW (AI Call Reports extension) ======================
+export const aiCallReportsAPI = {
+  getAll: (params) => api.get('/ai-call-reports', { params }),
+  dashboard: () => api.get('/ai-call-reports/dashboard'),
+  analytics: (params) => api.get('/ai-call-reports/analytics', { params }),
+  getOne: (id) => api.get(`/ai-call-reports/${id}`),
+};
+
 export const usersAPI = {
   getAll: () => api.get('/users'),
   getPreferences: () => api.get('/users/preferences'),

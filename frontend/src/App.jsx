@@ -43,6 +43,7 @@ import PermissionTemplates from './pages/PermissionTemplates';
 import N8nSettings from './pages/N8nSettings';
 import CallRecordings from './pages/CallRecordings';
 import Billing from './pages/Billing';
+import AiCallReports from './pages/AiCallReports';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -95,6 +96,7 @@ export default function App() {
             <Route path="stale-leads" element={<StaleLeads />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="team-operations" element={<TeamOperations />} />
+            <Route path="ai-call-reports" element={<AiCallReports />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="integrations/setup/:type" element={<IntegrationSetup />} />
             <Route path="integrations/:id" element={<IntegrationDetail />} />
