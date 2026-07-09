@@ -325,6 +325,21 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 
   if (shouldTransferNow) {
     session.transferPending = true;
+    session.ended = true; // block any further 'media' processing immediately — see the guard in handleCall
+
+    // Mark the handoff and log it NOW, before speaking the handoff line —
+    // do not wait for that (or anything else) to complete first. This used
+    // to happen only after this whole function returned 'transfer', gated
+    // behind the outer media handler's 12s race-timeout. A transfer turn
+    // has to speak TWO lines back-to-back (the main reply above, then the
+    // handoff line below) and occasionally ran past 12s — when it did, the
+    // timeout "won" the race and returned false to the caller, silently
+    // discarding this 'transfer' result even though the handoff line had
+    // already played. Doing the mark + close here means it happens
+    // regardless of how long the TTS calls take.
+    console.log(`[orchestrator] TRANSFER TRIGGERED callSid=${session.callSid} leadId=${session.leadId}`);
+    markForTransfer(session.callSid);
+
     // Short handoff line so the caller isn't just cut off mid-conversation.
     const handoffLine = session.language === 'English'
       ? 'Sure, please hold — connecting you to my colleague now.'
@@ -334,6 +349,11 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     } catch (err) {
       console.error(`[orchestrator] handoff TTS failed (${session.callSid}):`, err.message);
     }
+
+    ws.close();
+    finalizeCall(session, { transferredToHr: true }).catch(err =>
+      console.error('[orchestrator] finalizeCall (transfer) failed:', err.message)
+    );
     return 'transfer';
   }
 
@@ -559,7 +579,7 @@ async function handleCall(ws, req) {
         try {
           outcome = await Promise.race([
             processSpeechSegment(ws, session, segment),
-            new Promise(resolve => setTimeout(() => resolve(false), 12000)),
+            new Promise(resolve => setTimeout(() => resolve(false), 20000)),
           ]);
         } catch (err) {
           console.error('[orchestrator] processSpeechSegment error:', err.message);
