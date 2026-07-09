@@ -178,7 +178,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
         type: 'config',
         data: {
           target_language_code: languageCode,
-          speaker: 'pooja',                // female bulbul:v3 speaker (anushka is v2-only)
+          speaker: 'priya',                // female bulbul:v3 speaker (anushka is v2-only)
           output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
           speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
         },

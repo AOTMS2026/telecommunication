@@ -543,14 +543,21 @@ async function handleCall(ws, req) {
         }
 
         if (outcome === 'transfer') {
-          // Mark the handoff BEFORE closing the socket — Exotel's Passthru
-          // applet (configured right after the Voicebot applet) will hit
+          // Mark the handoff FIRST and close the socket immediately — Exotel's
+          // Passthru applet (right after the Voicebot applet) hits
           // /api/ai-caller/passthru within seconds of the WS closing, and
-          // that route reads this same in-memory flag to route the call
-          // into the Connect applet that dials HR.
+          // that route reads this same in-memory flag to route into the
+          // Connect applet that dials HR. We do NOT await finalizeCall here:
+          // it calls GPT again to summarize the transcript, which can take a
+          // few seconds — the transfer must not wait on that. finalizeCall
+          // still runs, just in the background, and any failure in it is
+          // caught internally / logged rather than blocking ws.close().
+          console.log(`[orchestrator] TRANSFER TRIGGERED callSid=${session.callSid} leadId=${session.leadId}`);
           markForTransfer(session.callSid);
-          await finalizeCall(session, { transferredToHr: true });
           ws.close();
+          finalizeCall(session, { transferredToHr: true }).catch(err =>
+            console.error('[orchestrator] finalizeCall (transfer) failed:', err.message)
+          );
         } else if (outcome) {
           await finalizeCall(session);
           ws.close();
