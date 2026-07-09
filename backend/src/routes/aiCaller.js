@@ -117,7 +117,7 @@ router.all('/passthru', (req, res) => {
 router.post('/status', async (req, res) => {
   try {
     const leadId = req.query.leadId;
-    const callStatus = req.body.Status || req.body.status;
+    const callStatus = req.body.Status || req.body.status || req.body.CallStatus || req.query.Status || req.query.CallStatus;
     console.log('[ai-caller] Exotel status callback:', leadId, callStatus);
 
     if (leadId && ['no-answer', 'busy', 'failed'].includes(callStatus)) {

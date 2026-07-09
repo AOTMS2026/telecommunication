@@ -25,6 +25,7 @@ const {
 const { buildMemoryBlock } = require('./conversationMemory');
 const { applyAiCallOutcome, applyNoConnectOutcome } = require('./outcomeService');
 const { markForTransfer } = require('./transferState');
+const { renewLock } = require('./leadLock');
 const Lead = require('../../models/Lead');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -342,6 +343,13 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 // ─── Call end — save outcome to MongoDB directly ─────────────────────────────
 
 async function finalizeCall(session, { transferredToHr = false } = {}) {
+  // Guard: this can now be reached from up to three places for the same call
+  // (the transfer branch, the normal-end branch, and ws.on('close') as a
+  // fallback) — without this it ran 2-3x per call, each one saving the CRM
+  // outcome again and racing on the same Lead document (Mongoose VersionError).
+  if (session.finalized) return;
+  session.finalized = true;
+
   const durationSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
   const hadConversation = session.conversation.some(m => m.role === 'user');
 
@@ -410,7 +418,22 @@ async function handleCall(ws, req) {
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
     studentInterested: false, // set once GPT emits TRANSFER_MARKER at any point in the call
     transferPending: false,   // set once the handoff has actually been triggered (guards against double-trigger)
+    ended: false,             // set the instant we decide the call is over (transfer or normal end) — guards against a stale/racing 'media' event being processed after that decision but before the socket actually finishes closing
+    finalized: false,         // guards finalizeCall() against running twice for the same session (was firing 2-3x: once from the transfer/end branch, again from ws.on('close'))
   };
+
+  // Keep the DB lock alive for as long as this call is actually running,
+  // regardless of leadLock.js's configured TTL — this is the real fix for
+  // "recovered stuck lead" firing mid-call and campaignEngine redialing the
+  // same lead while it's still on an active call. Cleared in finalizeCall().
+  let lockRenewalInterval = null;
+  if (leadId) {
+    lockRenewalInterval = setInterval(() => {
+      renewLock(leadId, 'ai-engine').catch(err =>
+        console.error(`[orchestrator] lock renewal failed (${leadId}):`, err.message)
+      );
+    }, 30000);
+  }
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
   // Previously this was awaited before ws.on('message', ...) was even
@@ -502,6 +525,8 @@ async function handleCall(ws, req) {
       }
 
     } else if (event === 'media') {
+      if (session.ended) return; // call already decided as over/transferred — ignore anything further
+
       const payload = message.media?.payload;
       if (!payload) return;
 
@@ -552,6 +577,7 @@ async function handleCall(ws, req) {
           // few seconds — the transfer must not wait on that. finalizeCall
           // still runs, just in the background, and any failure in it is
           // caught internally / logged rather than blocking ws.close().
+          session.ended = true; // must be set before anything else — see the 'media' guard above
           console.log(`[orchestrator] TRANSFER TRIGGERED callSid=${session.callSid} leadId=${session.leadId}`);
           markForTransfer(session.callSid);
           ws.close();
@@ -559,6 +585,7 @@ async function handleCall(ws, req) {
             console.error('[orchestrator] finalizeCall (transfer) failed:', err.message)
           );
         } else if (outcome) {
+          session.ended = true;
           await finalizeCall(session);
           ws.close();
         }
@@ -569,14 +596,19 @@ async function handleCall(ws, req) {
       console.log(`[orchestrator] dtmf: ${digit} (${session.callSid})`);
 
     } else if (event === 'stop') {
+      session.ended = true;
       await finalizeCall(session);
     }
   });
 
   ws.on('close', () => {
     console.log(`[orchestrator] WS closed: ${session.callSid}`);
+    if (lockRenewalInterval) clearInterval(lockRenewalInterval);
+    session.ended = true;
     // If the socket closed without a 'stop' event (e.g. network drop),
-    // still try to save whatever conversation happened.
+    // still try to save whatever conversation happened. finalizeCall() itself
+    // now guards against running twice (see session.finalized), so this is
+    // safe to call even if the transfer/end branch above already called it.
     if (session.conversation.some(m => m.role === 'user')) {
       finalizeCall(session).catch(() => {});
     }
