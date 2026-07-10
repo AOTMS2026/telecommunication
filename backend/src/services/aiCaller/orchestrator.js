@@ -13,8 +13,7 @@
 //   Orchestrator → Exotel: "media" (audio), "mark" (playback sync), "clear" (barge-in)
 // Reference: https://developer.exotel.com/docs/agentstream/developer-guide
 
-const axios = require('axios');
-const { transcribeAudio, synthesizeSpeech } = require('./sarvamClient');
+const { transcribeAudio, synthesizeSpeech, getAgentReply, getCallOutcome } = require('./geminiClient');
 const {
   buildSystemPrompt,
   buildWelcomeGreeting,
@@ -49,77 +48,6 @@ const TRANSFER_MARKER = '[[TRANSFER_TO_HR]]';
 // converts in under 3 minutes is cheaper to just let the AI finish/schedule
 // than to also spend a human's time on it this early.
 const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
-
-// ─── OpenAI via axios ─────────────────────────────────────────────────────
-//
-// SWITCHED FROM GEMINI: the Gemini API key expired, so live-call generation
-// and outcome extraction now go through OpenAI's Chat Completions API.
-// messages/session.conversation are already in OpenAI's native
-// {role: 'system'|'user'|'assistant', content}[] shape, so — unlike the
-// Gemini integration this replaces — no payload conversion is needed here.
-//
-// AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
-// good fit for low-latency voice-call turns). Override via env var if needed.
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4o-mini';
-
-async function getAgentReply(messages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
-
-  const response = await axios.post(
-    OPENAI_API_URL,
-    {
-      model: AI_CALLER_MODEL,
-      messages,
-      temperature: 0.6,
-      max_tokens: 80, // hard backstop for "1-2 sentence" replies, same reasoning as the old Gemini maxOutputTokens cap
-    },
-    {
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      timeout: 12000,
-    }
-  );
-  const text = response.data?.choices?.[0]?.message?.content || '';
-  return text.trim() || 'Sorry, could you say that again?';
-}
-
-async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const response = await axios.post(
-      OPENAI_API_URL,
-      {
-        model: AI_CALLER_MODEL,
-        messages: [outcomeExtractionPrompt, ...transcriptMessages],
-        temperature: 0.2,
-        max_tokens: 300,
-        response_format: { type: 'json_object' }, // OpenAI JSON mode — no markdown fences to strip
-      },
-      {
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        timeout: 20000,
-      }
-    );
-    const raw = (response.data?.choices?.[0]?.message?.content || '').trim();
-    return JSON.parse(raw);
-  } catch {
-    return {
-      leadStatus: 'Connected',
-      interestLevel: 'Unknown',
-      studentIntent: 'general_interest',
-      followUpRequired: false,
-      followUpDate: null,
-      demoRequired: false,
-      callbackReason: '',
-      conversationSummary: 'AI call completed. Summary unavailable.',
-      nextRecommendedAction: 'no_action',
-      confidenceScore: 0.0,
-    };
-  }
-}
 
 // ─── RMS silence helper ─────────────────────────────────────────────────────
 
