@@ -104,6 +104,8 @@ router.get('/google/oauth/callback', async (req, res) => {
     const update = {
       'config.accessToken': tokens.access_token || '',
       status: 'active',
+      needsReconnect: false,
+      lastAutoSyncError: null,
     };
     if (tokens.refresh_token) update['config.refreshToken'] = tokens.refresh_token;
     if (tokens.expiry_date) update['config.tokenExpiryDate'] = tokens.expiry_date;
