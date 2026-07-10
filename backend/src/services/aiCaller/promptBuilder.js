@@ -1,4 +1,4 @@
-]// backend/src/services/aiCaller/promptBuilder.js
+// backend/src/services/aiCaller/promptBuilder.js
 //
 // UPDATED for the RunPod + GPT-4.1-mini migration:
 //  - buildSystemPrompt() now accepts an optional `memoryBlock` (from
