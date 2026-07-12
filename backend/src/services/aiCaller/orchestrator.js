@@ -27,8 +27,8 @@
 // "random" pauses when a stale turn's TTS landed after a new one started).
 
 const axios = require('axios');
-const OpenAI = require('openai');
 const { transcribeAudio, createTtsSession } = require('./sarvamClient');
+const { getSarvamClient, AI_CALLER_CHAT_MODEL } = require('./sarvamChatClient');
 const {
   buildSystemPrompt,
   buildWelcomeGreeting,
@@ -141,10 +141,10 @@ function isCarrierAnnouncement(text) {
 //
 // AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
 // good fit for low-latency voice-call turns). Override via env var if needed.
-const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4o-mini';
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'; // used by getCallOutcome only
+const AI_CALLER_MODEL = AI_CALLER_CHAT_MODEL; // sarvam-30b by default (see sarvamChatClient.js)
+const SARVAM_CHAT_URL = 'https://api.sarvam.ai/v1/chat/completions'; // used by getCallOutcome only
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const sarvamChat = getSarvamClient();
 
 // Pull complete sentences out of a growing token buffer so each one can be
 // sent to TTS the instant it's ready, without ever splitting inside an
@@ -171,15 +171,16 @@ function extractCompleteSentences(buffer) {
  * and returns the full assembled reply text once the stream ends.
  */
 async function streamAgentReply(messages, { onSentence, signal } = {}) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
+  const apiKey = process.env.SARVAM_API_KEY;
+  if (!apiKey) throw new Error('SARVAM_API_KEY is not configured');
 
-  const stream = await openai.chat.completions.create(
+  const stream = await sarvamChat.chat.completions.create(
     {
       model: AI_CALLER_MODEL,
       messages,
       temperature: 0.6,
       max_tokens: 220, // was 160 — still clipping longer native-Telugu-script replies mid-sentence; raised further as a safety net alongside the tightened 1-2 sentence / 35-word cap now enforced in the prompt itself
+      reasoning_effort: null, // disable Sarvam's "thinking" mode — we need fast conversational replies, not reasoning tokens eating the latency budget
       stream: true,
     },
     { signal }
@@ -210,21 +211,22 @@ async function streamAgentReply(messages, { onSentence, signal } = {}) {
 }
 
 async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) return null;
 
   try {
     const response = await axios.post(
-      OPENAI_API_URL,
+      SARVAM_CHAT_URL,
       {
         model: AI_CALLER_MODEL,
         messages: [outcomeExtractionPrompt, ...transcriptMessages],
         temperature: 0.2,
         max_tokens: 300,
-        response_format: { type: 'json_object' }, // OpenAI JSON mode — no markdown fences to strip
+        reasoning_effort: null,
+        response_format: { type: 'json_object' }, // JSON mode — no markdown fences to strip
       },
       {
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'api-subscription-key': apiKey, 'Content-Type': 'application/json' },
         timeout: 20000,
       }
     );
