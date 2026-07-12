@@ -142,7 +142,7 @@ async function streamAgentReply(messages, { onSentence, signal } = {}) {
       model: AI_CALLER_MODEL,
       messages,
       temperature: 0.6,
-      max_tokens: 80, // hard backstop for "1-2 sentence" replies
+      max_tokens: 160, // was 80 — too tight for native Telugu Unicode script, which costs far more tokens/word than Romanized text and was truncating longer replies (e.g. fee breakdowns) mid-sentence
       stream: true,
     },
     { signal }
