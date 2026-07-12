@@ -34,6 +34,30 @@ function getSarvamKey() {
   return key;
 }
 
+// BUG FIX ("voice not clear" / crackling, especially noticeable right as
+// each reply starts): Sarvam's streaming TTS can prepend a WAV/RIFF
+// container header to an audio chunk (confirmed by Sarvam's own official
+// LiveKit and VideoSDK plugin source, which both explicitly strip a "RIFF"
+// header before treating chunks as raw PCM) even when output_audio_codec
+// is set to linear16/pcm. We were feeding every chunk straight to Exotel
+// with no check at all — if a chunk starts with a WAV header, those ~44
+// bytes of non-audio metadata get played as a burst of raw noise before
+// the actual samples, which happens right at the start of speech. Strip it
+// whenever present; otherwise pass the buffer through unchanged.
+function stripWavHeaderIfPresent(buf) {
+  if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WAVE') {
+    const dataIdx = buf.indexOf('data', 12, 'ascii');
+    if (dataIdx !== -1 && dataIdx + 8 <= buf.length) {
+      return buf.subarray(dataIdx + 8);
+    }
+    // "data" marker not found within a sane header size — fall back to the
+    // standard 44-byte canonical WAV header length rather than passing the
+    // header through as audio.
+    return buf.subarray(Math.min(44, buf.length));
+  }
+  return buf;
+}
+
 // ─── WAV builder — wraps raw PCM16 8kHz from Exotel into WAV container ───────
 function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSample = 16) {
   const dataSize = pcm16Bytes.length;
@@ -198,7 +222,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
         data: {
           target_language_code: languageCode,
           speaker: 'priya',                // female bulbul:v3 speaker (anushka is v2-only)
-          pace: 1.32,                       // >1 = faster speech; fixes the slow/dragging voice
+          pace: 1.15,                       // >1 = faster speech; fixes the slow/dragging voice
           output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
           speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
         },
@@ -225,7 +249,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
       }
 
       if (data.type === 'audio' && data.data && data.data.audio) {
-        const buf = Buffer.from(data.data.audio, 'base64');
+        const buf = stripWavHeaderIfPresent(Buffer.from(data.data.audio, 'base64'));
         chunks.push(buf);
         if (onChunk) {
           try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk handler threw:', e.message); }
@@ -308,7 +332,7 @@ function createTtsSession(languageCode = 'te-IN') {
           data: {
             target_language_code: languageCode,
             speaker: 'priya',
-            pace: 1.2,
+            pace: 1.15,
             output_audio_codec: 'linear16',
             speech_sample_rate: 8000,
           },
@@ -375,7 +399,7 @@ function createTtsSession(languageCode = 'te-IN') {
 
         if (data.type === 'audio' && data.data?.audio) {
           receivedAny = true;
-          const buf = Buffer.from(data.data.audio, 'base64');
+          const buf = stripWavHeaderIfPresent(Buffer.from(data.data.audio, 'base64'));
           if (onChunk) {
             try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk threw:', e.message); }
           }
