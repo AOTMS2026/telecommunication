@@ -111,6 +111,26 @@ function resolveLangCode(language) {
   return 'te-IN';
 }
 
+// BUG FIX ("voice stuck / replies make no sense mid-call"): the carrier/
+// telecom stack can play its OWN system announcements into the call audio
+// (e.g. a hold announcement if the call gets put on hold somewhere in the
+// SIP/PSTN path) — Sarvam then transcribes that announcement as if the
+// caller had said it, and GPT generates a reply to it, which is nonsense
+// and burns a wasted turn. Recognize the common announcement phrasing
+// (Telugu/Hindi/English) and treat it as noise, not real caller speech.
+const CARRIER_ANNOUNCEMENT_PATTERNS = [
+  /హోల్డ్\s*లో\s*పెట్టార/,          // Telugu: "...put your call on hold..."
+  /లైన్\s*లో\s*వేచి\s*ఉండ/,          // Telugu: "...please wait on the line..."
+  /హోల్డ్\s*పర్\s*రక్క/,             // Hindi (Telugu-script transliteration): "...held your call on hold..."
+  /లైన్\s*పర్\s*బనే\s*రహ/,           // Hindi (Telugu-script transliteration): "...stay on the line..."
+  /please\s+(hold|wait)\s+(on\s+)?the\s+line/i,
+  /call\s+(has\s+been\s+|is\s+)?(put\s+)?on\s+hold/i,
+];
+
+function isCarrierAnnouncement(text) {
+  return CARRIER_ANNOUNCEMENT_PATTERNS.some((re) => re.test(text));
+}
+
 // ─── OpenAI client ──────────────────────────────────────────────────────────
 //
 // SWITCHED FROM GEMINI: the Gemini API key expired, so live-call generation
@@ -444,6 +464,18 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   }
   if (!text) return false;
 
+  // BUG FIX: call already ended (e.g. caller hung up) while this turn's STT
+  // was still in flight — don't waste a GPT call generating a reply nobody
+  // will ever hear, and don't clutter logs with a reply for a dead call.
+  if (session.finalized) return false;
+
+  // BUG FIX: don't treat the carrier's own hold/announcement audio as if
+  // the caller said it — see CARRIER_ANNOUNCEMENT_PATTERNS comment above.
+  if (isCarrierAnnouncement(text)) {
+    console.log(`[orchestrator] ignoring carrier announcement, not caller speech (${session.callSid}): "${text}"`);
+    return false;
+  }
+
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
@@ -484,6 +516,12 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?';
     speak(reply);
   }
+
+  // BUG FIX: the call can end WHILE GPT is still generating (STT finished
+  // before hangup, GPT finished after) — this is exactly what produced a
+  // "GPT: ..." log line appearing AFTER "WS closed" for a dead call. Bail
+  // out quietly instead of queuing dead audio / logging a pointless reply.
+  if (session.finalized) return false;
 
   await ttsQueue.catch(err => console.error(`[orchestrator] sendTts failed (${session.callSid}):`, err.message));
   session.currentAbort = null;
