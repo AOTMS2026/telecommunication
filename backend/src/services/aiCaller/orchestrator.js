@@ -103,9 +103,9 @@ function resolveLangCode(language) {
 // {role: 'system'|'user'|'assistant', content}[] shape, so no payload
 // conversion is needed here.
 //
-// AI_CALLER_MODEL defaults to gpt-4.1-mini (OpenAI's fast/cheap "mini" model,
+// AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
 // good fit for low-latency voice-call turns). Override via env var if needed.
-const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4.1-mini';
+const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4o-mini';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'; // used by getCallOutcome only
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -290,6 +290,24 @@ async function sendTts(ws, session, text, signal = null) {
   // the smaller native frame size means the same jitter only ever costs
   // ~20ms — far below what a listener perceives as a "break" or "crash".
   const FRAME_MS = 20;
+  // BUG FIX: sequential `sleep(20ms)` between frames accumulates drift —
+  // any single delay (a slow GC pause, the event loop handling one of the
+  // periodic /api/notifications polls, network jitter) pushes EVERY
+  // subsequent frame in that utterance late by the same amount, since each
+  // wait is measured from "now" rather than from a fixed schedule. On a
+  // long reply this compounds, and Exotel's playback buffer eventually
+  // starves — heard as the voice breaking up, worse toward the end of
+  // longer sentences. Scheduling against an absolute per-utterance clock
+  // (frame N fires at streamStartedAt + N*20ms, not "20ms after the last
+  // one") makes each frame self-correct instead of drifting further behind.
+  const streamStartedAt = Date.now();
+  let frameIndex = 0;
+  const waitForNextFrameSlot = () => {
+    const targetTime = streamStartedAt + frameIndex * FRAME_MS;
+    frameIndex += 1;
+    const delay = Math.max(0, targetTime - Date.now());
+    return new Promise(resolve => setTimeout(resolve, delay));
+  };
 
   const drain = async () => {
     if (draining) return; // a drain loop is already running — it will pick up newly appended bytes
@@ -304,7 +322,7 @@ async function sendTts(ws, session, text, signal = null) {
             stream_sid: session.streamSid,
             media: { payload: frame.toString('base64') },
           }));
-          await new Promise(resolve => setTimeout(resolve, FRAME_MS));
+          await waitForNextFrameSlot();
         } else if (synthesisDone) {
           // No full frame left, and Sarvam is done — flush the remainder
           // padded to a 320-byte boundary (Exotel's requirement) and stop.
@@ -607,6 +625,16 @@ async function handleCall(ws, req) {
       const start = message.start || {};
       session.callSid = start.call_sid || '';
       session.streamSid = start.stream_sid || '';
+
+      // We assume 8kHz/16-bit/mono (Exotel's documented default) throughout
+      // this file — for TTS output rate, the STT input, and frame-size math.
+      // Log whatever Exotel actually negotiated so a silent mismatch (e.g.
+      // if the Voicebot Applet's WSS URL is ever changed to append
+      // ?sample-rate=16000) shows up immediately instead of just sounding
+      // like unexplained audio distortion.
+      if (start.media_format) {
+        console.log(`[orchestrator] Exotel media_format: ${JSON.stringify(start.media_format)}`);
+      }
 
       // Override leadId/campaignId from custom_parameters if Exotel sends them
       const params = start.custom_parameters || {};
