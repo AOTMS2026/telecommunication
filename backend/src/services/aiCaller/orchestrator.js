@@ -621,6 +621,16 @@ async function handleCall(ws, req) {
 
       session.busy = true;
       session.conversation.push({ role: 'assistant', content: ctx.greeting });
+      // BUG FIX ("cold start"/repeated greeting): the "never repeat your
+      // greeting" rule lives inside a long system prompt, and gpt-4o-mini
+      // was ignoring it later in the call — re-saying the full intro line
+      // when the caller just said "hello" again mid-conversation. A short,
+      // recent reminder message is far more reliable than one instruction
+      // buried in a wall of text, so pin it right after the greeting.
+      session.conversation.push({
+        role: 'system',
+        content: 'Reminder: you already greeted the caller and introduced yourself as Sara from Academy of Tech Masters — do not say your name/company introduction again for the rest of this call, even if the caller says "hello" again or seems unclear. Just continue the conversation naturally from where it left off.',
+      });
       try {
         await sendTts(ws, session, ctx.greeting);
       } catch (err) {
