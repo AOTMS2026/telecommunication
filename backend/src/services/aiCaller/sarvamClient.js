@@ -76,7 +76,12 @@ function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSamp
 }
 
 // ─── STT ─────────────────────────────────────────────────────────────────────
-async function transcribeAudio(pcm16Bytes, { signal } = {}) {
+// BUG FIX: language_code used to be hardcoded to 'te-IN' regardless of the
+// caller's actual language, so English speech was transcribed as phonetic
+// Telugu script (e.g. "yeah can you tell me about your company" became
+// "యా కెన్ యు ప్లీజ్ టెల్ మీ అబౌట్ యువర్ కంపెనీ"). Pass the resolved
+// language when known, and fall back to auto-detect ('unknown') otherwise.
+async function transcribeAudio(pcm16Bytes, { signal, languageCode } = {}) {
   if (!pcm16Bytes || pcm16Bytes.length < 320) return '';
   if (signal?.aborted) return '';
 
@@ -85,7 +90,7 @@ async function transcribeAudio(pcm16Bytes, { signal } = {}) {
 
   const form = new FormData();
   form.append('file', wavBuf, { filename: 'audio.wav', contentType: 'audio/wav' });
-  form.append('language_code', 'te-IN');
+  form.append('language_code', languageCode || 'unknown'); // 'unknown' = Sarvam auto-detects
   form.append('model', 'saaras:v3');
   form.append('sample_rate', '8000');
   form.append('high_vad_sensitivity', 'true');

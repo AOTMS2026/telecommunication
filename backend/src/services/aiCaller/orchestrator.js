@@ -393,10 +393,17 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   const controller = new AbortController();
   session.currentAbort = controller;
 
-  // STT
+  // BUG FIX: this was hardcoded to Telugu regardless of the lead's actual
+  // language, so English speech got transcribed as phonetic Telugu script
+  // (e.g. "yeah can you tell me about your company" -> "యా కెన్ యు ప్లీజ్ టెల్ మీ
+  // అబౌట్ యువర్ కంపెనీ"). GPT could usually still infer intent from the
+  // phonetic spelling, but it's fragile. Use the session's resolved language.
   let text;
   try {
-    text = await transcribeAudio(Buffer.from(pcm16Bytes), { signal: controller.signal });
+    text = await transcribeAudio(Buffer.from(pcm16Bytes), {
+      signal: controller.signal,
+      languageCode: resolveLangCode(session.language),
+    });
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
       console.error(`[orchestrator] STT failed (${session.callSid}):`, err.message);
@@ -499,6 +506,9 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 // ─── Call end — save outcome to MongoDB directly ─────────────────────────────
 
 async function finalizeCall(session, { transferredToHr = false } = {}) {
+  if (session.finalized) return; // BUG FIX: was running twice per call (see call sites)
+  session.finalized = true;
+
   session.ttsSession?.close(); // release the persistent Sarvam TTS connection for this call
 
   const durationSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
@@ -575,6 +585,7 @@ async function handleCall(ws, req) {
     bargeInRun: 0,             // consecutive non-silent frames while agent is speaking (barge-in debounce)
     speakingStartedAt: 0,      // timestamp agent started current utterance (barge-in grace period)
     sttCooldownUntil: 0,       // timestamp; no new segments are cut/sent to STT before this
+    finalized: false,          // guards finalizeCall() against running twice per call
   };
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
@@ -761,7 +772,7 @@ async function handleCall(ws, req) {
               // so this turn's audio/state can never land after the next one
               // starts, instead of just abandoning the promise.
               session.currentAbort?.abort();
-              resolve(false);
+              resolve('timeout');
             }, TURN_TIMEOUT_MS)),
           ]);
         } catch (err) {
@@ -769,6 +780,21 @@ async function handleCall(ws, req) {
         } finally {
           session.busy = false;
           session.currentAbort = null;
+        }
+
+        if (outcome === 'timeout') {
+          // BUG FIX: previously this just silently ate the turn — caller's
+          // question got transcribed (visible in STT logs) but never got a
+          // reply at all, not even an apology, because this branch didn't
+          // exist. It read as "I asked something and got total silence."
+          console.warn(`[orchestrator] turn timed out (${session.callSid}) — speaking fallback instead of dead air`);
+          const apology = session.language === 'English'
+            ? 'Sorry, that took a moment. Could you say that again?'
+            : 'క్షమించండి సార్, కొద్దిగా ఆలస్యం అయింది. మళ్ళీ చెప్పగలరా?';
+          try { await sendTts(ws, session, apology); } catch (err) {
+            console.error(`[orchestrator] timeout-fallback TTS failed (${session.callSid}):`, err.message);
+          }
+          outcome = false;
         }
 
         if (outcome === 'transfer') {
