@@ -76,7 +76,8 @@ const TURN_TIMEOUT_MS = 12000;
 // Request was aborted" firing repeatedly turn after turn, killing replies
 // before they even finished generating. Require a short run of consecutive
 // non-silent frames before treating it as a real interruption.
-const BARGE_IN_FRAME_THRESHOLD = 3;
+const BARGE_IN_FRAME_THRESHOLD = 5;
+const MIN_SPEAKING_MS_BEFORE_BARGEIN = 400; // grace period after Sara starts a reply before barge-in can cut it
 
 // BUG FIX: after any STT failure (esp. 429 rate-limit), briefly stop
 // cutting/sending new segments instead of immediately retrying — the old
@@ -267,6 +268,7 @@ async function sendTts(ws, session, text, signal = null) {
   if (!session.ttsSession) return; // safety net, should always be set in 'start' handler
 
   session.agentSpeaking = true;
+  session.speakingStartedAt = Date.now();
   session.abortSpeaking = false;
 
   // STREAMING PLAYBACK: audio bytes are forwarded to Exotel via `drain()`
@@ -534,6 +536,7 @@ async function handleCall(ws, req) {
     ttsSession: null,          // persistent per-call Sarvam TTS WebSocket (created once language is known)
     hadSpeechInSegment: false, // true once a non-silent frame lands in the current accumulating segment
     bargeInRun: 0,             // consecutive non-silent frames while agent is speaking (barge-in debounce)
+    speakingStartedAt: 0,      // timestamp agent started current utterance (barge-in grace period)
     sttCooldownUntil: 0,       // timestamp; no new segments are cut/sent to STT before this
   };
 
@@ -662,7 +665,11 @@ async function handleCall(ws, req) {
         if (session.agentSpeaking) session.bargeInRun += 1;
       }
 
-      if (session.agentSpeaking && session.bargeInRun >= BARGE_IN_FRAME_THRESHOLD) {
+      if (
+        session.agentSpeaking &&
+        session.bargeInRun >= BARGE_IN_FRAME_THRESHOLD &&
+        Date.now() - (session.speakingStartedAt || 0) >= MIN_SPEAKING_MS_BEFORE_BARGEIN
+      ) {
         ws.send(JSON.stringify({ event: 'clear', stream_sid: session.streamSid }));
         session.agentSpeaking = false;
         session.abortSpeaking = true; // tell the in-progress sendTts frame loop to stop early
