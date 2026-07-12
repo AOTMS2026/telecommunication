@@ -412,7 +412,16 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
       },
     });
   } catch (err) {
-    if (err.name === 'AbortError' || err.name === 'CanceledError') {
+    // BUG FIX (root cause of the "please repeat" loop on every barge-in):
+    // the OpenAI SDK's own abort error does NOT set err.name to 'AbortError'
+    // — it's literally just 'Error' with message "Request was aborted."
+    // (confirmed against the installed SDK). So this check never matched a
+    // real barge-in, and every single interruption fell through to the
+    // "GPT failed" branch below, logging a fake error and forcing Sara to
+    // say "one moment, please repeat" even though nothing failed — the
+    // caller had simply started talking. Checking the abort signal itself
+    // is reliable regardless of what the SDK names its error.
+    if (controller.signal.aborted || err.name === 'AbortError' || err.name === 'CanceledError' || err?.constructor?.name === 'APIUserAbortError') {
       session.currentAbort = null;
       return false;
     }
