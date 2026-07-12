@@ -51,6 +51,23 @@ This is a multilingual voice agent supporting English, Telugu, and Hindi. On eve
 - If the caller switches languages mid-call (e.g. starts in Telugu, then asks a question in English), switch WITH them on your very next reply — do not keep replying in the old language.
 - Never ask the caller which language they prefer and never announce that you're switching languages — just follow their lead naturally and silently, like a real bilingual/trilingual counselor would.`;
 
+// BUG FIX: GPT was never told what "today" actually is, so relative dates
+// the student says ("tomorrow", "this Saturday") got guessed instead of
+// computed — this is why a call on 12 July said "20th July" for "tomorrow"
+// instead of the 13th. Computed fresh per call (not at module load) so it's
+// always the real date of that specific call.
+function currentDateContext() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  return `TODAY'S DATE: ${dateStr} (Asia/Kolkata). Use this to work out "today", "tomorrow", "this Saturday", etc. correctly when the student picks a demo day — never guess or invent a date.`;
+}
+
 function languageInstruction(lead) {
   let openingLanguage;
   switch (lead.language) {
@@ -366,7 +383,7 @@ Counselor: Okay, madam. I will call again, meaning I have to ask the parents. Ok
 
 Example 4 — Backlogs / timing concern, reassure and keep it simultaneous (Kalyan):
 Student: Konni backlogs unnayi clear cheyala koncham time pattuddi.
-Counselor: Naa de sir mee ishtam sir mari backlogs unnaa sare meeru join avvacchu — ippudu meeru backlogs clear chesukuntaaru simultaneous gaa course koodaa nerchukuntaaru, daily 1.5 hour ae kadaa. So idi kooda chesukunte meeku backlogs anni ayipothaayi, meeku certificate kooda vacchestadi.
+Counselor: Sare sir, mee ishtam sir — backlogs unnaa parledu, meeru join avvachu. Ippudu meeru backlogs clear chesukuntaaru, simultaneous gaa course koodaa nerchukuntaaru, daily 1.5 hour ae kadaa. So idi kooda chesukunte meeku backlogs anni ayipothaayi, meeku certificate kooda vacchestadi.
 (Pattern: reassure the course fits alongside other commitments — 1.5 hrs/day — instead of asking them to wait.)
 
 Example 5 — Offline-only course, be upfront (VLSI enquiry, Karthik):
@@ -431,6 +448,8 @@ You don't have this caller's prior details on file, so introduce the company nat
 
 ${DYNAMIC_LANGUAGE_MIRRORING}
 
+${currentDateContext()}
+
 Opening language: start the call in Telugu (this is the default until the caller has spoken), then follow the mirroring rule above based on what language they actually respond in.
 
 ${memoryBlock ? `Context from previous conversations with this caller:\n${memoryBlock}\n` : ''}
@@ -470,6 +489,8 @@ function buildSystemPrompt(lead, memoryBlock = '') {
 You are speaking with ${studentName}${location}, who showed interest in: ${course}.
 
 ${languageInstruction(lead)}
+
+${currentDateContext()}
 
 ${memoryBlock ? `Context from previous conversations with this student:\n${memoryBlock}\n` : ''}
 Follow CALL_FLOW_STEPS below stage by stage — ask a short question at each stage and wait for their answer before moving on, rather than explaining everything at once:
@@ -515,7 +536,8 @@ function buildWelcomeGreeting(lead) {
 function buildOutcomeExtractionPrompt() {
   return {
     role: 'system',
-    content: `You just finished a phone call as an AOTMS course counselor. Based on the conversation transcript below, output ONLY a raw JSON object (no markdown, no code fences, no extra text) with these exact keys:
+    content: `You just finished a phone call as an AOTMS course counselor. ${currentDateContext()}
+Based on the conversation transcript below, output ONLY a raw JSON object (no markdown, no code fences, no extra text) with these exact keys:
 {
   "leadStatus": one of ["Fresh","Connected","Call Not Responding","Call Back Later","Not interested","Demo Scheduled","Demo Done","Won","Lost","Blocked"],
   "interestLevel": one of ["Highly Interested","Interested","Need More Information","Not Interested","Unknown"],
