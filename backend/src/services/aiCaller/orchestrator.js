@@ -28,7 +28,7 @@
 
 const axios = require('axios');
 const OpenAI = require('openai');
-const { transcribeAudio, synthesizeSpeech } = require('./sarvamClient');
+const { transcribeAudio, createTtsSession } = require('./sarvamClient');
 const {
   buildSystemPrompt,
   buildWelcomeGreeting,
@@ -68,6 +68,31 @@ const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
 // aborted (network calls cancelled via AbortController, not just abandoned)
 // so a stale reply can never land on top of the next turn's audio.
 const TURN_TIMEOUT_MS = 12000;
+
+// BUG FIX: a single non-silent frame while the agent was speaking was
+// treated as barge-in — but with no echo cancellation on the line, the
+// agent's OWN voice bleeding back into the mic (or a stray click/line
+// blip) trips that instantly. That's what the logs showed: "GPT failed:
+// Request was aborted" firing repeatedly turn after turn, killing replies
+// before they even finished generating. Require a short run of consecutive
+// non-silent frames before treating it as a real interruption.
+const BARGE_IN_FRAME_THRESHOLD = 3;
+
+// BUG FIX: after any STT failure (esp. 429 rate-limit), briefly stop
+// cutting/sending new segments instead of immediately retrying — the old
+// code had no backoff at all, so once Sarvam started rate-limiting, every
+// subsequent silence-triggered segment got fired immediately and failed
+// too, producing the 18-in-a-row 429 storm seen in production logs.
+const STT_COOLDOWN_ERROR_MS = 800;
+const STT_COOLDOWN_RATE_LIMIT_MS = 2500;
+
+// Maps our internal language names to Sarvam's language codes. Pulled out
+// so both TTS-session creation and sendTts agree on the code.
+function resolveLangCode(language) {
+  if (language === 'English') return 'en-IN';
+  if (language === 'Hindi' || language === 'Hinglish') return 'hi-IN';
+  return 'te-IN';
+}
 
 // ─── OpenAI client ──────────────────────────────────────────────────────────
 //
@@ -239,10 +264,7 @@ async function sendTts(ws, session, text, signal = null) {
   const clean = sanitizeForSpeech(text);
   if (!clean) return;
   if (signal?.aborted) return;
-
-  const langCode = session.language === 'English' ? 'en-IN'
-    : (session.language === 'Hindi' || session.language === 'Hinglish') ? 'hi-IN'
-    : 'te-IN';
+  if (!session.ttsSession) return; // safety net, should always be set in 'start' handler
 
   session.agentSpeaking = true;
   session.abortSpeaking = false;
@@ -302,7 +324,7 @@ async function sendTts(ws, session, text, signal = null) {
   };
 
   try {
-    await synthesizeSpeech(clean, langCode, (chunk) => {
+    await session.ttsSession.speak(clean, (chunk) => {
       if (session.abortSpeaking || signal?.aborted) return;
       pending = Buffer.concat([pending, chunk]);
       drain(); // fire-and-forget; re-entrancy-safe via the `draining` flag
@@ -348,6 +370,19 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
       console.error(`[orchestrator] STT failed (${session.callSid}):`, err.message);
+
+      // BUG FIX: this used to just `return false` here with nothing spoken —
+      // the caller heard pure dead air. Combined with no backoff, a single
+      // Sarvam 429 would repeat on every subsequent segment (each one also
+      // failing instantly), which is exactly the 18-in-a-row failure loop
+      // in the logs that ended with the student hanging up. Now: back off
+      // briefly, and actually tell the caller we didn't catch that.
+      const isRateLimited = err.response?.status === 429;
+      session.sttCooldownUntil = Date.now() + (isRateLimited ? STT_COOLDOWN_RATE_LIMIT_MS : STT_COOLDOWN_ERROR_MS);
+      const apology = session.language === 'English'
+        ? 'Sorry, I could not hear that clearly. Could you say it again?'
+        : 'క్షమించండి సార్, వినపడలేదు. మళ్ళీ చెప్పగలరా?';
+      try { await sendTts(ws, session, apology, controller.signal); } catch {}
     }
     return false;
   }
@@ -425,6 +460,8 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 // ─── Call end — save outcome to MongoDB directly ─────────────────────────────
 
 async function finalizeCall(session, { transferredToHr = false } = {}) {
+  session.ttsSession?.close(); // release the persistent Sarvam TTS connection for this call
+
   const durationSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
   const hadConversation = session.conversation.some(m => m.role === 'user');
 
@@ -494,6 +531,10 @@ async function handleCall(ws, req) {
     currentAbort: null,   // AbortController for the in-flight STT/GPT/TTS network calls of this turn
     studentInterested: false, // set once GPT emits TRANSFER_MARKER at any point in the call
     transferPending: false,   // set once the handoff has actually been triggered (guards against double-trigger)
+    ttsSession: null,          // persistent per-call Sarvam TTS WebSocket (created once language is known)
+    hadSpeechInSegment: false, // true once a non-silent frame lands in the current accumulating segment
+    bargeInRun: 0,             // consecutive non-silent frames while agent is speaking (barge-in debounce)
+    sttCooldownUntil: 0,       // timestamp; no new segments are cut/sent to STT before this
   };
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
@@ -574,6 +615,9 @@ async function handleCall(ws, req) {
       session.language = ctx.language;
       session.conversation = [{ role: 'system', content: ctx.systemPrompt }];
       session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
+      // One TTS WebSocket for the whole call instead of one per sentence —
+      // see sarvamClient.createTtsSession for why this was a latency bug.
+      session.ttsSession = createTtsSession(resolveLangCode(session.language));
 
       session.busy = true;
       session.conversation.push({ role: 'assistant', content: ctx.greeting });
@@ -598,11 +642,22 @@ async function handleCall(ws, req) {
       const chunkRms = chunk.length >= 2 ? rms(chunk) : 0;
       const isSilent = chunkRms < SILENCE_RMS_CUTOFF;
 
-      if (!isSilent && session.agentSpeaking) {
+      // Barge-in debounce: require a short run of consecutive non-silent
+      // frames (not just one) before treating it as real interruption —
+      // see BARGE_IN_FRAME_THRESHOLD comment for why.
+      if (isSilent) {
+        session.bargeInRun = 0;
+      } else {
+        session.hadSpeechInSegment = true;
+        if (session.agentSpeaking) session.bargeInRun += 1;
+      }
+
+      if (session.agentSpeaking && session.bargeInRun >= BARGE_IN_FRAME_THRESHOLD) {
         ws.send(JSON.stringify({ event: 'clear', stream_sid: session.streamSid }));
         session.agentSpeaking = false;
         session.abortSpeaking = true; // tell the in-progress sendTts frame loop to stop early
         session.currentAbort?.abort();
+        session.bargeInRun = 0;
       }
 
       session.audioBuffer = Buffer.concat([session.audioBuffer, chunk]);
@@ -611,11 +666,26 @@ async function handleCall(ws, req) {
       if (
         !session.busy &&
         session.silenceRun >= SILENCE_FRAME_THRESHOLD &&
-        session.audioBuffer.length > 0
+        session.audioBuffer.length > 0 &&
+        Date.now() >= session.sttCooldownUntil // still backing off after a recent STT error
       ) {
         const segment = Buffer.from(session.audioBuffer);
+        const hadSpeech = session.hadSpeechInSegment;
         session.audioBuffer = Buffer.alloc(0);
         session.silenceRun = 0;
+        session.hadSpeechInSegment = false;
+
+        // BUG FIX (root cause of the 429 storm): previously ANY accumulated
+        // buffer — even pure silence/line-noise/echo with no real speech —
+        // got cut and sent to Sarvam STT the instant the silence timer
+        // elapsed. During the ~1-2s the agent was busy processing a turn,
+        // silent frames kept piling up the silenceRun counter, so the very
+        // next tick after "busy" cleared would immediately re-trigger on a
+        // near-empty segment, over and over, with zero gap between calls —
+        // that's what hammered Sarvam into the 429 rate-limit loop in the
+        // logs. Skip segments that never actually contained speech.
+        if (!hadSpeech) return;
+
         session.busy = true; // block any other segment from being cut/processed until this turn finishes
 
         let outcome = false;

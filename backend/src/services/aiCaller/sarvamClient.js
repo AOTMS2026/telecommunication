@@ -198,6 +198,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
         data: {
           target_language_code: languageCode,
           speaker: 'priya',                // female bulbul:v3 speaker (anushka is v2-only)
+          pace: 1.2,                       // >1 = faster speech; fixes the slow/dragging voice
           output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
           speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
         },
@@ -273,4 +274,151 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
   });
 }
 
-module.exports = { transcribeAudio, synthesizeSpeech };
+// ─── Persistent TTS session (LATENCY FIX) ───────────────────────────────────
+//
+// BUG: synthesizeSpeech() above opens a brand-new WebSocket (fresh TCP + TLS
+// handshake + Sarvam auth) for EVERY SINGLE SENTENCE. A normal agent turn is
+// 2-3 sentences, so a turn that should only pay for one connection was
+// paying for 2-3 — each one adding a few hundred ms before Sarvam even sees
+// the text. That handshake tax was a big chunk of the reported 3-5s
+// per-turn latency.
+//
+// FIX: createTtsSession() opens ONE WebSocket for the whole call (config
+// sent once) and reuses it for every sentence via speak(text, onChunk) —
+// same streamed-audio behavior as synthesizeSpeech(), just without paying
+// the connection cost more than once per call.
+function createTtsSession(languageCode = 'te-IN') {
+  let socket = null;
+  let openPromise = null;
+  let closed = false;
+
+  function open() {
+    if (openPromise) return openPromise;
+    openPromise = new Promise((resolve, reject) => {
+      const key = getSarvamKey();
+      const sock = new WebSocket(SARVAM_TTS_WS_URL, {
+        headers: { 'api-subscription-key': key },
+      });
+      socket = sock;
+
+      sock.once('open', () => {
+        console.log('[sarvam-tts] session ws open');
+        sock.send(JSON.stringify({
+          type: 'config',
+          data: {
+            target_language_code: languageCode,
+            speaker: 'priya',
+            pace: 1.2,
+            output_audio_codec: 'linear16',
+            speech_sample_rate: 8000,
+          },
+        }));
+        resolve();
+      });
+
+      sock.once('error', (err) => {
+        console.log('[sarvam-tts] session ws error:', err.message);
+        openPromise = null;
+        reject(err);
+      });
+
+      sock.on('close', (code, reasonBuf) => {
+        console.log(`[sarvam-tts] session ws closed code=${code} reason=${reasonBuf ? reasonBuf.toString() : ''}`);
+        openPromise = null; // next speak() call will transparently reconnect
+      });
+    });
+    return openPromise;
+  }
+
+  // Speaks one utterance over the shared connection. Resolves once audio
+  // for THIS utterance stops arriving (same idle-gap heuristic as
+  // synthesizeSpeech), so callers can still queue sentences one after
+  // another exactly as before.
+  async function speak(text, onChunk, { signal } = {}) {
+    if (!text || !text.trim()) return;
+    if (signal?.aborted || closed) return;
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      await open();
+    }
+    const sock = socket;
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let idleTimer = null;
+      let receivedAny = false;
+
+      const cleanup = () => {
+        sock.removeListener('message', onMessage);
+        sock.removeListener('error', onError);
+        clearTimeout(idleTimer);
+        clearTimeout(overallTimer);
+        signal?.removeEventListener('abort', onAbort);
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+      const onAbort = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(Object.assign(new Error('Sarvam TTS aborted'), { name: 'AbortError' }));
+      };
+      if (signal) signal.addEventListener('abort', onAbort);
+
+      const onMessage = (raw) => {
+        let data;
+        try { data = JSON.parse(raw.toString()); } catch { return; }
+
+        if (data.type === 'audio' && data.data?.audio) {
+          receivedAny = true;
+          const buf = Buffer.from(data.data.audio, 'base64');
+          if (onChunk) {
+            try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk threw:', e.message); }
+          }
+          // Shortened from 250ms -> 200ms: shaves a little more off the
+          // tail of every utterance now that we're not also paying a
+          // reconnect cost between sentences.
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(finish, 200);
+        } else if (data.type === 'error') {
+          console.log(`[sarvam-tts] session error frame: ${data.data?.message || raw.toString().slice(0, 300)}`);
+        }
+      };
+      const onError = (err) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+
+      const overallTimer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          if (receivedAny) resolve();
+          else reject(new Error('Sarvam TTS utterance timed out'));
+        }
+      }, 15000);
+
+      sock.on('message', onMessage);
+      sock.on('error', onError);
+
+      sock.send(JSON.stringify({ type: 'text', data: { text } }));
+      sock.send(JSON.stringify({ type: 'flush' }));
+      console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
+    });
+  }
+
+  function close() {
+    closed = true;
+    try { socket?.close(); } catch {}
+  }
+
+  return { speak, close };
+}
+
+module.exports = { transcribeAudio, synthesizeSpeech, createTtsSession };
