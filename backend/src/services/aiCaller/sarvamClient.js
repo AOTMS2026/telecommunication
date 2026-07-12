@@ -382,7 +382,20 @@ function createTtsSession(languageCode = 'te-IN') {
           clearTimeout(idleTimer);
           finish();
         } else if (data.type === 'error') {
-          console.log(`[sarvam-tts] session error frame: ${data.data?.message || raw.toString().slice(0, 300)}`);
+          // BUG FIX ("voice stuck / not coming mid-call"): this used to
+          // only log and keep waiting — if Sarvam then never sent a real
+          // completion event for this utterance, speak() just hung until
+          // the 15s overallTimer, which is LONGER than orchestrator.js's
+          // 12s turn timeout, so the whole turn got force-aborted first.
+          // Caller heard nothing for that sentence and no clear reason why.
+          // Fail this utterance immediately instead of waiting it out.
+          const msg = data.data?.message || raw.toString().slice(0, 300);
+          console.log(`[sarvam-tts] session error frame: ${msg}`);
+          if (settled) return;
+          settled = true;
+          cleanup();
+          if (receivedAny) resolve(); // speak whatever audio already arrived
+          else reject(Object.assign(new Error(`Sarvam TTS error: ${msg}`), { name: 'SarvamTtsError' }));
         }
       };
       const onError = (err) => {

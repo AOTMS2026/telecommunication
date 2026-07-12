@@ -76,8 +76,13 @@ const TURN_TIMEOUT_MS = 12000;
 // Request was aborted" firing repeatedly turn after turn, killing replies
 // before they even finished generating. Require a short run of consecutive
 // non-silent frames before treating it as a real interruption.
-const BARGE_IN_FRAME_THRESHOLD = 5;
-const MIN_SPEAKING_MS_BEFORE_BARGEIN = 400; // grace period after Sara starts a reply before barge-in can cut it
+const BARGE_IN_FRAME_THRESHOLD = 10; // ~200ms sustained — was 5 (~100ms), too easily tripped by line echo
+const MIN_SPEAKING_MS_BEFORE_BARGEIN = 700; // was 400 — echo is worst right as Sara starts talking
+// Barge-in must be clearly louder than plain end-of-speech silence detection,
+// not just "not silent" — line echo of Sara's own voice often sits only
+// slightly above SILENCE_RMS_CUTOFF, which was enough to falsely trigger
+// barge-in and cut her off mid-sentence with no real interruption happening.
+const BARGE_IN_RMS_CUTOFF = 900;
 
 // BUG FIX: after any STT failure (esp. 429 rate-limit), briefly stop
 // cutting/sending new segments instead of immediately retrying — the old
@@ -712,15 +717,19 @@ async function handleCall(ws, req) {
       // top of the next turn once it starts.
       const chunkRms = chunk.length >= 2 ? rms(chunk) : 0;
       const isSilent = chunkRms < SILENCE_RMS_CUTOFF;
+      const isLoudEnoughForBargeIn = chunkRms >= BARGE_IN_RMS_CUTOFF;
 
-      // Barge-in debounce: require a short run of consecutive non-silent
-      // frames (not just one) before treating it as real interruption —
-      // see BARGE_IN_FRAME_THRESHOLD comment for why.
+      // Barge-in debounce: require a longer run of consecutive CLEARLY LOUD
+      // frames (not just barely-non-silent) before treating it as a real
+      // interruption — see BARGE_IN_FRAME_THRESHOLD/BARGE_IN_RMS_CUTOFF
+      // comments for why (line echo of Sara's own voice was tripping this).
       if (isSilent) {
         session.bargeInRun = 0;
       } else {
         session.hadSpeechInSegment = true;
-        if (session.agentSpeaking) session.bargeInRun += 1;
+        if (session.agentSpeaking) {
+          session.bargeInRun = isLoudEnoughForBargeIn ? session.bargeInRun + 1 : 0;
+        }
       }
 
       if (
