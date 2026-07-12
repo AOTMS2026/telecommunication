@@ -26,7 +26,7 @@ const FormData = require('form-data');
 const WebSocket = require('ws');
 
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
-const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3';
+const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3&send_completion_event=true';
 
 function getSarvamKey() {
   const key = process.env.SARVAM_API_KEY;
@@ -254,19 +254,22 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
         if (onChunk) {
           try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk handler threw:', e.message); }
         }
-        // Reset idle timer — finish shortly after the last chunk arrives.
-        // This is only a safety margin for detecting end-of-stream (in case
-        // the socket's own 'close' event is slower to fire than the actual
-        // gap between chunks), not something the caller is blocked on,
-        // since audio already streams to Exotel via onChunk as it arrives.
+        // Fallback only — Sarvam's own completion event (handled below) is
+        // the authoritative signal. This idle timer used to be the ONLY
+        // way we detected end-of-utterance, and a >250ms synthesis pause
+        // would cut it off early, silently dropping any audio Sarvam sent
+        // afterward. Widened as a safety net in case the event is ever lost.
         clearTimeout(idleTimer);
-        idleTimer = setTimeout(finish, 250);
+        idleTimer = setTimeout(finish, 1500);
       } else if (data.type === 'error') {
         const msg = data.data && data.data.message;
         console.log(`[sarvam-tts] ws error frame (after sending "${lastSent}"): ${msg || str.slice(0, 300)}`);
       } else if (data.type === 'event') {
-        // completion event (send_completion_event) — informational only
+        // Sarvam's authoritative "TTS generation finished" signal
+        // (send_completion_event=true) — trust this over the idle timer.
         console.log(`[sarvam-tts] ws event: ${str.slice(0, 200)}`);
+        clearTimeout(idleTimer);
+        finish();
       } else {
         console.log(`[sarvam-tts] ws message (unrecognized, after sending "${lastSent}"): ${str.slice(0, 300)}`);
       }
@@ -403,11 +406,24 @@ function createTtsSession(languageCode = 'te-IN') {
           if (onChunk) {
             try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk threw:', e.message); }
           }
-          // Shortened from 250ms -> 200ms: shaves a little more off the
-          // tail of every utterance now that we're not also paying a
-          // reconnect cost between sentences.
+          // BUG FIX ("missing audio" mid-sentence): this 200ms idle timer
+          // used to be the ONLY way we decided an utterance was finished.
+          // If Sarvam paused slightly longer than 200ms mid-synthesis
+          // (normal under real load), we'd call the utterance "done",
+          // detach our message listener, and any audio chunks Sarvam sent
+          // afterward for that same utterance had nowhere to go — silently
+          // dropped, no error, just missing words. Sarvam actually tells us
+          // explicitly when it's done (the 'event' branch below, enabled
+          // by send_completion_event=true) — that's now the real signal.
+          // This timer is kept only as a fallback in case that event is
+          // ever lost, with a longer window so it doesn't fire prematurely.
           clearTimeout(idleTimer);
-          idleTimer = setTimeout(finish, 200);
+          idleTimer = setTimeout(finish, 1500);
+        } else if (data.type === 'event' && (data.data?.event_type === 'final' || !data.data?.event_type)) {
+          // Sarvam's authoritative "TTS generation finished" signal for
+          // this utterance — trust this over the idle-timer fallback.
+          clearTimeout(idleTimer);
+          finish();
         } else if (data.type === 'error') {
           console.log(`[sarvam-tts] session error frame: ${data.data?.message || raw.toString().slice(0, 300)}`);
         }
