@@ -50,7 +50,7 @@ const SILENCE_RMS_CUTOFF = 400;
 
 // Exotel requires audio chunks to be multiples of 320 bytes.
 // 1600 bytes = 5 × 320 = 100ms at 8kHz mono PCM16.
-const EXOTEL_FRAME_BYTES = 1600;
+const EXOTEL_FRAME_BYTES = 320; // 20ms of 8kHz/16-bit mono audio — matches Exotel's own inbound frame size
 
 // Marker GPT inserts when it wants to end the call naturally.
 const END_CALL_MARKER = '[[END_CALL]]';
@@ -279,7 +279,17 @@ async function sendTts(ws, session, text, signal = null) {
   let pending = Buffer.alloc(0);
   let synthesisDone = false;
   let draining = false;
-  const FRAME_MS = 100; // EXOTEL_FRAME_BYTES (1600) = 100ms of 8kHz/16-bit mono audio
+  // BUG FIX ("voice breaking/crashing mid-sentence" even when GPT's text
+  // was clean end-to-end): audio was previously sent in large 100ms/1600-byte
+  // chunks, sleeping 100ms between each. Real telephony media streaming
+  // (Exotel/Twilio-style) sends and expects small ~20ms frames — our own
+  // inbound audio from the caller already arrives in that size. Bundling
+  // outbound audio into much bigger 100ms blocks meant that ANY single
+  // Node event-loop delay (a webhook GET, a GC pause, a DB call) turned
+  // into a full 100ms audible gap in the middle of a sentence. Matching
+  // the smaller native frame size means the same jitter only ever costs
+  // ~20ms — far below what a listener perceives as a "break" or "crash".
+  const FRAME_MS = 20;
 
   const drain = async () => {
     if (draining) return; // a drain loop is already running — it will pick up newly appended bytes

@@ -340,7 +340,8 @@ const OBJECTION_HANDLING = `OBJECTION HANDLING — always EMPATHIZE FIRST, in on
 - "Fees are too high" / cost concern: "I completely understand — choosing a course is a real investment. Let me first understand your goal so I can explain the option that fits best." Then, per COMPANY_KNOWLEDGE, offer to check with a senior/the CEO for a further discount rather than just refusing.
 - "I'm also checking other institutes" / asks how AOTMS compares: acknowledge that's smart to compare, then use UNIQUE_DIFFERENTIATORS, staying confident and specific, never dismissive of the other place — then steer toward the free demo as the fair way for them to judge for themselves.
 - "Will this actually help me get a job?": acknowledge that's the real question every student has, then use HIRING_PROCESS_SUPPORT to show it's ongoing support through a real journey, not a one-time promise, then steer toward the free demo.
-- Always steer the conversation toward booking a specific demo day/time as the concrete next step, rather than just answering questions indefinitely.`;
+- Always steer the conversation toward booking a specific demo day/time as the concrete next step, rather than just answering questions indefinitely.
+- NEVER confirm or "lock in" a specific demo day/time (or any other commitment) unless the caller has actually said a specific day/time themselves in their own words. A vague filler reply like "okay", "achha", "sare", or repeated "okay okay okay" to a question offering choices ("Tuesday or Saturday?") is NOT a selection — it just means they're listening or the transcription was unclear. If the caller hasn't clearly picked one of the options after being asked directly once more, do NOT invent a default (e.g. don't pick "Tuesday" for them) and do NOT say a booking is confirmed. Instead, either ask once more in a simpler yes/no way ("Sare sir, Saturday sayantram 5 PM ki demo pettamantara? Yes or no?"), or if it's genuinely unclear after that, offer to share details over WhatsApp so they can confirm a time whenever convenient — never state a fake confirmed date/time the caller never actually said.`;
 
 /**
  * CLOSING_SCRIPT (new in v2 — replaces the old bare "politely say goodbye"
@@ -479,7 +480,7 @@ function buildDefaultWelcomeGreeting() {
   // Kept deliberately short — this is the first audio the caller hears —
   // but names the full company once ("Academy of Tech Masters") so a cold
   // caller isn't left wondering who's calling.
-  return `నమస్కారం! నేను అకాడమీ ఆఫ్ టెక్ మాస్టర్స్ నుండి మాట్లాడుతున్న AI అసిస్టెంట్‌ని. మీకు రెండు నిమిషాలు సమయం ఉందా? తర్వాత మీ ఆసక్తికి తగ్గ కోర్సులను సూచిస్తాను.`;
+  return `Namaskaram sir, nenu Sara, Academy of Tech Masters AI calling agent ni. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
 }
 
 /**
