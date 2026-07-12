@@ -64,10 +64,21 @@ const TRANSFER_MARKER = '[[TRANSFER_TO_HR]]';
 // than to also spend a human's time on it this early.
 const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
 
-// Hard ceiling for one full STT→GPT→TTS turn. If exceeded, the turn is
-// aborted (network calls cancelled via AbortController, not just abandoned)
-// so a stale reply can never land on top of the next turn's audio.
-const TURN_TIMEOUT_MS = 12000;
+// STALL detection: abort a turn only if NO progress (no STT result, no new
+// GPT sentence, no new TTS audio chunk) has happened for this long — i.e. a
+// genuine hang. This replaced a flat 12s ceiling on the WHOLE turn
+// (STT+GPT+full TTS playback), which was aborting perfectly healthy,
+// still-speaking multi-sentence replies mid-sentence: a normal 2-3 sentence
+// Telugu reply legitimately takes longer than 12s to fully speak once you
+// include STT + GPT latency too, so the old timeout was cutting Sara off
+// mid-word and then playing an apology on top of her own unfinished reply
+// — that abrupt cut/overlap is exactly what sounded like "voice stuck/
+// breaking mid-call".
+const STALL_TIMEOUT_MS = 12000;
+// Absolute safety-net ceiling regardless of activity, in case progress
+// updates themselves ever stop firing correctly — should essentially never
+// trigger in normal operation.
+const ABSOLUTE_TURN_CEILING_MS = 45000;
 
 // BUG FIX: a single non-silent frame while the agent was speaking was
 // treated as barge-in — but with no echo cancellation on the line, the
@@ -361,6 +372,7 @@ async function sendTts(ws, session, text, signal = null) {
   try {
     await session.ttsSession.speak(clean, (chunk) => {
       if (session.abortSpeaking || signal?.aborted) return;
+      session.lastActivityAt = Date.now(); // audio still arriving — real progress, not a hang
       pending = Buffer.concat([pending, chunk]);
       drain(); // fire-and-forget; re-entrancy-safe via the `draining` flag
     }, { signal });
@@ -397,6 +409,7 @@ async function sendTts(ws, session, text, signal = null) {
 async function processSpeechSegment(ws, session, pcm16Bytes) {
   const controller = new AbortController();
   session.currentAbort = controller;
+  session.lastActivityAt = Date.now(); // turn starting counts as activity
 
   // BUG FIX: this was hardcoded to Telugu regardless of the lead's actual
   // language, so English speech got transcribed as phonetic Telugu script
@@ -409,6 +422,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
       signal: controller.signal,
       languageCode: resolveLangCode(session.language),
     });
+    session.lastActivityAt = Date.now(); // STT result landed — real progress
   } catch (err) {
     if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
       console.error(`[orchestrator] STT failed (${session.callSid}):`, err.message);
@@ -447,6 +461,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     reply = await streamAgentReply(session.conversation, {
       signal: controller.signal,
       onSentence: (sentence) => {
+        session.lastActivityAt = Date.now(); // new sentence ready — real progress
         const spoken = sentence.replace(END_CALL_MARKER, '').replace(TRANSFER_MARKER, '').trim();
         if (spoken) speak(spoken);
       },
@@ -590,6 +605,7 @@ async function handleCall(ws, req) {
     bargeInRun: 0,             // consecutive non-silent frames while agent is speaking (barge-in debounce)
     speakingStartedAt: 0,      // timestamp agent started current utterance (barge-in grace period)
     sttCooldownUntil: 0,       // timestamp; no new segments are cut/sent to STT before this
+    lastActivityAt: 0,         // updated on every real turn-progress event; used for stall detection
     finalized: false,          // guards finalizeCall() against running twice per call
   };
 
@@ -774,16 +790,38 @@ async function handleCall(ws, req) {
 
         let outcome = false;
         try {
-          outcome = await Promise.race([
-            processSpeechSegment(ws, session, segment),
-            new Promise(resolve => setTimeout(() => {
-              // Turn overran its budget — cancel the in-flight network calls
-              // so this turn's audio/state can never land after the next one
-              // starts, instead of just abandoning the promise.
-              session.currentAbort?.abort();
-              resolve('timeout');
-            }, TURN_TIMEOUT_MS)),
-          ]);
+          outcome = await new Promise((resolve, reject) => {
+            let settled = false;
+            const turnStartedAt = Date.now();
+
+            const stallChecker = setInterval(() => {
+              if (settled) return;
+              const idleFor = Date.now() - session.lastActivityAt;
+              const totalFor = Date.now() - turnStartedAt;
+              if (idleFor >= STALL_TIMEOUT_MS || totalFor >= ABSOLUTE_TURN_CEILING_MS) {
+                settled = true;
+                clearInterval(stallChecker);
+                // Genuinely stuck (or, as a last resort, the absolute
+                // ceiling) — cancel the in-flight network calls so this
+                // turn's audio/state can never land after the next one
+                // starts, instead of just abandoning the promise.
+                session.currentAbort?.abort();
+                resolve('timeout');
+              }
+            }, 500);
+
+            processSpeechSegment(ws, session, segment).then((result) => {
+              if (settled) return;
+              settled = true;
+              clearInterval(stallChecker);
+              resolve(result);
+            }).catch((err) => {
+              if (settled) return;
+              settled = true;
+              clearInterval(stallChecker);
+              reject(err);
+            });
+          });
         } catch (err) {
           console.error('[orchestrator] processSpeechSegment error:', err.message);
         } finally {
