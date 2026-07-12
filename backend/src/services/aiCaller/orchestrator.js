@@ -12,8 +12,22 @@
 //   Exotel → orchestrator: "connected", "start", "media", "dtmf", "stop"
 //   Orchestrator → Exotel: "media" (audio), "mark" (playback sync), "clear" (barge-in)
 // Reference: https://developer.exotel.com/docs/agentstream/developer-guide
+//
+// LATENCY FIX (this pass): GPT replies were previously fetched in one
+// blocking, non-streamed call — nothing was sent to TTS until the ENTIRE
+// reply had finished generating, on top of STT time. That "silent" GPT
+// generation was the single biggest remaining source of dead air, mid-call
+// lag, and turn-to-turn inconsistency (varies with OpenAI queueing).
+// Fixed by streaming tokens from OpenAI and flushing each completed
+// sentence straight into TTS as soon as it's ready, so playback starts
+// after the FIRST sentence instead of the WHOLE reply. Also added an
+// AbortController per turn so barge-in / turn-timeout actually cancels the
+// in-flight STT/GPT/TTS network calls instead of letting them run to
+// completion in the background (which was causing overlapping audio and
+// "random" pauses when a stale turn's TTS landed after a new one started).
 
 const axios = require('axios');
+const OpenAI = require('openai');
 const { transcribeAudio, synthesizeSpeech } = require('./sarvamClient');
 const {
   buildSystemPrompt,
@@ -25,7 +39,6 @@ const {
 const { buildMemoryBlock } = require('./conversationMemory');
 const { applyAiCallOutcome, applyNoConnectOutcome } = require('./outcomeService');
 const { markForTransfer } = require('./transferState');
-const { renewLock } = require('./leadLock');
 const Lead = require('../../models/Lead');
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -51,38 +64,87 @@ const TRANSFER_MARKER = '[[TRANSFER_TO_HR]]';
 // than to also spend a human's time on it this early.
 const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
 
-// ─── OpenAI via axios ─────────────────────────────────────────────────────
+// Hard ceiling for one full STT→GPT→TTS turn. If exceeded, the turn is
+// aborted (network calls cancelled via AbortController, not just abandoned)
+// so a stale reply can never land on top of the next turn's audio.
+const TURN_TIMEOUT_MS = 12000;
+
+// ─── OpenAI client ──────────────────────────────────────────────────────────
 //
 // SWITCHED FROM GEMINI: the Gemini API key expired, so live-call generation
 // and outcome extraction now go through OpenAI's Chat Completions API.
 // messages/session.conversation are already in OpenAI's native
-// {role: 'system'|'user'|'assistant', content}[] shape, so — unlike the
-// Gemini integration this replaces — no payload conversion is needed here.
+// {role: 'system'|'user'|'assistant', content}[] shape, so no payload
+// conversion is needed here.
 //
 // AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
 // good fit for low-latency voice-call turns). Override via env var if needed.
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4o-mini';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'; // used by getCallOutcome only
 
-async function getAgentReply(messages) {
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Pull complete sentences out of a growing token buffer so each one can be
+// sent to TTS the instant it's ready, without ever splitting inside an
+// END_CALL_MARKER / TRANSFER_MARKER token (which can arrive split across
+// multiple streamed chunks).
+function extractCompleteSentences(buffer) {
+  const openIdx = buffer.lastIndexOf('[[');
+  const closeIdx = buffer.lastIndexOf(']]');
+  const safeEnd = openIdx > closeIdx ? openIdx : buffer.length;
+  const safePart = buffer.slice(0, safeEnd);
+  const rest = buffer.slice(safeEnd);
+
+  const matches = safePart.match(/[^.!?।]+[.!?।]+/g);
+  if (!matches) return { sentences: [], remainder: buffer };
+
+  const consumedLength = matches.join('').length;
+  const remainder = safePart.slice(consumedLength) + rest;
+  return { sentences: matches.map((s) => s.trim()).filter(Boolean), remainder };
+}
+
+/**
+ * Streams the GPT reply token-by-token. Calls `onSentence` as soon as each
+ * complete sentence is available (well before the full reply is done),
+ * and returns the full assembled reply text once the stream ends.
+ */
+async function streamAgentReply(messages, { onSentence, signal } = {}) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY is not configured');
 
-  const response = await axios.post(
-    OPENAI_API_URL,
+  const stream = await openai.chat.completions.create(
     {
       model: AI_CALLER_MODEL,
       messages,
       temperature: 0.6,
-      max_tokens: 80, // hard backstop for "1-2 sentence" replies, same reasoning as the old Gemini maxOutputTokens cap
+      max_tokens: 80, // hard backstop for "1-2 sentence" replies
+      stream: true,
     },
-    {
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      timeout: 12000,
-    }
+    { signal }
   );
-  const text = response.data?.choices?.[0]?.message?.content || '';
-  return text.trim() || 'Sorry, could you say that again?';
+
+  let buffer = '';
+  let full = '';
+
+  for await (const chunk of stream) {
+    if (signal?.aborted) break;
+    const delta = chunk.choices?.[0]?.delta?.content || '';
+    if (!delta) continue;
+    full += delta;
+    buffer += delta;
+
+    const { sentences, remainder } = extractCompleteSentences(buffer);
+    buffer = remainder;
+    for (const sentence of sentences) {
+      if (onSentence) await onSentence(sentence);
+    }
+  }
+
+  if (!signal?.aborted && buffer.trim() && onSentence) {
+    await onSentence(buffer.trim());
+  }
+
+  return full.trim() || 'Sorry, could you say that again?';
 }
 
 async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
@@ -173,9 +235,10 @@ function sanitizeForSpeech(text) {
 
 // ─── Send TTS audio to Exotel ────────────────────────────────────────────────
 
-async function sendTts(ws, session, text) {
+async function sendTts(ws, session, text, signal = null) {
   const clean = sanitizeForSpeech(text);
   if (!clean) return;
+  if (signal?.aborted) return;
 
   const langCode = session.language === 'English' ? 'en-IN'
     : (session.language === 'Hindi' || session.language === 'Hinglish') ? 'hi-IN'
@@ -184,16 +247,11 @@ async function sendTts(ws, session, text) {
   session.agentSpeaking = true;
   session.abortSpeaking = false;
 
-  // STREAMING PLAYBACK: previously this function awaited synthesizeSpeech()
-  // for the FULL reply, then looped over the complete buffer pacing frames
-  // out afterward — meaning nothing was heard on the call until Sarvam had
-  // finished generating the entire sentence. For a multi-sentence answer
-  // that's 1-2+ seconds of pure dead air on every turn, on top of GPT and
-  // STT latency, which is why replies felt like they took 5+ seconds.
-  //
-  // Now audio bytes are forwarded to Exotel via `drain()` the moment enough
-  // of them have arrived (see onChunk callback below), while Sarvam is
-  // still synthesizing the rest of the sentence in the background.
+  // STREAMING PLAYBACK: audio bytes are forwarded to Exotel via `drain()`
+  // the moment enough of them have arrived (see onChunk callback below),
+  // while Sarvam is still synthesizing the rest of the sentence in the
+  // background — instead of waiting for the full clip before any audio
+  // is heard.
   let pending = Buffer.alloc(0);
   let synthesisDone = false;
   let draining = false;
@@ -203,7 +261,7 @@ async function sendTts(ws, session, text) {
     if (draining) return; // a drain loop is already running — it will pick up newly appended bytes
     draining = true;
     try {
-      while (!session.abortSpeaking) {
+      while (!session.abortSpeaking && !signal?.aborted) {
         if (pending.length >= EXOTEL_FRAME_BYTES) {
           const frame = pending.slice(0, EXOTEL_FRAME_BYTES);
           pending = pending.slice(EXOTEL_FRAME_BYTES);
@@ -245,11 +303,14 @@ async function sendTts(ws, session, text) {
 
   try {
     await synthesizeSpeech(clean, langCode, (chunk) => {
+      if (session.abortSpeaking || signal?.aborted) return;
       pending = Buffer.concat([pending, chunk]);
       drain(); // fire-and-forget; re-entrancy-safe via the `draining` flag
-    });
+    }, { signal });
   } catch (err) {
-    console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
+    if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+      console.error(`[orchestrator] TTS failed (${session.callSid}):`, err.message);
+    }
     session.agentSpeaking = false;
     session.abortSpeaking = false;
     return;
@@ -257,11 +318,11 @@ async function sendTts(ws, session, text) {
 
   synthesisDone = true;
   // Let the drain loop flush whatever's still buffered.
-  while ((draining || pending.length > 0) && !session.abortSpeaking) {
+  while ((draining || pending.length > 0) && !session.abortSpeaking && !signal?.aborted) {
     await new Promise(resolve => setTimeout(resolve, 20));
   }
 
-  if (!session.abortSpeaking) {
+  if (!session.abortSpeaking && !signal?.aborted) {
     // Mark signals end of this utterance (for barge-in re-arming)
     ws.send(JSON.stringify({
       event: 'mark',
@@ -277,12 +338,17 @@ async function sendTts(ws, session, text) {
 // ─── Speech segment processing ────────────────────────────────────────────────
 
 async function processSpeechSegment(ws, session, pcm16Bytes) {
+  const controller = new AbortController();
+  session.currentAbort = controller;
+
   // STT
   let text;
   try {
-    text = await transcribeAudio(Buffer.from(pcm16Bytes));
+    text = await transcribeAudio(Buffer.from(pcm16Bytes), { signal: controller.signal });
   } catch (err) {
-    console.error(`[orchestrator] STT failed (${session.callSid}):`, err.message);
+    if (err.name !== 'AbortError' && err.name !== 'CanceledError') {
+      console.error(`[orchestrator] STT failed (${session.callSid}):`, err.message);
+    }
     return false;
   }
   if (!text) return false;
@@ -290,14 +356,36 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
-  // GPT (OpenAI)
+  // Sentences must be spoken in the order GPT produced them — queue each
+  // sendTts call behind the previous one instead of firing them in parallel.
+  let ttsQueue = Promise.resolve();
+  const speak = (sentence) => {
+    ttsQueue = ttsQueue.then(() => sendTts(ws, session, sentence, controller.signal));
+    return ttsQueue;
+  };
+
+  // GPT (OpenAI) — streamed, sentence-chunked straight into TTS
   let reply;
   try {
-    reply = await getAgentReply(session.conversation);
+    reply = await streamAgentReply(session.conversation, {
+      signal: controller.signal,
+      onSentence: (sentence) => {
+        const spoken = sentence.replace(END_CALL_MARKER, '').replace(TRANSFER_MARKER, '').trim();
+        if (spoken) speak(spoken);
+      },
+    });
   } catch (err) {
+    if (err.name === 'AbortError' || err.name === 'CanceledError') {
+      session.currentAbort = null;
+      return false;
+    }
     console.error(`[orchestrator] GPT failed (${session.callSid}):`, err.message);
-    reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?'; // "One moment, could you repeat that?" in Telugu
+    reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?';
+    speak(reply);
   }
+
+  await ttsQueue.catch(err => console.error(`[orchestrator] sendTts failed (${session.callSid}):`, err.message));
+  session.currentAbort = null;
 
   const shouldEnd = reply.includes(END_CALL_MARKER);
   const wantsTransfer = reply.includes(TRANSFER_MARKER);
@@ -316,12 +404,6 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     `${shouldEnd ? ' [END]' : ''}${wantsTransfer ? ' [INTERESTED]' : ''}${shouldTransferNow ? ' [TRANSFER-NOW]' : ''}`
   );
   session.conversation.push({ role: 'assistant', content: spokenReply });
-
-  try {
-    await sendTts(ws, session, spokenReply);
-  } catch (err) {
-    console.error(`[orchestrator] sendTts failed (${session.callSid}):`, err.message);
-  }
 
   if (shouldTransferNow) {
     session.transferPending = true;
@@ -343,13 +425,6 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 // ─── Call end — save outcome to MongoDB directly ─────────────────────────────
 
 async function finalizeCall(session, { transferredToHr = false } = {}) {
-  // Guard: this can now be reached from up to three places for the same call
-  // (the transfer branch, the normal-end branch, and ws.on('close') as a
-  // fallback) — without this it ran 2-3x per call, each one saving the CRM
-  // outcome again and racing on the same Lead document (Mongoose VersionError).
-  if (session.finalized) return;
-  session.finalized = true;
-
   const durationSeconds = Math.floor((Date.now() - session.startedAt) / 1000);
   const hadConversation = session.conversation.some(m => m.role === 'user');
 
@@ -416,24 +491,10 @@ async function handleCall(ws, req) {
     agentSpeaking: false,
     busy: false,          // true while an STT→GPT→TTS turn is in flight — gates new turns
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
+    currentAbort: null,   // AbortController for the in-flight STT/GPT/TTS network calls of this turn
     studentInterested: false, // set once GPT emits TRANSFER_MARKER at any point in the call
     transferPending: false,   // set once the handoff has actually been triggered (guards against double-trigger)
-    ended: false,             // set the instant we decide the call is over (transfer or normal end) — guards against a stale/racing 'media' event being processed after that decision but before the socket actually finishes closing
-    finalized: false,         // guards finalizeCall() against running twice for the same session (was firing 2-3x: once from the transfer/end branch, again from ws.on('close'))
   };
-
-  // Keep the DB lock alive for as long as this call is actually running,
-  // regardless of leadLock.js's configured TTL — this is the real fix for
-  // "recovered stuck lead" firing mid-call and campaignEngine redialing the
-  // same lead while it's still on an active call. Cleared in finalizeCall().
-  let lockRenewalInterval = null;
-  if (leadId) {
-    lockRenewalInterval = setInterval(() => {
-      renewLock(leadId, 'ai-engine').catch(err =>
-        console.error(`[orchestrator] lock renewal failed (${leadId}):`, err.message)
-      );
-    }, 30000);
-  }
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
   // Previously this was awaited before ws.on('message', ...) was even
@@ -525,14 +586,15 @@ async function handleCall(ws, req) {
       }
 
     } else if (event === 'media') {
-      if (session.ended) return; // call already decided as over/transferred — ignore anything further
-
       const payload = message.media?.payload;
       if (!payload) return;
 
       const chunk = Buffer.from(payload, 'base64');
 
-      // Barge-in: if agent is speaking and caller starts talking, clear queued audio
+      // Barge-in: if agent is speaking and caller starts talking, clear queued
+      // audio AND cancel whatever STT/GPT/TTS network calls are still in
+      // flight for that turn — otherwise a stale reply can land audibly on
+      // top of the next turn once it starts.
       const chunkRms = chunk.length >= 2 ? rms(chunk) : 0;
       const isSilent = chunkRms < SILENCE_RMS_CUTOFF;
 
@@ -540,6 +602,7 @@ async function handleCall(ws, req) {
         ws.send(JSON.stringify({ event: 'clear', stream_sid: session.streamSid }));
         session.agentSpeaking = false;
         session.abortSpeaking = true; // tell the in-progress sendTts frame loop to stop early
+        session.currentAbort?.abort();
       }
 
       session.audioBuffer = Buffer.concat([session.audioBuffer, chunk]);
@@ -559,33 +622,31 @@ async function handleCall(ws, req) {
         try {
           outcome = await Promise.race([
             processSpeechSegment(ws, session, segment),
-            new Promise(resolve => setTimeout(() => resolve(false), 12000)),
+            new Promise(resolve => setTimeout(() => {
+              // Turn overran its budget — cancel the in-flight network calls
+              // so this turn's audio/state can never land after the next one
+              // starts, instead of just abandoning the promise.
+              session.currentAbort?.abort();
+              resolve(false);
+            }, TURN_TIMEOUT_MS)),
           ]);
         } catch (err) {
           console.error('[orchestrator] processSpeechSegment error:', err.message);
         } finally {
           session.busy = false;
+          session.currentAbort = null;
         }
 
         if (outcome === 'transfer') {
-          // Mark the handoff FIRST and close the socket immediately — Exotel's
-          // Passthru applet (right after the Voicebot applet) hits
+          // Mark the handoff BEFORE closing the socket — Exotel's Passthru
+          // applet (configured right after the Voicebot applet) will hit
           // /api/ai-caller/passthru within seconds of the WS closing, and
-          // that route reads this same in-memory flag to route into the
-          // Connect applet that dials HR. We do NOT await finalizeCall here:
-          // it calls GPT again to summarize the transcript, which can take a
-          // few seconds — the transfer must not wait on that. finalizeCall
-          // still runs, just in the background, and any failure in it is
-          // caught internally / logged rather than blocking ws.close().
-          session.ended = true; // must be set before anything else — see the 'media' guard above
-          console.log(`[orchestrator] TRANSFER TRIGGERED callSid=${session.callSid} leadId=${session.leadId}`);
+          // that route reads this same in-memory flag to route the call
+          // into the Connect applet that dials HR.
           markForTransfer(session.callSid);
+          await finalizeCall(session, { transferredToHr: true });
           ws.close();
-          finalizeCall(session, { transferredToHr: true }).catch(err =>
-            console.error('[orchestrator] finalizeCall (transfer) failed:', err.message)
-          );
         } else if (outcome) {
-          session.ended = true;
           await finalizeCall(session);
           ws.close();
         }
@@ -596,19 +657,15 @@ async function handleCall(ws, req) {
       console.log(`[orchestrator] dtmf: ${digit} (${session.callSid})`);
 
     } else if (event === 'stop') {
-      session.ended = true;
       await finalizeCall(session);
     }
   });
 
   ws.on('close', () => {
     console.log(`[orchestrator] WS closed: ${session.callSid}`);
-    if (lockRenewalInterval) clearInterval(lockRenewalInterval);
-    session.ended = true;
+    session.currentAbort?.abort();
     // If the socket closed without a 'stop' event (e.g. network drop),
-    // still try to save whatever conversation happened. finalizeCall() itself
-    // now guards against running twice (see session.finalized), so this is
-    // safe to call even if the transfer/end branch above already called it.
+    // still try to save whatever conversation happened.
     if (session.conversation.some(m => m.role === 'user')) {
       finalizeCall(session).catch(() => {});
     }

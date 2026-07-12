@@ -14,6 +14,12 @@
 //       was causing Sarvam to reject every single TTS request with a 422,
 //       which is why the agent could never speak.
 // Exotel sends/expects raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
+//
+// ABORT SUPPORT (this pass): both transcribeAudio() and synthesizeSpeech()
+// now accept an optional AbortSignal so a barge-in or turn-timeout in
+// orchestrator.js can actually cancel an in-flight STT/TTS call instead of
+// letting it run to completion in the background — which was letting a
+// stale turn's audio land on top of the next turn's reply.
 
 const axios = require('axios');
 const FormData = require('form-data');
@@ -65,8 +71,9 @@ function stripWavHeader(wavBuf) {
 
 // ─── STT ─────────────────────────────────────────────────────────────────────
 // Per PDF: model=saaras:v3, sample_rate=8000, high_vad_sensitivity=true
-async function transcribeAudio(pcm16Bytes) {
+async function transcribeAudio(pcm16Bytes, { signal } = {}) {
   if (!pcm16Bytes || pcm16Bytes.length < 320) return '';
+  if (signal?.aborted) return '';
 
   const key = getSarvamKey();
   const wavBuf = buildWavBuffer(pcm16Bytes, 8000, 1, 16);
@@ -81,6 +88,7 @@ async function transcribeAudio(pcm16Bytes) {
   const response = await axios.post(SARVAM_STT_URL, form, {
     headers: { ...form.getHeaders(), 'api-subscription-key': key },
     timeout: 12000,
+    signal,
   });
 
   const transcript = (response.data.transcript || '').trim();
@@ -126,12 +134,11 @@ async function transcribeAudio(pcm16Bytes) {
 // each raw PCM Buffer the instant it arrives from Sarvam — so the caller
 // (orchestrator.js) can start forwarding audio to Exotel while Sarvam is
 // still generating the rest of the reply, instead of waiting for the whole
-// thing. This is the main latency fix for the "AI takes 5+ seconds to
-// respond" issue: previously nothing was heard until the ENTIRE reply had
-// finished synthesizing.
-function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
+// thing.
+function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal } = {}) {
   return new Promise((resolve, reject) => {
     if (!text || !text.trim()) return resolve(Buffer.alloc(0));
+    if (signal?.aborted) return resolve(Buffer.alloc(0));
 
     const key = getSarvamKey();
     const chunks = [];
@@ -142,11 +149,22 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
       headers: { 'api-subscription-key': key },
     });
 
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(overallTimer);
+      clearTimeout(idleTimer);
+      ws.terminate();
+      reject(Object.assign(new Error('Sarvam TTS aborted'), { name: 'AbortError' }));
+    };
+    if (signal) signal.addEventListener('abort', onAbort);
+
     const finish = () => {
       if (settled) return;
       settled = true;
       clearTimeout(overallTimer);
       clearTimeout(idleTimer);
+      signal?.removeEventListener('abort', onAbort);
       ws.close();
       const audio = Buffer.concat(chunks);
       if (audio.length === 0) {
@@ -161,6 +179,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
       if (!settled) {
         settled = true;
         clearTimeout(idleTimer);
+        signal?.removeEventListener('abort', onAbort);
         ws.terminate();
         reject(new Error('Sarvam TTS WebSocket timed out'));
       }
@@ -211,13 +230,10 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
           try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk handler threw:', e.message); }
         }
         // Reset idle timer — finish shortly after the last chunk arrives.
-        // Shortened from 600ms to 250ms: previously this delay gated when
-        // playback could START (since sendTts waited for the whole buffer),
-        // so it was pure added latency on every single reply. Now that
-        // audio streams to Exotel via onChunk as it arrives, this timer is
-        // only a safety margin for detecting end-of-stream (in case the
-        // socket's own 'close' event is slower to fire than the actual gap
-        // between chunks), not something the caller is blocked on.
+        // This is only a safety margin for detecting end-of-stream (in case
+        // the socket's own 'close' event is slower to fire than the actual
+        // gap between chunks), not something the caller is blocked on,
+        // since audio already streams to Exotel via onChunk as it arrives.
         clearTimeout(idleTimer);
         idleTimer = setTimeout(finish, 250);
       } else if (data.type === 'error') {
@@ -244,6 +260,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
         settled = true;
         clearTimeout(overallTimer);
         clearTimeout(idleTimer);
+        signal?.removeEventListener('abort', onAbort);
         reject(err);
       }
     });
