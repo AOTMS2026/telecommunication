@@ -198,7 +198,7 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal
         data: {
           target_language_code: languageCode,
           speaker: 'priya',                // female bulbul:v3 speaker (anushka is v2-only)
-          pace: 1.2,                       // >1 = faster speech; fixes the slow/dragging voice
+          pace: 1.32,                       // >1 = faster speech; fixes the slow/dragging voice
           output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
           speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
         },
@@ -308,7 +308,7 @@ function createTtsSession(languageCode = 'te-IN') {
           data: {
             target_language_code: languageCode,
             speaker: 'priya',
-            pace: 1.2,
+            pace: 1.32,
             output_audio_codec: 'linear16',
             speech_sample_rate: 8000,
           },
