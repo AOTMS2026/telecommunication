@@ -103,9 +103,9 @@ function resolveLangCode(language) {
 // {role: 'system'|'user'|'assistant', content}[] shape, so no payload
 // conversion is needed here.
 //
-// AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
+// AI_CALLER_MODEL defaults to gpt-4.1-mini (OpenAI's fast/cheap "mini" model,
 // good fit for low-latency voice-call turns). Override via env var if needed.
-const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4o-mini';
+const AI_CALLER_MODEL = process.env.AI_CALLER_MODEL || 'gpt-4.1-mini';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'; // used by getCallOutcome only
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -143,7 +143,7 @@ async function streamAgentReply(messages, { onSentence, signal } = {}) {
       model: AI_CALLER_MODEL,
       messages,
       temperature: 0.6,
-      max_tokens: 160, // was 80 — too tight for native Telugu Unicode script, which costs far more tokens/word than Romanized text and was truncating longer replies (e.g. fee breakdowns) mid-sentence
+      max_tokens: 220, // was 160 — still clipping longer native-Telugu-script replies mid-sentence; raised further as a safety net alongside the tightened 1-2 sentence / 35-word cap now enforced in the prompt itself
       stream: true,
     },
     { signal }
