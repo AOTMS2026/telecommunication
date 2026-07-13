@@ -103,6 +103,24 @@ const BARGE_IN_RMS_CUTOFF = 900;
 const STT_COOLDOWN_ERROR_MS = 800;
 const STT_COOLDOWN_RATE_LIMIT_MS = 2500;
 
+// BUG FIX: a 402 (Sarvam account balance/credits exhausted) or any other
+// STT failure was retried forever — every subsequent segment just failed
+// again the same way, so the caller heard "sorry, could not hear that"
+// on a loop until they hung up (seen in production logs: 402 repeated
+// 6+ times back to back). These failures are not transient like a single
+// dropped packet — once the account has no balance, every future call in
+// the same window will fail identically. Cap consecutive STT failures and
+// end the call gracefully instead of burning the rest of it on dead loops.
+const MAX_CONSECUTIVE_STT_FAILURES = 3;
+
+// BUG FIX: GPT (esp. the smaller sarvam-30b model) sometimes gets stuck and
+// outputs the EXACT SAME reply turn after turn regardless of what the
+// caller actually said next — seen verbatim in production logs, repeating
+// the same sentence 10+ times while the caller asked different questions
+// each time. Detect this and break the loop instead of letting it repeat
+// indefinitely and never actually answering the caller.
+const MAX_CONSECUTIVE_REPEATED_REPLIES = 2;
+
 // Maps our internal language names to Sarvam's language codes. Pulled out
 // so both TTS-session creation and sendTts agree on the code.
 function resolveLangCode(language) {
@@ -456,7 +474,26 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
       // in the logs that ended with the student hanging up. Now: back off
       // briefly, and actually tell the caller we didn't catch that.
       const isRateLimited = err.response?.status === 429;
+      const isPaymentRequired = err.response?.status === 402;
+      if (isPaymentRequired) {
+        // 402 = Sarvam account has no balance/credits. Every subsequent
+        // call will fail identically until credits are topped up — do not
+        // treat this like ordinary transient noise.
+        console.error(`[orchestrator] STT 402 (Sarvam credits exhausted) — call ${session.callSid}`);
+      }
       session.sttCooldownUntil = Date.now() + (isRateLimited ? STT_COOLDOWN_RATE_LIMIT_MS : STT_COOLDOWN_ERROR_MS);
+      session.sttFailureStreak = (session.sttFailureStreak || 0) + 1;
+
+      if (session.sttFailureStreak >= MAX_CONSECUTIVE_STT_FAILURES) {
+        // Stop looping the apology — end the call politely instead of
+        // repeating a doomed retry until the caller gives up and hangs up.
+        const giveUpLine = session.language === 'English'
+          ? 'Sorry, there seems to be a network issue on my end. I will call you back shortly. Thank you!'
+          : 'క్షమించండి సార్, నెట్‌వర్క్ సమస్య ఉన్నట్టుంది. నేను కొద్దిసేపట్లో మళ్ళీ కాల్ చేస్తాను. ధన్యవాదాలు!';
+        try { await sendTts(ws, session, giveUpLine, controller.signal); } catch {}
+        return true; // signals the caller loop to finalize + close the WS
+      }
+
       const apology = session.language === 'English'
         ? 'Sorry, I could not hear that clearly. Could you say it again?'
         : 'క్షమించండి సార్, వినపడలేదు. మళ్ళీ చెప్పగలరా?';
@@ -464,6 +501,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     }
     return false;
   }
+  session.sttFailureStreak = 0; // reset once STT succeeds again
   if (!text) return false;
 
   // BUG FIX: call already ended (e.g. caller hung up) while this turn's STT
@@ -545,6 +583,41 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     `${shouldEnd ? ' [END]' : ''}${wantsTransfer ? ' [INTERESTED]' : ''}${shouldTransferNow ? ' [TRANSFER-NOW]' : ''}`
   );
   session.conversation.push({ role: 'assistant', content: spokenReply });
+
+  // BUG FIX (root cause of the "ignores the question, repeats itself"
+  // loop in production logs): normalize + compare this reply to the last
+  // one. If they match, the model is stuck — it already spoke this exact
+  // sentence again despite the caller asking something new, so nudge it
+  // hard for the NEXT turn, and if it's still stuck after that, stop
+  // relying on the model entirely and close the call ourselves rather
+  // than let it repeat forever.
+  const normalize = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const normalizedReply = normalize(spokenReply);
+  if (normalizedReply && normalizedReply === session.lastNormalizedReply) {
+    session.repeatStreak = (session.repeatStreak || 0) + 1;
+  } else {
+    session.repeatStreak = 0;
+  }
+  session.lastNormalizedReply = normalizedReply;
+
+  if (session.repeatStreak >= MAX_CONSECUTIVE_REPEATED_REPLIES) {
+    console.warn(`[orchestrator] repeated-reply loop detected (${session.callSid}) — force-closing call`);
+    const bailoutLine = session.language === 'English'
+      ? 'Sorry for the confusion, sir — I will have our team call you back shortly with the details. Thank you!'
+      : 'క్షమించండి సార్, కొంచెం confusion అయింది. మా team మీకు షార్ట్‌గా తిరిగి call చేస్తారు. ధన్యవాదాలు!';
+    try { await sendTts(ws, session, bailoutLine); } catch (err) {
+      console.error(`[orchestrator] loop-bailout TTS failed (${session.callSid}):`, err.message);
+    }
+    return true;
+  } else if (session.repeatStreak === MAX_CONSECUTIVE_REPEATED_REPLIES - 1) {
+    // One repeat already happened — pin a strong corrective reminder so
+    // the NEXT generation actually engages with what the caller said
+    // instead of repeating itself a second time.
+    session.conversation.push({
+      role: 'system',
+      content: 'Reminder: your last reply was IDENTICAL to the one before it, which is a mistake — the caller has been saying different things and you are not responding to them. Re-read the caller\'s most recent message carefully and answer THAT specifically, in different words. Do not repeat any previous reply verbatim.',
+    });
+  }
 
   if (shouldTransferNow) {
     session.transferPending = true;
@@ -647,6 +720,9 @@ async function handleCall(ws, req) {
     sttCooldownUntil: 0,       // timestamp; no new segments are cut/sent to STT before this
     lastActivityAt: 0,         // updated on every real turn-progress event; used for stall detection
     finalized: false,          // guards finalizeCall() against running twice per call
+    sttFailureStreak: 0,       // consecutive STT failures (402/429/etc.) — caps the retry loop
+    lastNormalizedReply: '',   // normalized text of the previous assistant reply — for loop detection
+    repeatStreak: 0,           // consecutive identical replies — for loop detection
   };
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.

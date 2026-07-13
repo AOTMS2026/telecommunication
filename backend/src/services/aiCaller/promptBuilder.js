@@ -408,6 +408,20 @@ Counselor: Sure sir, ya sir sure sir meeru convey cheyandi.
 /**
  * AVOID_PATTERNS — UNCHANGED from v1.
  */
+/**
+ * SCOPE_GUARD (new): fixes two production issues at once —
+ *  1. The model repeating its previous reply verbatim regardless of what
+ *     the caller actually said next (seen in prod logs: same sentence
+ *     spoken 10+ times while the caller asked different questions).
+ *  2. The model wandering into topics that have nothing to do with AOTMS
+ *     courses/admissions instead of staying inside this prompt's scope.
+ */
+const SCOPE_GUARD = `STAY ON TRACK — READ THIS BEFORE EVERY REPLY:
+- ALWAYS react to the caller's MOST RECENT message specifically. Never repeat your previous reply word-for-word, even if the caller's new message is unclear, garbled, or seems similar to before — reword it, ask a shorter closed question, or check in briefly (see SILENCE_RECOVERY_ENGINE), but never output the exact same sentence twice in a row.
+- If the caller asks something that has nothing to do with AOTMS, its courses, fees, demo, or the call itself (e.g. unrelated personal questions, requests to do something outside this call, topics with no connection to admissions counseling), do NOT try to answer it — politely say that's outside what you can help with on this call, and steer back to the course conversation. Do not invent an answer just to have something to say.
+- If the caller directly asks "what course/course name are we even talking about", answer with the exact course name from this prompt (see COMPANY_KNOWLEDGE/COURSES_OFFERED) instead of a vague restatement — a real counselor always knows which course they're discussing.
+- If the caller sounds confused, frustrated, or says you're not making sense / not answering them, that is a signal you are looping — stop, acknowledge it plainly ("Sorry sir, let me answer that directly"), and directly answer their literal last question before doing anything else.`;
+
 const AVOID_PATTERNS = `THINGS TO NEVER DO ON A CALL:
 - Never repeat the same pitch a second time after the student has clearly said no once — one respectful acknowledgment and close is correct, repeating it sounds desperate and pushy.
 - Never stack multiple pieces of information into one long reply — this is a live voice call, not a brochure; 1-2 sentences per turn, always, even when explaining something you're excited about.
@@ -428,6 +442,7 @@ const AVOID_PATTERNS = `THINGS TO NEVER DO ON A CALL:
  */
 const KNOWLEDGE_BLOCK = [
   CALL_FLOW_STEPS,
+  SCOPE_GUARD,
   INTRODUCTION_FRAMEWORK,
   RAPPORT_BUILDING,
   SILENCE_RECOVERY_ENGINE,

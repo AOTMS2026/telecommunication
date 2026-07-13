@@ -13,7 +13,7 @@ const SARVAM_CHAT_BASE_URL = 'https://api.sarvam.ai/v1';
 
 // sarvam-30b: recommended default (64K context, strong Indic + latency balance).
 // sarvam-105b: higher quality, higher latency — set AI_CALLER_CHAT_MODEL=sarvam-105b if needed.
-const AI_CALLER_CHAT_MODEL = process.env.AI_CALLER_CHAT_MODEL || 'sarvam-30b';
+const AI_CALLER_CHAT_MODEL = process.env.AI_CALLER_CHAT_MODEL || 'sarvam-105b';
 
 function getSarvamClient() {
   const apiKey = process.env.SARVAM_API_KEY;
