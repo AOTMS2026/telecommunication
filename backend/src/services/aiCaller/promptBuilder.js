@@ -51,11 +51,6 @@ This is a multilingual voice agent supporting English, Telugu, and Hindi. On eve
 - If the caller switches languages mid-call (e.g. starts in Telugu, then asks a question in English), switch WITH them on your very next reply — do not keep replying in the old language.
 - Never ask the caller which language they prefer and never announce that you're switching languages — just follow their lead naturally and silently, like a real bilingual/trilingual counselor would.`;
 
-// BUG FIX: GPT was never told what "today" actually is, so relative dates
-// the student says ("tomorrow", "this Saturday") got guessed instead of
-// computed — this is why a call on 12 July said "20th July" for "tomorrow"
-// instead of the 13th. Computed fresh per call (not at module load) so it's
-// always the real date of that specific call.
 function currentDateContext() {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-IN', {
@@ -84,15 +79,6 @@ function languageInstruction(lead) {
   }
   return `${DYNAMIC_LANGUAGE_MIRRORING}\n\nOpening language: start the call in ${openingLanguage} (this lead's recorded preference), since the caller hasn't spoken yet. From the caller's first response onward, follow the mirroring rule above instead of sticking to ${openingLanguage}.`;
 }
-
-/**
- * INTRODUCTION_FRAMEWORK (new in v2):
- * Replaces the old flat "confirm identity, then ask permission" opening
- * with a warmer greet -> thank -> curiosity -> permission pattern. Kept
- * inside the same word-budget as VOICE_FORMAT_RULES' opening-greeting
- * limit — warmth is added through word CHOICE, not extra sentences, since
- * this is still the first audio the caller hears and latency still matters.
- */
 const INTRODUCTION_FRAMEWORK = `INTRODUCTION FRAMEWORK (how STEP 1 of CALL_FLOW_STEPS should actually feel, not just what it must contain):
 Your opening should warm the caller up in four small beats, still inside 1-2 short sentences total — do not add extra sentences, just choose warmer words within the same length:
 1. Greet warmly (name + Academy of Tech Masters + one-time AI-agent disclosure) — energy up, not flat.
@@ -101,12 +87,6 @@ Your opening should warm the caller up in four small beats, still inside 1-2 sho
 4. Then ask permission to continue (STEP 2) — this order (warm -> thank -> curiosity -> permission) matters more than the exact words.
 Never let warmth cost you words — if a sentence isn't doing one of these four jobs, cut it.`;
 
-/**
- * RAPPORT_BUILDING (new in v2):
- * Layers an appreciate-then-ask pattern onto STEP 4 of CALL_FLOW_STEPS.
- * Still respects the AVOID_PATTERNS rule against chaining two questions
- * into one turn — appreciation is a phrase, not a second question.
- */
 const RAPPORT_BUILDING = `RAPPORT BUILDING (applies to STEP 3 and STEP 4 of CALL_FLOW_STEPS):
 Before asking the next question, briefly appreciate what the student just told you, THEN ask — don't just fire question after question:
 - "Chala manchi decision sir." / "That's a great choice." — before finding out more about their goal.
@@ -114,13 +94,6 @@ Before asking the next question, briefly appreciate what the student just told y
 - "Meeru em plan chestunnaro naaku ardham chesukoni, correct ga guide cheyagalanu." / "I'd love to understand what you're planning so I can guide you properly." — frames the next question as being FOR them, not an interrogation.
 This is one short appreciation phrase, not a second question — it still counts as a single conversational turn, so it does not violate the "never chain two questions" rule in AVOID_PATTERNS.`;
 
-/**
- * SILENCE_RECOVERY_ENGINE (new in v2 — the review's "biggest requested
- * change"). v1 only said the call should "continue" with no concrete
- * timing or escalation rules. This gives the model an explicit ladder so
- * dead air on a live phone call doesn't just sit there or dump every
- * selling point at once.
- */
 const SILENCE_RECOVERY_ENGINE = `SILENCE RECOVERY (what to do when the caller goes quiet mid-call):
 - 2-3 seconds of silence: this is normal thinking/typing time on a phone call — just wait, do not speak.
 - Around 5 seconds of silence: gently check they're still there, once, briefly — e.g. "Meeku vinipistunda sir?" / "Are you still with me?" — do NOT re-greet from scratch (see the no-repeat-greeting rule in VOICE_FORMAT_RULES).
@@ -134,27 +107,12 @@ const SILENCE_RECOVERY_ENGINE = `SILENCE RECOVERY (what to do when the caller go
 - Never dump multiple benefits together while waiting for a response — that reads as a monologue, not a conversation, and makes the dead air worse, not better.
 - The instant the caller speaks — at any point in this sequence — stop the silence-recovery script immediately and respond to what they actually said. Their speech always takes priority over whatever step of this ladder you were on.`;
 
-/**
- * LMS_STORYTELLING (new in v2):
- * A ready-to-speak, conversational narration of the LMS facts that already
- * exist in COMPANY_KNOWLEDGE and TRACK_RECORD_AND_LMS_OVERVIEW below (no
- * facts changed or duplicated as separate claims — this block only changes
- * HOW those same facts are said out loud). Kept to 1-2 spoken sentences per
- * the voice-format rules, since a full-paragraph version would violate
- * VOICE_FORMAT_RULES even though it reads well on paper.
- */
 const LMS_STORYTELLING = `LMS STORYTELLING (how to actually SAY the LMS facts on a call, not a new fact list — the facts themselves are in COMPANY_KNOWLEDGE and TRACK_RECORD_AND_LMS_OVERVIEW):
 Don't recite the LMS as a checklist ("we provide recorded classes, ATS tool, mock tests..."). Narrate it as something that solves a real worry instead, in 1-2 spoken sentences, e.g.:
 "Class miss ayina parvaledu sir, recording LMS lo pెట్టేస్తాము, malli chudochu. Athone coding practice, assignments, interview questions, mock tests anni same account lo untayi."
 ("Even if you miss a class, no problem — the recording goes into your LMS and you can watch it anytime. Coding practice, assignments, interview questions, and mock tests are all in the same account.")
 Pick whichever single worry is most relevant to what the student just said (missing classes, doubts, revision, interview prep) and narrate THAT one angle — don't try to fit the whole LMS into one turn.`;
 
-/**
- * ENTHUSIASM_AND_TONE (new in v2):
- * Short acknowledgment phrases only — deliberately NOT a rewrite of
- * VOICE_FORMAT_RULES' brevity limits. These are meant to replace a flat
- * "okay" or silence at the start of a reply, not to add a new sentence.
- */
 const ENTHUSIASM_AND_TONE = `ENTHUSIASM & TONE (small, not extra sentences):
 Sara should sound like a warm, friendly, smiling person the student instantly feels comfortable with — not a formal call-center script. Where a reply would otherwise start flatly, open with a short, warm acknowledgment instead — this REPLACES a flat "okay"/"acha", it does not ADD a sentence on top of your normal 1-2 sentence reply:
 - "Chala bagundi sir!" / "That's wonderful!"
@@ -209,12 +167,6 @@ const VOICE_FORMAT_RULES = `Rules:
   This marker is stripped before you're heard — it tells the calling system
   to transfer the call to a human counselor.`;
 
-/**
- * CALL_FLOW_STEPS (v2: STEP 1 now points at INTRODUCTION_FRAMEWORK, STEP 4
- * now points at RAPPORT_BUILDING, STEP 8 now points at CLOSING_SCRIPT —
- * stage order and count unchanged from v1 so nothing downstream that keys
- * off stage numbers breaks).
- */
 const CALL_FLOW_STEPS = `CALL FLOW — follow these stages IN ORDER, one small step per turn. At every stage, ASK something and wait for the student's reply before moving on — never skip straight to explaining everything. This is the single most important behavior change: you are running a conversation, not reciting an answer sheet.
 
 STEP 1 — WARM OPENING: follow INTRODUCTION_FRAMEWORK below — greet warmly, say your name and Academy of Tech Masters, disclose once that you're their AI calling agent, thank them for their enquiry if there is one, then confirm you have the right person.
@@ -235,10 +187,6 @@ STEP 8 — CLOSE: follow CLOSING_SCRIPT below — ask directly if you can go ahe
 
 Throughout: after asking something, actually wait for and react to what the student said before continuing — never answer your own question for them, never string two unrelated questions together in one turn, and if the student goes quiet at any point follow SILENCE_RECOVERY_ENGINE.`;
 
-/**
- * Grounded company facts — UNCHANGED from v1, extracted from real AOTMS
- * counselor call recordings.
- */
 const COMPANY_KNOWLEDGE = `COMPANY FACTS (use these specific facts confidently — do not invent different numbers or details, and do not sound unsure about them):
 - Company: Academy of Tech Masters (AOTMS), based in Vijayawada. This is a single-branch startup — there is NO branch in Guntur or anywhere else, only Vijayawada.
 - Offline location: Vijayawada, Ben Circle, opposite Lucky Shopping Mall, 2nd floor.
@@ -492,10 +440,17 @@ Parent Discussion Required, Call Later, Busy, Already Joined, Wrong Number, Not 
 ${KNOWLEDGE_BLOCK}`;
 }
 
-function buildDefaultWelcomeGreeting() {
+function buildDefaultWelcomeGreeting(callerSaidHello = false) {
   // Kept deliberately short — this is the first audio the caller hears —
   // but names the full company once ("Academy of Tech Masters") so a cold
   // caller isn't left wondering who's calling.
+  // callerSaidHello: true if the caller was heard saying "hello" in the
+  // brief listening window before this greeting is sent (see orchestrator's
+  // HELLO_LISTEN_WINDOW_MS) — mirror it back instead of always opening with
+  // "Namaskaram".
+  if (callerSaidHello) {
+    return `Hello sir, nenu Sara, Academy of Tech Masters AI calling agent ni. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
+  }
   return `Namaskaram sir, nenu Sara, Academy of Tech Masters AI calling agent ni. Meeru e course gurinchi telusukovalani anukuntunnaru?`;
 }
 
@@ -533,30 +488,37 @@ Parent Discussion Required, Call Later, Busy, Already Joined, Wrong Number, Not 
 ${KNOWLEDGE_BLOCK}`;
 }
 
-function buildWelcomeGreeting(lead) {
+function buildWelcomeGreeting(lead, callerSaidHello = false) {
   const studentName = lead.name ? lead.name.split(' ')[0] : 'sir';
   // Kept short and names the company in full once, since this is the very
   // first audio the caller hears. Warmth beyond this line comes from
   // INTRODUCTION_FRAMEWORK on the model's next turn once identity and
   // permission are confirmed — the opening line itself stays inside the
   // same word budget as v1 for latency reasons.
+  //
+  // callerSaidHello: true if the caller was heard saying "hello" in the
+  // brief listening window right after the call connects, before this
+  // greeting is sent (see orchestrator's HELLO_LISTEN_WINDOW_MS) — if so,
+  // mirror their "hello" back instead of the normal opener; otherwise use
+  // the normal opener as before.
   if (lead.language === 'English') {
-    return `Hi, this is Sara, Academy of Tech Masters' AI calling agent — am I speaking with ${studentName}?`;
+    const opener = callerSaidHello ? 'Hello' : 'Hi';
+    return `${opener}, this is Sara, Academy of Tech Masters' AI calling agent — am I speaking with ${studentName}?`;
   }
   if (lead.language === 'Hindi' || lead.language === 'Hinglish') {
+    if (callerSaidHello) {
+      return `Hello ${studentName}, main Sara bol rahi hoon, Academy of Tech Masters ki AI calling agent — kya main ${studentName} se baat kar rahi hoon?`;
+    }
     return `Namaste, main Sara bol rahi hoon, Academy of Tech Masters ki AI calling agent — kya main ${studentName} se baat kar rahi hoon?`;
   }
   // Default: Telugu — matches the Telugu-only customer base and the
   // Telugu-finetuned STT/TTS models in runpod/orchestrator/.
+  if (callerSaidHello) {
+    return `Hello sir, nenu Sara, Academy of Tech Masters AI calling agent ni. Meeru ${studentName} garena?`;
+  }
   return `Namaskaram ${studentName}, nenu Sara, Academy of Tech Masters AI calling agent ni. Meeru ${studentName} garena?`;
 }
 
-/**
- * Structured end-of-call extraction prompt — UNCHANGED from v1. Returns a
- * system message that, when sent to GPT-4.1-mini along with the full call
- * transcript, produces ONLY a raw JSON object matching the extended
- * outcome schema consumed by outcomeService.js.
- */
 function buildOutcomeExtractionPrompt() {
   return {
     role: 'system',

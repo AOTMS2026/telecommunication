@@ -149,17 +149,29 @@ function isCarrierAnnouncement(text) {
   return CARRIER_ANNOUNCEMENT_PATTERNS.some((re) => re.test(text));
 }
 
-// ─── OpenAI client ──────────────────────────────────────────────────────────
+// Detects whether the caller opened the call with some form of "hello"
+// (English/Telugu/Hindi) so the opening greeting can mirror it ("Hello sir,
+// I am Sara...") instead of always using the plain default ("Hi sir, I am
+// Sara..." / "Namaskaram..."), which is used when no speech (or no "hello")
+// is heard within OPENING_GREETING_WAIT_MS.
+const HELLO_OPENING_PATTERN = /\b(hello|hallo|halo)\b|హలో|హాయ్|हेलो|हैलो|हलो/i;
+
+// Max time to wait for the caller's opening word before greeting anyway
+// with the default (non-"hello") variant, so the call never stalls in
+// silence if the caller doesn't say anything.
+const OPENING_GREETING_WAIT_MS = 4000;
+
+// ─── Sarvam LLM client ──────────────────────────────────────────────────────
 //
 // SWITCHED FROM GEMINI: the Gemini API key expired, so live-call generation
-// and outcome extraction now go through OpenAI's Chat Completions API.
-// messages/session.conversation are already in OpenAI's native
-// {role: 'system'|'user'|'assistant', content}[] shape, so no payload
-// conversion is needed here.
+// and outcome extraction now go through Sarvam's Chat Completions API
+// (OpenAI-compatible endpoint, see sarvamChatClient.js). messages/
+// session.conversation are already in the {role: 'system'|'user'|'assistant',
+// content}[] shape Sarvam expects, so no payload conversion is needed here.
 //
-// AI_CALLER_MODEL defaults to gpt-4o-mini (OpenAI's fast/cheap "mini" model,
-// good fit for low-latency voice-call turns). Override via env var if needed.
-const AI_CALLER_MODEL = AI_CALLER_CHAT_MODEL; // sarvam-30b by default (see sarvamChatClient.js)
+// AI_CALLER_MODEL defaults to sarvam-105b (see sarvamChatClient.js) — set
+// AI_CALLER_CHAT_MODEL=sarvam-30b for faster/cheaper replies if needed.
+const AI_CALLER_MODEL = AI_CALLER_CHAT_MODEL;
 const SARVAM_CHAT_URL = 'https://api.sarvam.ai/v1/chat/completions'; // used by getCallOutcome only
 
 const sarvamChat = getSarvamClient();
@@ -184,7 +196,7 @@ function extractCompleteSentences(buffer) {
 }
 
 /**
- * Streams the GPT reply token-by-token. Calls `onSentence` as soon as each
+ * Streams the Sarvam LLM reply token-by-token. Calls `onSentence` as soon as each
  * complete sentence is available (well before the full reply is done),
  * and returns the full assembled reply text once the stream ends.
  */
@@ -444,6 +456,40 @@ async function sendTts(ws, session, text, signal = null) {
   session.abortSpeaking = false;
 }
 
+// ─── Opening greeting (hello-aware) ─────────────────────────────────────────
+//
+// Sends the correct opening greeting variant exactly once: "Hello sir, I am
+// Sara..." if the caller's very first utterance sounded like "hello", or the
+// plain default ("Hi sir, I am Sara..." / "Namaskaram...") if the caller
+// said something else, said nothing, or the wait window timed out.
+async function sendOpeningGreeting(ws, session, openedWithHello) {
+  if (!session.awaitingGreeting) return; // already sent — guards against double-send
+  session.awaitingGreeting = false;
+  clearTimeout(session.greetingTimeout);
+
+  const greeting = openedWithHello ? session.greetingHello : session.greetingNormal;
+  session.conversation.push({ role: 'assistant', content: greeting });
+  // BUG FIX ("cold start"/repeated greeting): the "never repeat your
+  // greeting" rule lives inside a long system prompt, and the model was
+  // ignoring it later in the call — re-saying the full intro line when the
+  // caller just said "hello" again mid-conversation. A short, recent
+  // reminder message is far more reliable than one instruction buried in a
+  // wall of text, so pin it right after the greeting.
+  session.conversation.push({
+    role: 'system',
+    content: 'Reminder: you already greeted the caller and introduced yourself as Sara from Academy of Tech Masters — do not say your name/company introduction again for the rest of this call, even if the caller says "hello" again or seems unclear. Just continue the conversation naturally from where it left off.',
+  });
+
+  session.busy = true;
+  try {
+    await sendTts(ws, session, greeting);
+  } catch (err) {
+    console.error(`[orchestrator] opening greeting TTS failed (${session.callSid}):`, err.message);
+  } finally {
+    session.busy = false;
+  }
+}
+
 // ─── Speech segment processing ────────────────────────────────────────────────
 
 async function processSpeechSegment(ws, session, pcm16Bytes) {
@@ -519,7 +565,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
-  // Sentences must be spoken in the order GPT produced them — queue each
+  // Sentences must be spoken in the order the LLM produced them — queue each
   // sendTts call behind the previous one instead of firing them in parallel.
   let ttsQueue = Promise.resolve();
   const speak = (sentence) => {
@@ -527,7 +573,16 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     return ttsQueue;
   };
 
-  // GPT (OpenAI) — streamed, sentence-chunked straight into TTS
+  // BUG FIX ("repeating sentences so many times"): the LLM occasionally
+  // re-emits the exact same sentence more than once WITHIN a single
+  // streamed reply (not just turn-to-turn). Since each sentence is spoken
+  // the instant it's extracted, this used to play the duplicate straight
+  // out loud. Track normalized sentences already spoken THIS turn and drop
+  // repeats before they ever reach TTS.
+  const spokenSentencesThisTurn = new Set();
+  const normalizeSentence = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+  // Sarvam LLM — streamed, sentence-chunked straight into TTS
   let reply;
   try {
     reply = await streamAgentReply(session.conversation, {
@@ -535,24 +590,32 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
       onSentence: (sentence) => {
         session.lastActivityAt = Date.now(); // new sentence ready — real progress
         const spoken = sentence.replace(END_CALL_MARKER, '').replace(TRANSFER_MARKER, '').trim();
-        if (spoken) speak(spoken);
+        if (!spoken) return;
+        const normalized = normalizeSentence(spoken);
+        if (normalized && spokenSentencesThisTurn.has(normalized)) {
+          console.warn(`[orchestrator] dropping repeated sentence within same reply (${session.callSid}): "${spoken}"`);
+          return;
+        }
+        if (normalized) spokenSentencesThisTurn.add(normalized);
+        speak(spoken);
       },
     });
   } catch (err) {
     // BUG FIX (root cause of the "please repeat" loop on every barge-in):
-    // the OpenAI SDK's own abort error does NOT set err.name to 'AbortError'
-    // — it's literally just 'Error' with message "Request was aborted."
-    // (confirmed against the installed SDK). So this check never matched a
-    // real barge-in, and every single interruption fell through to the
-    // "GPT failed" branch below, logging a fake error and forcing Sara to
-    // say "one moment, please repeat" even though nothing failed — the
-    // caller had simply started talking. Checking the abort signal itself
-    // is reliable regardless of what the SDK names its error.
+    // the Sarvam/OpenAI-compatible SDK's own abort error does NOT set
+    // err.name to 'AbortError' — it's literally just 'Error' with message
+    // "Request was aborted." (confirmed against the installed SDK). So this
+    // check never matched a real barge-in, and every single interruption
+    // fell through to the "Sarvam LLM failed" branch below, logging a fake
+    // error and forcing Sara to say "one moment, please repeat" even though
+    // nothing failed — the caller had simply started talking. Checking the
+    // abort signal itself is reliable regardless of what the SDK names its
+    // error.
     if (controller.signal.aborted || err.name === 'AbortError' || err.name === 'CanceledError' || err?.constructor?.name === 'APIUserAbortError') {
       session.currentAbort = null;
       return false;
     }
-    console.error(`[orchestrator] GPT failed (${session.callSid}):`, err.message);
+    console.error(`[orchestrator] Sarvam LLM failed (${session.callSid}):`, err.message);
     reply = 'ఒక్క నిమిషం, మళ్ళీ చెప్పగలరా?';
     speak(reply);
   }
@@ -579,7 +642,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     elapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS;
 
   console.log(
-    `[orchestrator] GPT (${session.callSid}): "${spokenReply}"` +
+    `[orchestrator] Sarvam LLM (${session.callSid}): "${spokenReply}"` +
     `${shouldEnd ? ' [END]' : ''}${wantsTransfer ? ' [INTERESTED]' : ''}${shouldTransferNow ? ' [TRANSFER-NOW]' : ''}`
   );
   session.conversation.push({ role: 'assistant', content: spokenReply });
@@ -723,6 +786,10 @@ async function handleCall(ws, req) {
     sttFailureStreak: 0,       // consecutive STT failures (402/429/etc.) — caps the retry loop
     lastNormalizedReply: '',   // normalized text of the previous assistant reply — for loop detection
     repeatStreak: 0,           // consecutive identical replies — for loop detection
+    awaitingGreeting: false,   // true until the opening greeting has been sent (hello-aware)
+    greetingHello: '',         // greeting variant used if the caller opened with "hello"
+    greetingNormal: '',        // default greeting variant (no "hello" heard / timeout)
+    greetingTimeout: null,     // timer that force-sends the default greeting if caller stays silent
   };
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
@@ -749,7 +816,8 @@ async function handleCall(ws, req) {
       return {
         language: lead.language || 'Telugu',
         systemPrompt: buildSystemPrompt(lead, memoryBlock),
-        greeting: buildWelcomeGreeting(lead),
+        greetingNormal: buildWelcomeGreeting(lead, false),
+        greetingHello: buildWelcomeGreeting(lead, true),
       };
     }
 
@@ -757,7 +825,8 @@ async function handleCall(ws, req) {
     return {
       language: 'Telugu',
       systemPrompt: buildDefaultSystemPrompt(),
-      greeting: buildDefaultWelcomeGreeting(),
+      greetingNormal: buildDefaultWelcomeGreeting(false),
+      greetingHello: buildDefaultWelcomeGreeting(true),
     };
   })();
 
@@ -817,25 +886,21 @@ async function handleCall(ws, req) {
       // see sarvamClient.createTtsSession for why this was a latency bug.
       session.ttsSession = createTtsSession(resolveLangCode(session.language));
 
-      session.busy = true;
-      session.conversation.push({ role: 'assistant', content: ctx.greeting });
-      // BUG FIX ("cold start"/repeated greeting): the "never repeat your
-      // greeting" rule lives inside a long system prompt, and gpt-4o-mini
-      // was ignoring it later in the call — re-saying the full intro line
-      // when the caller just said "hello" again mid-conversation. A short,
-      // recent reminder message is far more reliable than one instruction
-      // buried in a wall of text, so pin it right after the greeting.
-      session.conversation.push({
-        role: 'system',
-        content: 'Reminder: you already greeted the caller and introduced yourself as Sara from Academy of Tech Masters — do not say your name/company introduction again for the rest of this call, even if the caller says "hello" again or seems unclear. Just continue the conversation naturally from where it left off.',
-      });
-      try {
-        await sendTts(ws, session, ctx.greeting);
-      } catch (err) {
-        console.error('[orchestrator] welcome TTS failed:', err.message);
-      } finally {
-        session.busy = false;
-      }
+      // Don't speak immediately — wait briefly to hear how the caller opens
+      // the call (e.g. "Hello?") so the greeting can mirror it ("Hello sir,
+      // I am Sara...") instead of always barging in with a flat default
+      // line. If the caller says nothing within OPENING_GREETING_WAIT_MS,
+      // greet anyway with the plain default variant so the call never
+      // stalls in silence.
+      session.greetingHello = ctx.greetingHello;
+      session.greetingNormal = ctx.greetingNormal;
+      session.awaitingGreeting = true;
+      session.busy = false;
+      session.greetingTimeout = setTimeout(() => {
+        sendOpeningGreeting(ws, session, false).catch(err =>
+          console.error(`[orchestrator] greeting-timeout send failed (${session.callSid}):`, err.message)
+        );
+      }, OPENING_GREETING_WAIT_MS);
 
     } else if (event === 'media') {
       const payload = message.media?.payload;
@@ -901,6 +966,22 @@ async function handleCall(ws, req) {
         // that's what hammered Sarvam into the 429 rate-limit loop in the
         // logs. Skip segments that never actually contained speech.
         if (!hadSpeech) return;
+
+        if (session.awaitingGreeting) {
+          session.busy = true;
+          let openedWithHello = false;
+          try {
+            const openingText = await transcribeAudio(segment, {
+              languageCode: resolveLangCode(session.language),
+            });
+            openedWithHello = HELLO_OPENING_PATTERN.test(openingText || '');
+          } catch (err) {
+            console.error(`[orchestrator] opening-greeting STT failed (${session.callSid}):`, err.message);
+          }
+          await sendOpeningGreeting(ws, session, openedWithHello);
+          session.busy = false;
+          return;
+        }
 
         session.busy = true; // block any other segment from being cut/processed until this turn finishes
 
@@ -986,6 +1067,7 @@ async function handleCall(ws, req) {
 
   ws.on('close', () => {
     console.log(`[orchestrator] WS closed: ${session.callSid}`);
+    clearTimeout(session.greetingTimeout);
     session.currentAbort?.abort();
     // If the socket closed without a 'stop' event (e.g. network drop),
     // still try to save whatever conversation happened.
