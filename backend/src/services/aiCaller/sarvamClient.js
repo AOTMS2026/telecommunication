@@ -430,7 +430,22 @@ function createTtsSession(languageCode = 'te-IN') {
     try { socket?.close(); } catch {}
   }
 
-  return { speak, close };
+  // COLD-START FIX: open() was previously only ever triggered lazily, on
+  // the first speak() call — so even after orchestrator.js started calling
+  // createTtsSession() earlier, the actual WebSocket handshake to Sarvam
+  // still didn't begin until the first sentence was ready to be spoken,
+  // adding its own connection-setup time to the critical path before Sara
+  // could say a word. warm() kicks off that handshake immediately (and can
+  // be called well before any text exists), so by the time speak() is
+  // actually called the socket is usually already open.
+  function warm() {
+    if (closed) return;
+    open().catch((err) => {
+      console.log('[sarvam-tts] warm() handshake failed (will retry on first speak()):', err.message);
+    });
+  }
+
+  return { speak, close, warm };
 }
 
 module.exports = { transcribeAudio, synthesizeSpeech, createTtsSession };

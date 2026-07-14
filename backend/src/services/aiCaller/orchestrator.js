@@ -200,7 +200,7 @@ const HELLO_OPENING_PATTERN = /\b(hello|hallo|halo)\b|హలో|హాయ్|ह
 // Max time to wait for the caller's opening word before greeting anyway
 // with the default (non-"hello") variant, so the call never stalls in
 // silence if the caller doesn't say anything.
-const OPENING_GREETING_WAIT_MS = 4000;
+const OPENING_GREETING_WAIT_MS = 1500;
 
 // ─── Sarvam LLM client ──────────────────────────────────────────────────────
 //
@@ -961,6 +961,19 @@ async function handleCall(ws, req) {
     };
   })();
 
+  // COLD-START FIX: createTtsSession()'s WebSocket handshake to Sarvam
+  // previously only started inside the 'start' handler, AFTER the CallSid
+  // DB lookup and the contextPromise await had already finished — sitting
+  // squarely in the critical path before Sara could say a single word.
+  // Kick the handshake off here instead, in parallel with contextPromise,
+  // using the same default language contextPromise falls back to (Telugu)
+  // so the common case (no lead / default prompt) needs no reconnect at
+  // all. If the resolved lead's actual language differs, this pre-warmed
+  // session is closed below and a fresh one is opened for that language.
+  const DEFAULT_PREWARM_LANG_CODE = resolveLangCode('Telugu');
+  const prewarmedTtsSession = createTtsSession(DEFAULT_PREWARM_LANG_CODE);
+  prewarmedTtsSession.warm();
+
   ws.on('message', async (raw) => {
     let message;
     try { message = JSON.parse(raw); } catch { return; }
@@ -1015,7 +1028,17 @@ async function handleCall(ws, req) {
       session.outcomeExtractionPrompt = buildOutcomeExtractionPrompt();
       // One TTS WebSocket for the whole call instead of one per sentence —
       // see sarvamClient.createTtsSession for why this was a latency bug.
-      session.ttsSession = createTtsSession(resolveLangCode(session.language));
+      // Reuse the session pre-warmed above (in parallel with the DB lookup)
+      // only if it was opened for the SAME language — its 'config' frame
+      // already locked in target_language_code, so a mismatched pre-warm
+      // can't just be reused with the right language after the fact.
+      const resolvedLangCode = resolveLangCode(session.language);
+      if (resolvedLangCode === DEFAULT_PREWARM_LANG_CODE) {
+        session.ttsSession = prewarmedTtsSession;
+      } else {
+        prewarmedTtsSession.close();
+        session.ttsSession = createTtsSession(resolvedLangCode);
+      }
 
       // Don't speak immediately — wait briefly to hear how the caller opens
       // the call (e.g. "Hello?") so the greeting can mirror it ("Hello sir,
