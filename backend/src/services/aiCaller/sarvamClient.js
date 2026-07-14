@@ -279,7 +279,7 @@ function createTtsSession(languageCode = 'te-IN') {
           data: {
             target_language_code: languageCode,
             speaker: 'priya',
-            pace: 1.20,
+            pace: 1.15,
             output_audio_codec: 'linear16',
             speech_sample_rate: 8000,
           },
