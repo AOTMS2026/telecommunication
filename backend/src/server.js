@@ -91,6 +91,7 @@ app.use('/api/whatsapp-inbox', apiLimiter, require('./routes/whatsappInbox'));
 app.use('/api/whatsapp-lists', apiLimiter, require('./routes/whatsappLists'));
 app.use('/api/bulk-import', apiLimiter, require('./routes/bulkImport'));
 app.use('/api/ai-caller', require('./routes/aiCaller'));
+app.use('/api/ai-call-reports', apiLimiter, require('./routes/aiCallReports')); // NEW: AI Call Reports extension
 app.use('/api/integrations', require('./routes/integrations'));
 app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/recordings', apiLimiter, require('./routes/recordings'));

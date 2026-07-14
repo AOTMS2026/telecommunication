@@ -17,6 +17,7 @@ const Lead = require('../../models/Lead');
 const FollowUp = require('../../models/FollowUp');
 const AiCallOutcome = require('../../models/AiCallOutcome');
 const { releaseLock } = require('./leadLock');
+const { upsertAiCallReport } = require('./aiCallReportService'); // NEW: AI Call Reports extension
 
 const VALID_STATUSES = [
   'Fresh', 'Connected', 'Call Not Responding', 'Call Back Later',
@@ -46,6 +47,7 @@ async function applyAiCallOutcome(leadId, outcome, {
   transcript = '',
   campaignId = null,
   callSid = '',
+  transferredToHr = false,
 } = {}) {
   const lead = await Lead.findById(leadId);
   if (!lead) {
@@ -70,6 +72,13 @@ async function applyAiCallOutcome(leadId, outcome, {
     callDuration: durationSeconds,
     callStatus,
   });
+
+  if (transferredToHr) {
+    lead.activities.unshift({
+      type: 'note',
+      description: 'Call transferred to HR — student showed genuine interest (AI handoff).',
+    });
+  }
 
   lead.totalCalls += 1;
   lead.totalCallDuration += durationSeconds;
@@ -112,7 +121,7 @@ async function applyAiCallOutcome(leadId, outcome, {
   await releaseLock(lead._id, 'ai-engine');
 
   // Full audit record (separate from the trimmed Lead.activities text).
-  await AiCallOutcome.create({
+  const aiCallOutcomeDoc = await AiCallOutcome.create({
     lead: lead._id,
     campaign: campaignId || lead.campaign || undefined,
     callSid,
@@ -121,7 +130,19 @@ async function applyAiCallOutcome(leadId, outcome, {
     durationSeconds,
     recordingUrl,
     status: 'success',
-  }).catch((err) => console.error('[aiCaller] AiCallOutcome write failed:', err.message));
+  }).catch((err) => {
+    console.error('[aiCaller] AiCallOutcome write failed:', err.message);
+    return null;
+  });
+
+  // NEW: AI Call Reports extension — extracts demo/interest details from the
+  // same `outcome` object and keeps one up-to-date report row per student.
+  // Purely additive: never throws, never affects the calling flow above.
+  await upsertAiCallReport(lead, outcome, {
+    campaignId: campaignId || lead.campaign,
+    callSid,
+    aiCallOutcomeId: aiCallOutcomeDoc?._id,
+  });
 
   return lead;
 }

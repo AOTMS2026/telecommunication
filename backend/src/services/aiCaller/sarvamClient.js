@@ -2,25 +2,39 @@
 //
 // STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true (confirmed working)
 // TTS: bulbul:v3 model over WebSocket (wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3).
-//   Verified against Sarvam's live API docs (docs.sarvam.ai), NOT the PDF
-//   guides, which had two separate bugs:
-//     - config key is `speech_sample_rate`, not `sample_rate`
-//     - output_audio_codec values are linear16/mulaw/alaw/opus/flac/aac/wav/mp3
-//       ('pcm' is not a valid value — 'linear16' is the raw-PCM equivalent)
-//     - speaker `shubh` is valid for bulbul:v3 (`anushka` is a bulbul:v2-only voice)
-//     - THE MAIN BUG: the text-to-synthesize message must use "type": "text",
-//       not "type": "convert" (which both PDFs got wrong in different ways —
-//       see the synthesizeSpeech() comment below for the full story). This
-//       was causing Sarvam to reject every single TTS request with a 422,
-//       which is why the agent could never speak.
-// Exotel sends/expects raw PCM16 8kHz 16-bit (per PDF spec — NOT mulaw)
+//
+// ROOT CAUSE FIX (this pass) — "TTS opens, then stops after generation
+// completes": the persistent session socket had NO way to tell an in-flight
+// speak() call that the socket had died. If Sarvam idle-closed the WS mid
+// utterance (or it dropped for any other reason), speak() just sat there —
+// its message/error listeners were on a now-dead socket — until its own
+// 15s overallTimer finally fired. Since orchestrator.js's TURN_TIMEOUT_MS
+// is 12s, the turn-level abort fired FIRST and killed the whole turn
+// (STT+GPT+TTS) before the TTS call ever got a chance to time out on its
+// own — which looks exactly like "TTS stops as soon as generation
+// finishes" from the caller's side: dead air, then a hard cut.
+//
+// Also fixed: the completion-event check only matched
+// `data.data.event_type === 'final'`. Real completion events from Sarvam
+// didn't match that shape, so EVERY sentence fell through to the 1500ms
+// idle-timer fallback as its ONLY completion signal — i.e. ~1.5s of dead
+// air tacked onto the end of every single sentence, compounding across a
+// multi-sentence reply. Completion is now detected the same (lenient) way
+// synthesizeSpeech() already did it: any `type: "event"` message ends the
+// utterance immediately.
+//
+// Also added: a keepalive ping on the persistent session socket so Sarvam
+// doesn't idle-close it between turns (STT+GPT thinking time can exceed
+// whatever idle window Sarvam enforces), which was the trigger for the
+// dead-socket scenario above in the first place.
 
 const axios = require('axios');
 const FormData = require('form-data');
 const WebSocket = require('ws');
 
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
-const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3';
+const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3&send_completion_event=true';
+const TTS_KEEPALIVE_MS = 15000; // must stay well under Sarvam's own idle-close window
 
 function getSarvamKey() {
   const key = process.env.SARVAM_API_KEY;
@@ -28,7 +42,17 @@ function getSarvamKey() {
   return key;
 }
 
-// ─── WAV builder — wraps raw PCM16 8kHz from Exotel into WAV container ───────
+function stripWavHeaderIfPresent(buf) {
+  if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WAVE') {
+    const dataIdx = buf.indexOf('data', 12, 'ascii');
+    if (dataIdx !== -1 && dataIdx + 8 <= buf.length) {
+      return buf.subarray(dataIdx + 8);
+    }
+    return buf.subarray(Math.min(44, buf.length));
+  }
+  return buf;
+}
+
 function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSample = 16) {
   const dataSize = pcm16Bytes.length;
   const byteRate = sampleRate * channels * (bitsPerSample / 8);
@@ -51,36 +75,30 @@ function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSamp
   return buf;
 }
 
-function stripWavHeader(wavBuf) {
-  let offset = 12;
-  while (offset + 8 <= wavBuf.length) {
-    const id = wavBuf.toString('ascii', offset, offset + 4);
-    const size = wavBuf.readUInt32LE(offset + 4);
-    if (id === 'data') return wavBuf.slice(offset + 8, offset + 8 + size);
-    offset += 8 + size;
-    if (size % 2 !== 0) offset++;
-  }
-  return wavBuf.slice(44);
-}
-
 // ─── STT ─────────────────────────────────────────────────────────────────────
-// Per PDF: model=saaras:v3, sample_rate=8000, high_vad_sensitivity=true
-async function transcribeAudio(pcm16Bytes) {
+// BUG FIX: language_code used to be hardcoded to 'te-IN' regardless of the
+// caller's actual language, so English speech was transcribed as phonetic
+// Telugu script (e.g. "yeah can you tell me about your company" became
+// "యా కెన్ యు ప్లీజ్ టెల్ మీ అబౌట్ యువర్ కంపెనీ"). Pass the resolved
+// language when known, and fall back to auto-detect ('unknown') otherwise.
+async function transcribeAudio(pcm16Bytes, { signal, languageCode } = {}) {
   if (!pcm16Bytes || pcm16Bytes.length < 320) return '';
+  if (signal?.aborted) return '';
 
   const key = getSarvamKey();
   const wavBuf = buildWavBuffer(pcm16Bytes, 8000, 1, 16);
 
   const form = new FormData();
   form.append('file', wavBuf, { filename: 'audio.wav', contentType: 'audio/wav' });
-  form.append('language_code', 'te-IN');
-  form.append('model', 'saaras:v3');         // per PDF: saaras:v3
-  form.append('sample_rate', '8000');         // per PDF: must match Exotel 8kHz
-  form.append('high_vad_sensitivity', 'true'); // per PDF: 0.5s silence boundary
+  form.append('language_code', languageCode || 'unknown'); // 'unknown' = Sarvam auto-detects
+  form.append('model', 'saaras:v3');
+  form.append('sample_rate', '8000');
+  form.append('high_vad_sensitivity', 'true');
 
   const response = await axios.post(SARVAM_STT_URL, form, {
     headers: { ...form.getHeaders(), 'api-subscription-key': key },
     timeout: 12000,
+    signal,
   });
 
   const transcript = (response.data.transcript || '').trim();
@@ -88,50 +106,11 @@ async function transcribeAudio(pcm16Bytes) {
   return transcript;
 }
 
-// ─── TTS ─────────────────────────────────────────────────────────────────────
-// Verified against the OFFICIAL Sarvam docs (docs.sarvam.ai/api-reference-docs/
-// api-guides-tutorials/text-to-speech/streaming-api/web-socket), not the PDF
-// guides, which turned out to be wrong on the wire format.
-//
-// The WS protocol is a discriminated union of exactly 4 input message types,
-// each named to match its `type` field: Config Message ("config"), Text
-// Message ("text"), Flush Message ("flush"), Ping Message ("ping").
-//
-// ROOT CAUSE OF THE TTS BUG: this file was sending `{"type": "convert", ...}`
-// for the text payload (copied from the PDF guides, neither of which
-// actually got the text-message shape right — one used a bare {"text":...}
-// with no envelope, the other guessed "convert"). "convert" is not a member
-// of Sarvam's discriminated union, so the server can't match it to any known
-// schema and rejects it with the generic 422 "Input parameters has to be a
-// valid dictionary" — on literally every utterance, exactly what the logs
-// showed. Fix: use "text" as the type.
-//
-// Confirmed message shapes (per docs):
-//   { "type": "config", "data": { target_language_code, speaker, pace,
-//       min_buffer_size, max_chunk_length, output_audio_codec,
-//       output_audio_bitrate, speech_sample_rate } }
-//   { "type": "text",   "data": { "text": "..." } }
-//   { "type": "flush" }
-//   { "type": "ping" }
-// Audio comes back as: { "type": "audio", "data": { "audio": "<base64>", "content_type": "..." } }
-// Errors come back as: { "type": "error", "data": { "message": "...", "code": ... } }
-//
-// output_audio_codec="linear16" is Sarvam's raw-PCM value (docs literally
-// list it as "pcm (LINEAR16)"), and speech_sample_rate=8000 is documented as
-// supported "for all models & modes" including streaming — both needed so
-// Sarvam hands back audio already in Exotel's 8kHz/16-bit PCM shape with no
-// resampling needed on our end.
-//
-// STREAMING PLAYBACK: `onChunk`, if provided, is invoked synchronously with
-// each raw PCM Buffer the instant it arrives from Sarvam — so the caller
-// (orchestrator.js) can start forwarding audio to Exotel while Sarvam is
-// still generating the rest of the reply, instead of waiting for the whole
-// thing. This is the main latency fix for the "AI takes 5+ seconds to
-// respond" issue: previously nothing was heard until the ENTIRE reply had
-// finished synthesizing.
-function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
+// ─── One-shot TTS (kept for any caller not using the persistent session) ────
+function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null, { signal } = {}) {
   return new Promise((resolve, reject) => {
     if (!text || !text.trim()) return resolve(Buffer.alloc(0));
+    if (signal?.aborted) return resolve(Buffer.alloc(0));
 
     const key = getSarvamKey();
     const chunks = [];
@@ -142,11 +121,22 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
       headers: { 'api-subscription-key': key },
     });
 
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(overallTimer);
+      clearTimeout(idleTimer);
+      ws.terminate();
+      reject(Object.assign(new Error('Sarvam TTS aborted'), { name: 'AbortError' }));
+    };
+    if (signal) signal.addEventListener('abort', onAbort);
+
     const finish = () => {
       if (settled) return;
       settled = true;
       clearTimeout(overallTimer);
       clearTimeout(idleTimer);
+      signal?.removeEventListener('abort', onAbort);
       ws.close();
       const audio = Buffer.concat(chunks);
       if (audio.length === 0) {
@@ -161,13 +151,12 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
       if (!settled) {
         settled = true;
         clearTimeout(idleTimer);
+        signal?.removeEventListener('abort', onAbort);
         ws.terminate();
         reject(new Error('Sarvam TTS WebSocket timed out'));
       }
     }, 15000);
 
-    // Track which message we last sent so a subsequent error can be
-    // attributed precisely instead of guessing from a generic 422.
     let lastSent = null;
 
     ws.on('open', () => {
@@ -178,15 +167,13 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
         type: 'config',
         data: {
           target_language_code: languageCode,
-          speaker: 'shubh',                // valid bulbul:v3 speaker (anushka is v2-only)
-          output_audio_codec: 'linear16',   // Sarvam's raw-PCM value ("pcm (LINEAR16)" per docs)
-          speech_sample_rate: 8000,         // 8000 Hz supported for all models/modes incl. streaming
+          speaker: 'priya',
+          pace: 1.15,
+          output_audio_codec: 'linear16',
+          speech_sample_rate: 8000,
         },
       }));
 
-      // FIX: the text message's "type" must be "text", not "convert".
-      // "convert" isn't a member of Sarvam's discriminated union, so the
-      // server rejected it with a generic 422 on every single utterance.
       lastSent = 'text';
       ws.send(JSON.stringify({ type: 'text', data: { text } }));
 
@@ -205,27 +192,20 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
       }
 
       if (data.type === 'audio' && data.data && data.data.audio) {
-        const buf = Buffer.from(data.data.audio, 'base64');
+        const buf = stripWavHeaderIfPresent(Buffer.from(data.data.audio, 'base64'));
         chunks.push(buf);
         if (onChunk) {
           try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk handler threw:', e.message); }
         }
-        // Reset idle timer — finish shortly after the last chunk arrives.
-        // Shortened from 600ms to 250ms: previously this delay gated when
-        // playback could START (since sendTts waited for the whole buffer),
-        // so it was pure added latency on every single reply. Now that
-        // audio streams to Exotel via onChunk as it arrives, this timer is
-        // only a safety margin for detecting end-of-stream (in case the
-        // socket's own 'close' event is slower to fire than the actual gap
-        // between chunks), not something the caller is blocked on.
         clearTimeout(idleTimer);
-        idleTimer = setTimeout(finish, 250);
+        idleTimer = setTimeout(finish, 1500);
       } else if (data.type === 'error') {
         const msg = data.data && data.data.message;
         console.log(`[sarvam-tts] ws error frame (after sending "${lastSent}"): ${msg || str.slice(0, 300)}`);
       } else if (data.type === 'event') {
-        // completion event (send_completion_event) — informational only
         console.log(`[sarvam-tts] ws event: ${str.slice(0, 200)}`);
+        clearTimeout(idleTimer);
+        finish();
       } else {
         console.log(`[sarvam-tts] ws message (unrecognized, after sending "${lastSent}"): ${str.slice(0, 300)}`);
       }
@@ -244,16 +224,228 @@ function synthesizeSpeech(text, languageCode = 'te-IN', onChunk = null) {
         settled = true;
         clearTimeout(overallTimer);
         clearTimeout(idleTimer);
+        signal?.removeEventListener('abort', onAbort);
         reject(err);
       }
     });
 
     ws.on('close', (code, reasonBuf) => {
       console.log(`[sarvam-tts] ws closed code=${code} reason=${reasonBuf ? reasonBuf.toString() : ''} chunks=${chunks.length}`);
-      // server closed the socket on its own — treat as end of stream
       finish();
     });
   });
 }
 
-module.exports = { transcribeAudio, synthesizeSpeech };
+// ─── Persistent TTS session ──────────────────────────────────────────────────
+function createTtsSession(languageCode = 'te-IN') {
+  let socket = null;
+  let openPromise = null;
+  let closed = false;
+  let keepaliveTimer = null;
+  // The speak() call currently waiting on `socket`, if any. Lets the
+  // socket's own 'close'/'error' handlers immediately unblock an in-flight
+  // speak() instead of leaving it to hang until its 15s overallTimer.
+  let activeCall = null;
+
+  function clearKeepalive() {
+    if (keepaliveTimer) {
+      clearInterval(keepaliveTimer);
+      keepaliveTimer = null;
+    }
+  }
+
+  function armKeepalive(sock) {
+    clearKeepalive();
+    keepaliveTimer = setInterval(() => {
+      if (sock.readyState === WebSocket.OPEN) {
+        try { sock.send(JSON.stringify({ type: 'ping' })); } catch {}
+      }
+    }, TTS_KEEPALIVE_MS);
+  }
+
+  function open() {
+    if (openPromise) return openPromise;
+    openPromise = new Promise((resolve, reject) => {
+      const key = getSarvamKey();
+      const sock = new WebSocket(SARVAM_TTS_WS_URL, {
+        headers: { 'api-subscription-key': key },
+      });
+      socket = sock;
+
+      sock.once('open', () => {
+        console.log('[sarvam-tts] session ws open');
+        sock.send(JSON.stringify({
+          type: 'config',
+          data: {
+            target_language_code: languageCode,
+            speaker: 'priya',
+            pace: 1.15,
+            output_audio_codec: 'linear16',
+            speech_sample_rate: 8000,
+          },
+        }));
+        armKeepalive(sock);
+        resolve();
+      });
+
+      sock.once('error', (err) => {
+        console.log('[sarvam-tts] session ws error:', err.message);
+        openPromise = null;
+        reject(err);
+      });
+
+      sock.on('close', (code, reasonBuf) => {
+        console.log(`[sarvam-tts] session ws closed code=${code} reason=${reasonBuf ? reasonBuf.toString() : ''}`);
+        openPromise = null; // next speak() call will transparently reconnect
+        clearKeepalive();
+        // BUG FIX: previously nothing told an in-flight speak() that the
+        // socket it was listening on had just died — it sat waiting for
+        // messages that could never arrive until its own 15s timer fired,
+        // which is longer than orchestrator.js's 12s turn timeout, so the
+        // WHOLE turn got aborted first. Unblock it here immediately.
+        if (activeCall) activeCall.onSocketDown();
+      });
+    });
+    return openPromise;
+  }
+
+  async function speak(text, onChunk, { signal } = {}) {
+    if (!text || !text.trim()) return;
+    if (signal?.aborted || closed) return;
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      await open();
+    }
+    const sock = socket;
+
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      let idleTimer = null;
+      let receivedAny = false;
+
+      const cleanup = () => {
+        sock.removeListener('message', onMessage);
+        sock.removeListener('error', onError);
+        clearTimeout(idleTimer);
+        clearTimeout(overallTimer);
+        signal?.removeEventListener('abort', onAbort);
+        if (activeCall === thisCall) activeCall = null;
+      };
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+      const onAbort = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(Object.assign(new Error('Sarvam TTS aborted'), { name: 'AbortError' }));
+      };
+      if (signal) signal.addEventListener('abort', onAbort);
+
+      const onSocketDown = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        // Speak whatever audio we already got rather than hanging the turn;
+        // if nothing arrived at all, reject so the caller can react (and the
+        // next speak() call will transparently reconnect via open()).
+        if (receivedAny) resolve();
+        else reject(Object.assign(new Error('Sarvam TTS socket closed unexpectedly'), { name: 'SocketClosed' }));
+      };
+      const thisCall = { onSocketDown };
+      activeCall = thisCall;
+
+      const onMessage = (raw) => {
+        let data;
+        try { data = JSON.parse(raw.toString()); } catch { return; }
+
+        if (data.type === 'audio' && data.data?.audio) {
+          receivedAny = true;
+          const buf = stripWavHeaderIfPresent(Buffer.from(data.data.audio, 'base64'));
+          if (onChunk) {
+            try { onChunk(buf); } catch (e) { console.error('[sarvam-tts] onChunk threw:', e.message); }
+          }
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(finish, 1500);
+        } else if (data.type === 'event') {
+          // BUG FIX: this used to require data.data.event_type === 'final'
+          // (or absent) before treating the utterance as done. Real
+          // completion events didn't match that shape, so this branch
+          // almost never fired — EVERY sentence fell through to the 1500ms
+          // idle-timer fallback below as its only way to finish, adding up
+          // to 1.5s of pure dead air after every sentence in a reply.
+          // Sarvam's own "event" message IS the completion signal — trust
+          // it unconditionally, same as synthesizeSpeech() already does.
+          clearTimeout(idleTimer);
+          finish();
+        } else if (data.type === 'error') {
+          // BUG FIX ("voice stuck / not coming mid-call"): this used to
+          // only log and keep waiting — if Sarvam then never sent a real
+          // completion event for this utterance, speak() just hung until
+          // the 15s overallTimer, which is LONGER than orchestrator.js's
+          // 12s turn timeout, so the whole turn got force-aborted first.
+          // Caller heard nothing for that sentence and no clear reason why.
+          // Fail this utterance immediately instead of waiting it out.
+          const msg = data.data?.message || raw.toString().slice(0, 300);
+          console.log(`[sarvam-tts] session error frame: ${msg}`);
+          if (settled) return;
+          settled = true;
+          cleanup();
+          if (receivedAny) resolve(); // speak whatever audio already arrived
+          else reject(Object.assign(new Error(`Sarvam TTS error: ${msg}`), { name: 'SarvamTtsError' }));
+        }
+      };
+      const onError = (err) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+
+      const overallTimer = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          cleanup();
+          if (receivedAny) resolve();
+          else reject(new Error('Sarvam TTS utterance timed out'));
+        }
+      }, 15000);
+
+      sock.on('message', onMessage);
+      sock.on('error', onError);
+
+      sock.send(JSON.stringify({ type: 'text', data: { text } }));
+      sock.send(JSON.stringify({ type: 'flush' }));
+      console.log(`[sarvam-tts] synthesized "${text.slice(0, 50)}"`);
+    });
+  }
+
+  function close() {
+    closed = true;
+    clearKeepalive();
+    activeCall = null;
+    try { socket?.close(); } catch {}
+  }
+
+  // COLD-START FIX: open() was previously only ever triggered lazily, on
+  // the first speak() call — so even after orchestrator.js started calling
+  // createTtsSession() earlier, the actual WebSocket handshake to Sarvam
+  // still didn't begin until the first sentence was ready to be spoken,
+  // adding its own connection-setup time to the critical path before Sara
+  // could say a word. warm() kicks off that handshake immediately (and can
+  // be called well before any text exists), so by the time speak() is
+  // actually called the socket is usually already open.
+  function warm() {
+    if (closed) return;
+    open().catch((err) => {
+      console.log('[sarvam-tts] warm() handshake failed (will retry on first speak()):', err.message);
+    });
+  }
+
+  return { speak, close, warm };
+}
+
+module.exports = { transcribeAudio, synthesizeSpeech, createTtsSession };

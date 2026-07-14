@@ -52,6 +52,10 @@ const integrationSchema = new mongoose.Schema({
   lastAutoSyncAt: { type: Date },
   lastAutoSyncResult: { type: mongoose.Schema.Types.Mixed },
   lastAutoSyncError: { type: String },
+  // Set when a stored OAuth refresh token is expired/revoked (Google
+  // "invalid_grant") — stops the auto-sync poller from retrying every 2
+  // minutes against a dead token until the user reconnects.
+  needsReconnect: { type: Boolean, default: false },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

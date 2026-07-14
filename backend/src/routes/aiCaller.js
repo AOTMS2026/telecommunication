@@ -17,6 +17,7 @@ const Campaign = require('../models/Campaign');
 const { protect } = require('../middleware/auth');
 const { applyNoConnectOutcome } = require('../services/aiCaller/outcomeService');
 const { triggerAiCall } = require('../services/aiCaller/dialer');
+const { consumeTransfer } = require('../services/aiCaller/transferState');
 
 const router = express.Router();
 
@@ -86,6 +87,27 @@ router.all(['/stream-url', '/stream-url/:leadId'], async (req, res) => {
 });
 
 /**
+ * GET/POST /api/ai-caller/passthru
+ * Call-transfer feature: place a Passthru applet immediately after the
+ * Voicebot applet in Exotel's App Bazaar flow. Exotel calls this the moment
+ * the orchestrator's WebSocket closes. We answer with a plain HTTP status —
+ * Exotel's Passthru applet is a pure binary switch on that status code:
+ *   - 302 (or 404) -> wire this branch to a Connect applet that dials HR
+ *     (6300667834), so the call is transferred to a human.
+ *   - 200          -> wire this branch to a Hangup applet, so the call just
+ *     ends normally (no transfer requested).
+ * The actual "should we transfer?" decision was already made and stashed by
+ * orchestrator.js (see transferState.js) right before it closed the WS.
+ * NOT protected — called by Exotel directly.
+ */
+router.all('/passthru', (req, res) => {
+  const callSid = req.query.CallSid || req.body?.CallSid || req.query.CallSID || req.body?.CallSID || '';
+  const transfer = consumeTransfer(callSid);
+  console.log(`[ai-caller] passthru: callSid=${callSid} transfer=${transfer}`);
+  res.sendStatus(transfer ? 302 : 200);
+});
+
+/**
  * POST /api/ai-caller/status
  * Exotel terminal status callback. Handles calls that never connected
  * (no-answer / busy / failed) — the WebSocket never opens in those cases,
@@ -95,7 +117,7 @@ router.all(['/stream-url', '/stream-url/:leadId'], async (req, res) => {
 router.post('/status', async (req, res) => {
   try {
     const leadId = req.query.leadId;
-    const callStatus = req.body.Status || req.body.status;
+    const callStatus = req.body.Status || req.body.status || req.body.CallStatus || req.query.Status || req.query.CallStatus;
     console.log('[ai-caller] Exotel status callback:', leadId, callStatus);
 
     if (leadId && ['no-answer', 'busy', 'failed'].includes(callStatus)) {

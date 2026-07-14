@@ -1,10 +1,16 @@
 // backend/src/services/aiCaller/leadLock.js
-// Reduced TTL to 90s for faster recovery during testing.
-// Change back to 600 for production.
 
 const Lead = require('../../models/Lead');
 
-const DEFAULT_TTL_SECONDS = 90; // was 600 (10 min) — reduced for faster test recovery
+// BUG FIX: this was temporarily dropped to 90s "for faster test recovery"
+// and left that way. A normal AI call — especially with the 3-minute
+// transfer-eligibility window — routinely runs past 90s, so the lock was
+// expiring WHILE the call was still live. campaignEngine's recoverStuckLeads()
+// then saw an "expired lock + in_progress" lead, assumed it was abandoned,
+// and redialed the SAME lead mid-call — causing a second concurrent call to
+// the same number, duplicate finalizeCall runs, and Mongoose VersionErrors.
+// 600s (10 min) comfortably covers any real call + its finalize step.
+const DEFAULT_TTL_SECONDS = 600;
 
 async function acquireLock(leadId, ownerId = 'ai-engine', ttlSeconds = DEFAULT_TTL_SECONDS) {
   const now = new Date();

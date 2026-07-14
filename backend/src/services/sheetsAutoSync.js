@@ -7,7 +7,7 @@ async function syncAllActiveSheets() {
   if (running) return; // avoid overlapping runs
   running = true;
   try {
-    const integrations = await Integration.find({ type: 'google_sheets', status: 'active' });
+    const integrations = await Integration.find({ type: 'google_sheets', status: 'active', needsReconnect: { $ne: true } });
     for (const integration of integrations) {
       if (!integration.config?.refreshToken && !integration.config?.accessToken) continue; // not connected yet
       const hasSheet = integration.config?.sheetId || (integration.config?.sheetSources || []).some(s => s.sheetId);
@@ -23,9 +23,18 @@ async function syncAllActiveSheets() {
           },
         });
       } catch (err) {
+        const isInvalidGrant = /invalid_grant/i.test(err.message || '') || err.response?.data?.error === 'invalid_grant';
         console.error(`[sheetsAutoSync] failed for integration ${integration._id}:`, err.message);
         await Integration.findByIdAndUpdate(integration._id, {
-          $set: { lastAutoSyncAt: new Date(), lastAutoSyncError: err.message },
+          $set: {
+            lastAutoSyncAt: new Date(),
+            lastAutoSyncError: isInvalidGrant
+              ? 'Google authorization expired or was revoked. Reconnect this integration (Step 1 > Connect with Google) to resume auto-sync.'
+              : err.message,
+            // Stop hammering Google every 2 minutes with a dead refresh token —
+            // wait for the user to reconnect via OAuth instead.
+            ...(isInvalidGrant ? { needsReconnect: true } : {}),
+          },
         });
       }
     }
