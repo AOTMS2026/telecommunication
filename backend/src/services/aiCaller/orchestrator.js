@@ -80,6 +80,19 @@ const STALL_TIMEOUT_MS = 12000;
 // trigger in normal operation.
 const ABSOLUTE_TURN_CEILING_MS = 45000;
 
+// DEAD-AIR / NO-RESPONSE HANDLING: this is different from SILENCE_RECOVERY_ENGINE
+// (which is a prompt-level behavior that only ever runs mid-turn, i.e. AFTER
+// the caller has already said something at least once). If the caller never
+// speaks at all — picks up and says nothing, or goes fully silent after the
+// agent's line and never responds again — no STT segment is ever cut (see
+// `if (!hadSpeech) return;` below), so the LLM is never even invoked and
+// nothing in the prompt can react. These two timers are a code-level
+// safety net for exactly that case: total silence with zero caller speech.
+// Measured from the end of the agent's last utterance (or the opening
+// greeting), not reset by anything except the caller actually speaking.
+const SILENCE_CHECKIN_MS = 10000; // 10s of total silence -> Sara checks in once ("Hello sir, are you there?")
+const SILENCE_HANGUP_MS = 30000; // 30s of total silence (including the check-in) -> end the call gracefully
+
 // BUG FIX: a single non-silent frame while the agent was speaking was
 // treated as barge-in — but with no echo cancellation on the line, the
 // agent's OWN voice bleeding back into the mic (or a stray click/line
@@ -456,6 +469,63 @@ async function sendTts(ws, session, text, signal = null) {
   session.abortSpeaking = false;
 }
 
+// ─── Dead-air / no-response monitor ─────────────────────────────────────────
+//
+// Call this every time the agent finishes speaking and it becomes the
+// caller's turn to respond (end of opening greeting, end of a normal reply,
+// end of an apology/timeout line that doesn't end the call). Restarts the
+// 30s total-silence window from zero.
+function markAgentTurnEnded(session) {
+  session.lastAgentTurnEndAt = Date.now();
+  session.callerRespondedSinceAgentTurn = false;
+  session.silenceCheckInSent = false;
+}
+
+// Runs once/sec for the life of the call. Independent of the STT/GPT/TTS
+// turn pipeline entirely — this is the only thing watching for a caller who
+// never says anything at all.
+function startSilenceMonitor(ws, session) {
+  session.silenceMonitorInterval = setInterval(async () => {
+    if (session.finalized) {
+      clearInterval(session.silenceMonitorInterval);
+      return;
+    }
+    // Don't act mid-turn, mid-greeting-wait, or while Sara is already talking —
+    // only fire while it's genuinely the caller's turn and nothing is happening.
+    if (session.awaitingGreeting || session.busy || session.agentSpeaking) return;
+    if (!session.lastAgentTurnEndAt) return; // greeting hasn't completed yet
+    if (session.callerRespondedSinceAgentTurn) return; // caller has spoken since — nothing to do
+
+    const silentFor = Date.now() - session.lastAgentTurnEndAt;
+
+    if (silentFor >= SILENCE_HANGUP_MS && session.silenceCheckInSent) {
+      clearInterval(session.silenceMonitorInterval);
+      session.busy = true;
+      const goodbye = session.language === 'English'
+        ? "Okay sir, I am not able to hear you — I will call back later. Thank you!"
+        : 'సరే సార్, మీ వాయిస్ వినిపించడం లేదు, నేను తర్వాత మళ్ళీ కాల్ చేస్తాను. ధన్యవాదాలు!';
+      try { await sendTts(ws, session, goodbye); } catch (err) {
+        console.error(`[orchestrator] no-response hangup TTS failed (${session.callSid}):`, err.message);
+      }
+      await finalizeCall(session);
+      ws.close();
+      return;
+    }
+
+    if (silentFor >= SILENCE_CHECKIN_MS && !session.silenceCheckInSent) {
+      session.silenceCheckInSent = true;
+      session.busy = true;
+      const checkIn = session.language === 'English'
+        ? 'Hello sir, are you there?'
+        : 'హలో సార్, వినిపిస్తుందా?';
+      try { await sendTts(ws, session, checkIn); } catch (err) {
+        console.error(`[orchestrator] silence check-in TTS failed (${session.callSid}):`, err.message);
+      }
+      session.busy = false;
+    }
+  }, 1000);
+}
+
 // ─── Opening greeting (hello-aware) ─────────────────────────────────────────
 //
 // Sends the correct opening greeting variant exactly once: "Hello sir, I am
@@ -487,6 +557,7 @@ async function sendOpeningGreeting(ws, session, openedWithHello) {
     console.error(`[orchestrator] opening greeting TTS failed (${session.callSid}):`, err.message);
   } finally {
     session.busy = false;
+    markAgentTurnEnded(session); // start the 30s dead-air window fresh from here
   }
 }
 
@@ -544,6 +615,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
         ? 'Sorry, I could not hear that clearly. Could you say it again?'
         : 'క్షమించండి సార్, వినపడలేదు. మళ్ళీ చెప్పగలరా?';
       try { await sendTts(ws, session, apology, controller.signal); } catch {}
+      markAgentTurnEnded(session); // call continues — restart the dead-air window
     }
     return false;
   }
@@ -628,6 +700,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 
   await ttsQueue.catch(err => console.error(`[orchestrator] sendTts failed (${session.callSid}):`, err.message));
   session.currentAbort = null;
+  markAgentTurnEnded(session); // restart the dead-air window now that it's the caller's turn again
 
   const shouldEnd = reply.includes(END_CALL_MARKER);
   const wantsTransfer = reply.includes(TRANSFER_MARKER);
@@ -686,8 +759,8 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     session.transferPending = true;
     // Short handoff line so the caller isn't just cut off mid-conversation.
     const handoffLine = session.language === 'English'
-      ? 'Sure, please hold — connecting you to my colleague now.'
-      : 'సరే sir, ఒక్క నిమిషం hold చేయండి, మా HR మేడమ్ కి కనెక్ట్ చేస్తున్నాను.';
+      ? 'Okay sir, I am transferring your call to my team now — they will speak with you.'
+      : 'సరే sir, మీ కాల్ ని మా టీమ్ కి transfer చేస్తున్నాను, వాళ్ళు మీతో మాట్లాడతారు.';
     try {
       await sendTts(ws, session, handoffLine);
     } catch (err) {
@@ -790,7 +863,13 @@ async function handleCall(ws, req) {
     greetingHello: '',         // greeting variant used if the caller opened with "hello"
     greetingNormal: '',        // default greeting variant (no "hello" heard / timeout)
     greetingTimeout: null,     // timer that force-sends the default greeting if caller stays silent
+    lastAgentTurnEndAt: 0,     // timestamp Sara last finished speaking; 0 = greeting not done yet
+    callerRespondedSinceAgentTurn: false, // true once real caller audio has landed since lastAgentTurnEndAt
+    silenceCheckInSent: false, // true once "Hello sir, are you there?" has been spoken for this silence window
+    silenceMonitorInterval: null, // setInterval handle for the total-silence/no-response watchdog
   };
+
+  startSilenceMonitor(ws, session);
 
   // Kick off lead/context loading in the BACKGROUND — do not await it here.
   // Previously this was awaited before ws.on('message', ...) was even
@@ -924,6 +1003,7 @@ async function handleCall(ws, req) {
         session.bargeInRun = 0;
       } else {
         session.hadSpeechInSegment = true;
+        session.callerRespondedSinceAgentTurn = true; // real audio from the caller — cancels the dead-air timers
         if (session.agentSpeaking) {
           session.bargeInRun = isLoudEnoughForBargeIn ? session.bargeInRun + 1 : 0;
         }
@@ -1038,6 +1118,7 @@ async function handleCall(ws, req) {
           try { await sendTts(ws, session, apology); } catch (err) {
             console.error(`[orchestrator] timeout-fallback TTS failed (${session.callSid}):`, err.message);
           }
+          markAgentTurnEnded(session); // call continues — restart the dead-air window
           outcome = false;
         }
 
@@ -1068,6 +1149,7 @@ async function handleCall(ws, req) {
   ws.on('close', () => {
     console.log(`[orchestrator] WS closed: ${session.callSid}`);
     clearTimeout(session.greetingTimeout);
+    clearInterval(session.silenceMonitorInterval);
     session.currentAbort?.abort();
     // If the socket closed without a 'stop' event (e.g. network drop),
     // still try to save whatever conversation happened.
