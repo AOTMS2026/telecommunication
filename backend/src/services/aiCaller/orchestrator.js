@@ -190,6 +190,34 @@ function hasEnrollmentIntent(text) {
   return ENROLLMENT_INTENT_PATTERNS.some((re) => re.test(text));
 }
 
+// BUG FIX ("caller literally asks to be transferred, agent just keeps
+// saying 'I don't know that number' and loops back to course questions"):
+// seen verbatim in production logs — caller said "transfer the call" /
+// "just transfer the call" / asked for HR's name and number multiple times
+// in a row, and the LLM never emitted [[TRANSFER_TO_HR]] because its own
+// HUMAN_HANDOFF instruction only covered enrollment interest, not an
+// explicit ask to be connected to a person. This is a deterministic,
+// keyword-based backstop on the caller's OWN transcribed words — same
+// pattern as ENROLLMENT_INTENT_PATTERNS above — so the flag still gets set
+// even on a turn where the model doesn't pick up on the request.
+const TRANSFER_REQUEST_PATTERNS = [
+  /ట్రాన్స్‌?ఫర్\s*(ద\s*)?కాల్/,      // Telugu: "transfer (the) call"
+  /కాల్\s*ట్రాన్స్‌?ఫర్/,             // Telugu: "call transfer"
+  /మీ\s*టీమ్\s*కి\s*(కలపండి|ఇవ్వండి)/, // Telugu: "connect/give to your team"
+  /హెచ్ఆర్\s*(కి|నంబర్|పేరు)/,        // Telugu: "HR (to/number/name)"
+  /మనిషిని\s*కలపండి/,                 // Telugu: "connect me to a person"
+  /कॉल\s*ट्रान्सफर/,                  // Hindi: "call transfer"
+  /किसी\s*(इंसान|आदमी|व्यक्ति)\s*से\s*बात/, // Hindi: "talk to a person"
+  /\btransfer\s*(the\s*)?call\b/i,
+  /\bconnect\s*(me\s*)?(to|with)\s*(your\s*)?(team|hr|someone|a\s*human|a\s*person)\b/i,
+  /\b(talk|speak)\s*to\s*(a\s*)?(human|person|someone|hr|your\s*team)\b/i,
+  /\b(hr'?s?|team'?s?)\s*(number|name)\b/i,
+];
+
+function hasTransferRequest(text) {
+  return TRANSFER_REQUEST_PATTERNS.some((re) => re.test(text));
+}
+
 // Detects whether the caller opened the call with some form of "hello"
 // (English/Telugu/Hindi) so the opening greeting can mirror it ("Hello sir,
 // I am Sara...") instead of always using the plain default ("Hi sir, I am
@@ -670,6 +698,12 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     session.studentInterested = true;
   }
 
+  if (hasTransferRequest(text)) {
+    console.log(`[orchestrator] explicit transfer-request keyword match (${session.callSid}) — flagging explicitTransferRequested`);
+    session.studentInterested = true;
+    session.explicitTransferRequested = true;
+  }
+
   // Sentences must be spoken in the order the LLM produced them — queue each
   // sendTts call behind the previous one instead of firing them in parallel.
   let ttsQueue = Promise.resolve();
@@ -743,9 +777,11 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
 
   const elapsedMs = Date.now() - session.startedAt;
   const shouldTransferNow =
-    session.studentInterested &&
     !session.transferPending &&
-    elapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS;
+    (
+      session.explicitTransferRequested || // caller directly asked — act now, don't make them wait for the 3-min mark
+      (session.studentInterested && elapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS)
+    );
 
   console.log(
     `[orchestrator] Sarvam LLM (${session.callSid}): "${spokenReply}"` +
@@ -777,7 +813,7 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
     // — even though a live human handoff was fully eligible right then.
     // Prefer transferring over closing whenever the call already qualifies.
     const loopElapsedMs = Date.now() - session.startedAt;
-    if (session.studentInterested && !session.transferPending && loopElapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS) {
+    if (!session.transferPending && (session.explicitTransferRequested || (session.studentInterested && loopElapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS))) {
       console.warn(`[orchestrator] repeated-reply loop detected (${session.callSid}) — transferring instead of closing (studentInterested=true)`);
       session.transferPending = true;
       const handoffLine = session.language === 'English'
@@ -869,6 +905,51 @@ async function finalizeCall(session, { transferredToHr = false } = {}) {
   }
 }
 
+// BUG FIX ("agent never proactively hands off at 3 minutes"): previously
+// the ONLY way a call ever got transferred was studentInterested (LLM
+// marker or keyword backstop) PLUS the 3-minute gate — a call that ran
+// past 3 minutes but never tripped either interest signal just kept going
+// on the AI indefinitely. This is a separate, unconditional timer: once
+// ANY call reaches MIN_CALL_DURATION_FOR_TRANSFER_MS, it is hung off to
+// the team regardless of interest, same as the prompt now tells the model
+// to expect (see promptBuilder.js HUMAN_HANDOFF). Waits for a free
+// (non-busy, not-still-greeting) moment so it never talks over an
+// in-progress turn, and no-ops if the call already ended/transferred by
+// then through one of the other paths.
+function scheduleAutoTransfer(ws, session) {
+  const remainingMs = Math.max(0, MIN_CALL_DURATION_FOR_TRANSFER_MS - (Date.now() - session.startedAt));
+
+  session.autoTransferTimer = setTimeout(() => {
+    session.autoTransferPoll = setInterval(async () => {
+      if (session.finalized || session.transferPending) {
+        clearInterval(session.autoTransferPoll);
+        return;
+      }
+      if (session.busy || session.awaitingGreeting) return; // wait for the current turn/greeting to finish
+
+      clearInterval(session.autoTransferPoll);
+      session.transferPending = true;
+
+      const handoffLine = session.language === 'English'
+        ? 'Sir, we have been speaking for a little while now — let me connect you with my team, they will take it from here.'
+        : 'సర్, మనం కొంతసేపు మాట్లాడాము — ఇప్పుడు మీ కాల్ ని మా టీమ్ కి transfer చేస్తున్నాను, వాళ్ళు మీతో మాట్లాడతారు.';
+      try {
+        session.currentAbort = new AbortController();
+        await sendTts(ws, session, handoffLine, session.currentAbort.signal);
+      } catch (err) {
+        console.error(`[orchestrator] auto-transfer handoff TTS failed (${session.callSid}):`, err.message);
+      } finally {
+        session.currentAbort = null;
+      }
+
+      console.log(`[orchestrator] auto-transfer at 3-min mark (${session.callSid})`);
+      markForTransfer(session.callSid);
+      await finalizeCall(session, { transferredToHr: true });
+      ws.close();
+    }, 500);
+  }, remainingMs);
+}
+
 // ─── Main WebSocket handler ───────────────────────────────────────────────────
 
 /**
@@ -900,7 +981,10 @@ async function handleCall(ws, req) {
     abortSpeaking: false, // set by barge-in to stop an in-progress TTS playback loop early
     currentAbort: null,   // AbortController for the in-flight STT/GPT/TTS network calls of this turn
     studentInterested: false, // set once GPT emits TRANSFER_MARKER at any point in the call
+    explicitTransferRequested: false, // set once the caller's own words directly ask to be transferred — bypasses the 3-min gate
     transferPending: false,   // set once the handoff has actually been triggered (guards against double-trigger)
+    autoTransferTimer: null,  // setTimeout handle: unconditional handoff once the call hits MIN_CALL_DURATION_FOR_TRANSFER_MS
+    autoTransferPoll: null,   // setInterval handle used to wait for a free (non-busy) moment to speak the handoff line
     ttsSession: null,          // persistent per-call Sarvam TTS WebSocket (created once language is known)
     hadSpeechInSegment: false, // true once a non-silent frame lands in the current accumulating segment
     bargeInRun: 0,             // consecutive non-silent frames while agent is speaking (barge-in debounce)
@@ -1055,6 +1139,9 @@ async function handleCall(ws, req) {
           console.error(`[orchestrator] greeting-timeout send failed (${session.callSid}):`, err.message)
         );
       }, OPENING_GREETING_WAIT_MS);
+
+      // Unconditional 3-minute handoff — see scheduleAutoTransfer() comment.
+      scheduleAutoTransfer(ws, session);
 
     } else if (event === 'media') {
       const payload = message.media?.payload;
@@ -1225,6 +1312,8 @@ async function handleCall(ws, req) {
     console.log(`[orchestrator] WS closed: ${session.callSid}`);
     clearTimeout(session.greetingTimeout);
     clearInterval(session.silenceMonitorInterval);
+    clearTimeout(session.autoTransferTimer);
+    clearInterval(session.autoTransferPoll);
     session.currentAbort?.abort();
     // If the socket closed without a 'stop' event (e.g. network drop),
     // still try to save whatever conversation happened.

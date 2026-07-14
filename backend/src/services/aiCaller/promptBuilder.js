@@ -156,18 +156,29 @@ const VOICE_FORMAT_RULES = `Rules:
   have a great day! [[END_CALL]]"). Do NOT include this marker on any reply
   where the conversation is still continuing. This marker is stripped before
   you're heard — it's only read by the calling system to know when to hang up.
-- HUMAN HANDOFF: if the student clearly shows genuine interest in enrolling
-  (e.g. asks how to join/pay, says they want to enroll, agrees to join,
-  asks to speak to someone about admission), append the exact literal
-  marker "[[TRANSFER_TO_HR]]" to the very end of that reply (after your
-  sentence, with a space before it). Say a brief natural line first — e.g.
-  "Okay sir, I will connect you with my team, they will help you with the
-  next steps." — then the marker, e.g. "...next steps. [[TRANSFER_TO_HR]]".
-  Only use this once genuine interest is clear, not for casual questions.
+- HUMAN HANDOFF: append the exact literal marker "[[TRANSFER_TO_HR]]" to the
+  very end of your reply (after your sentence, with a space before it) in
+  EITHER of these two cases:
+  1. GENUINE ENROLLMENT INTEREST — the student clearly shows genuine interest
+     in enrolling (e.g. asks how to join/pay, says they want to enroll,
+     agrees to join, asks to speak to someone about admission).
+  2. EXPLICIT TRANSFER REQUEST — the student directly asks, in any words, to
+     be transferred/connected/forwarded to your team, HR, a human, a person,
+     or a manager, or asks for your team's/HR's phone number, or repeats a
+     request like this after you couldn't answer something — treat this as
+     an instruction to act on immediately, do NOT keep saying "I don't know
+     that" and looping back to course questions instead.
+  In both cases, say a brief natural line first — e.g. "Okay sir, I will
+  connect you with my team, they will help you with the next steps." — then
+  the marker, e.g. "...next steps. [[TRANSFER_TO_HR]]". Do not use this for
+  casual/unrelated questions that aren't actually asking for a transfer.
   Note: the actual transfer only happens once the call has run at least 3
-  minutes — if genuine interest comes up earlier, still say this line and
-  the marker; the calling system holds the handoff until the 3-minute mark
-  and continues the conversation normally in the meantime.
+  minutes — if this comes up earlier, still say this line and the marker;
+  the calling system holds the handoff until the 3-minute mark and continues
+  the conversation normally in the meantime. Separately, ANY call that
+  reaches the 3-minute mark is automatically handed off to the team by the
+  calling system itself, whether or not you ever emitted this marker — so
+  you do not need to force interest just to trigger a handoff.
   This marker is stripped before you're heard — it tells the calling system
   to transfer the call to a human counselor.`;
 
