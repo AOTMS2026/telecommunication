@@ -162,6 +162,34 @@ function isCarrierAnnouncement(text) {
   return CARRIER_ANNOUNCEMENT_PATTERNS.some((re) => re.test(text));
 }
 
+// BUG FIX (root cause of "not transferring even after 3 min"): the ONLY
+// thing that ever sets session.studentInterested = true is the LLM itself
+// choosing to emit the [[TRANSFER_TO_HR]] marker in its reply. Seen in
+// production logs: the caller said, in effect, "I want to take the
+// 10,000-rupee course" — clear enrollment agreement — but the LLM just
+// kept asking "which time for the demo?" and never emitted the marker, so
+// studentInterested stayed false for the entire rest of the (252s) call.
+// The 3-minute gate in processSpeechSegment was working correctly the
+// whole time; it simply never had anything to open, because nothing ever
+// flips this flag if the model forgets to. This is a deterministic,
+// keyword-based backstop on the caller's OWN transcribed words — it does
+// not replace the LLM's marker, it just guarantees the flag still gets
+// set even on a turn where the model doesn't produce the marker.
+const ENROLLMENT_INTENT_PATTERNS = [
+  /తీసుకోవాలనుకుంటున్నాను/, // Telugu: "I want to take (it)"
+  /తీసుకుంటాను/,             // Telugu: "I will take (it)"
+  /చేరుతాను/,                 // Telugu: "I will join"
+  /జాయిన్\s*అవుతాను/,         // Telugu: "I will join" (English loanword)
+  /join\s*(avutha|chestha|karunga|kartha hoon|karta hoon)/i,
+  /\bi\s*(want|would like)\s*to\s*(join|enroll|take)\b/i,
+  /\bi\s*will\s*join\b/i,
+  /\byes\s*i\s*(will|want to)\s*(join|enroll)\b/i,
+];
+
+function hasEnrollmentIntent(text) {
+  return ENROLLMENT_INTENT_PATTERNS.some((re) => re.test(text));
+}
+
 // Detects whether the caller opened the call with some form of "hello"
 // (English/Telugu/Hindi) so the opening greeting can mirror it ("Hello sir,
 // I am Sara...") instead of always using the plain default ("Hi sir, I am
@@ -637,6 +665,11 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   console.log(`[orchestrator] STT (${session.callSid}): "${text}"`);
   session.conversation.push({ role: 'user', content: text });
 
+  if (hasEnrollmentIntent(text)) {
+    console.log(`[orchestrator] enrollment-intent keyword match (${session.callSid}) — flagging studentInterested`);
+    session.studentInterested = true;
+  }
+
   // Sentences must be spoken in the order the LLM produced them — queue each
   // sendTts call behind the previous one instead of firing them in parallel.
   let ttsQueue = Promise.resolve();
@@ -737,6 +770,25 @@ async function processSpeechSegment(ws, session, pcm16Bytes) {
   session.lastNormalizedReply = normalizedReply;
 
   if (session.repeatStreak >= MAX_CONSECUTIVE_REPEATED_REPLIES) {
+    // BUG FIX (seen in production): a caller who had ALREADY shown clear
+    // enrollment interest (studentInterested=true) and was well past the
+    // 3-minute mark got hard-closed by this loop safety-net with a generic
+    // "our team will call you back" line instead of actually transferring
+    // — even though a live human handoff was fully eligible right then.
+    // Prefer transferring over closing whenever the call already qualifies.
+    const loopElapsedMs = Date.now() - session.startedAt;
+    if (session.studentInterested && !session.transferPending && loopElapsedMs >= MIN_CALL_DURATION_FOR_TRANSFER_MS) {
+      console.warn(`[orchestrator] repeated-reply loop detected (${session.callSid}) — transferring instead of closing (studentInterested=true)`);
+      session.transferPending = true;
+      const handoffLine = session.language === 'English'
+        ? 'Okay sir, I am transferring your call to my team now — they will speak with you.'
+        : 'సరే sir, మీ కాల్ ని మా టీమ్ కి transfer చేస్తున్నాను, వాళ్ళు మీతో మాట్లాడతారు.';
+      try { await sendTts(ws, session, handoffLine); } catch (err) {
+        console.error(`[orchestrator] loop-bailout handoff TTS failed (${session.callSid}):`, err.message);
+      }
+      return 'transfer';
+    }
+
     console.warn(`[orchestrator] repeated-reply loop detected (${session.callSid}) — force-closing call`);
     const bailoutLine = session.language === 'English'
       ? 'Sorry for the confusion, sir — I will have our team call you back shortly with the details. Thank you!'
