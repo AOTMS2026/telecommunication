@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
+const mongoose = require('mongoose');
 const FollowUp = require('../models/FollowUp');
 const Lead = require('../models/Lead');
 const { protect, authorize } = require('../middleware/auth');
@@ -8,6 +9,33 @@ const { notifyAdminsTaskCreated, notifyAdminsTaskEdited } = require('../services
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Safety cap so a bad "endDate" (e.g. years out) can't create thousands of rows
+const MAX_RECURRING_OCCURRENCES = 366;
+
+// Given a start date + frequency + endDate, build the list of scheduledAt
+// dates for every occurrence (including the first one). Each occurrence
+// keeps the same time-of-day as the original scheduledAt.
+function buildRecurrenceDates(startDate, frequency, endDate) {
+  const dates = [new Date(startDate)];
+  if (frequency === 'none' || !endDate) return dates;
+
+  const stepDays = frequency === 'daily' ? 1 : frequency === 'weekly' ? 7 : null;
+  const stepMonths = frequency === 'monthly' ? 1 : null;
+
+  let cursor = new Date(startDate);
+  while (dates.length < MAX_RECURRING_OCCURRENCES) {
+    const next = new Date(cursor);
+    if (stepDays) next.setDate(next.getDate() + stepDays);
+    else if (stepMonths) next.setMonth(next.getMonth() + stepMonths);
+    else break; // unknown frequency, stop
+
+    if (next.getTime() > new Date(endDate).getTime()) break;
+    dates.push(next);
+    cursor = next;
+  }
+  return dates;
+}
 
 // Safe fire-and-forget wrapper — notification failures must NEVER break the main response
 function fireAndForget(fn) {
@@ -130,20 +158,55 @@ router.post('/', protect, async (req, res) => {
       return res.status(403).json({ message: 'You are not allowed to assign tasks to this user' });
     }
 
-    const followup = await FollowUp.create({
-      ...req.body,
+    const { recurrence, ...body } = req.body;
+    const baseDoc = {
+      ...body,
       assignedTo: req.body.assignedTo || req.user._id,
       assignedBy: req.body.assignedBy || req.user._id,
-    });
+    };
 
-    await followup.populate('lead', 'name phone status');
-    await followup.populate('assignedTo', 'name email');
-    await followup.populate('assignedBy', 'name email');
+    const frequency = recurrence?.frequency;
+    const isRecurring = frequency && frequency !== 'none' && recurrence?.endDate;
 
-    // Fire-and-forget: notification failures must NOT affect the 201 response
-    fireAndForget(() => notifyAdminsTaskCreated({ followup, performedByUser: req.user }));
+    if (!isRecurring) {
+      // Plain, one-off task — unchanged behaviour
+      const followup = await FollowUp.create(baseDoc);
 
-    res.status(201).json({ followup });
+      await followup.populate('lead', 'name phone status');
+      await followup.populate('assignedTo', 'name email');
+      await followup.populate('assignedBy', 'name email');
+
+      fireAndForget(() => notifyAdminsTaskCreated({ followup, performedByUser: req.user }));
+
+      return res.status(201).json({ followup });
+    }
+
+    // ── Recurring task: pre-generate one document per occurrence ──────────
+    if (!baseDoc.scheduledAt) {
+      return res.status(400).json({ message: 'scheduledAt is required to build a recurring series' });
+    }
+    const occurrenceDates = buildRecurrenceDates(baseDoc.scheduledAt, frequency, recurrence.endDate);
+    const recurringGroupId = new mongoose.Types.ObjectId();
+
+    const docs = occurrenceDates.map(scheduledAt => ({
+      ...baseDoc,
+      scheduledAt,
+      recurrence: { frequency, endDate: recurrence.endDate },
+      recurringGroupId,
+    }));
+
+    const created = await FollowUp.insertMany(docs);
+
+    // Return the first occurrence (populated) so the UI can show/select it immediately;
+    // the rest will simply appear on their scheduled day when the list is queried.
+    const firstFollowup = await FollowUp.findById(created[0]._id)
+      .populate('lead', 'name phone status')
+      .populate('assignedTo', 'name email')
+      .populate('assignedBy', 'name email');
+
+    fireAndForget(() => notifyAdminsTaskCreated({ followup: firstFollowup, performedByUser: req.user }));
+
+    res.status(201).json({ followup: firstFollowup, seriesCount: created.length });
   } catch (err) {
     console.error('[POST /followups]', err);
     res.status(500).json({ message: err.message });
@@ -192,10 +255,22 @@ router.put('/:id', protect, async (req, res) => {
 });
 
 // DELETE /api/followups/:id — only admin & admin allowed
+// Pass ?series=true to delete every future occurrence in the same recurring
+// series (past/completed occurrences in the series are left untouched).
 router.delete('/:id', protect, authorize('manager', 'admin'), async (req, res) => {
   try {
-    const deleted = await FollowUp.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: 'Task not found' });
+    const target = await FollowUp.findById(req.params.id);
+    if (!target) return res.status(404).json({ message: 'Task not found' });
+
+    if (req.query.series === 'true' && target.recurringGroupId) {
+      const result = await FollowUp.deleteMany({
+        recurringGroupId: target.recurringGroupId,
+        scheduledAt: { $gte: target.scheduledAt },
+      });
+      return res.json({ message: 'Deleted series', count: result.deletedCount });
+    }
+
+    await FollowUp.findByIdAndDelete(req.params.id);
     res.json({ message: 'Deleted' });
   } catch (err) {
     console.error('[DELETE /followups/:id]', err);
