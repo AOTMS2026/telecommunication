@@ -40,6 +40,13 @@ export default function Users() {
     role: 'caller',
     isActive: true
   });
+  const [showPassword, setShowPassword] = useState(false);
+
+  const EyeIcon = ({ visible }) => visible ? (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  ) : (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.6 21.6 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  );
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -68,6 +75,7 @@ export default function Users() {
       isActive: true
     });
     setError('');
+    setShowPassword(false);
     setShowAddModal(true);
   };
 
@@ -82,6 +90,7 @@ export default function Users() {
       isActive: u.isActive
     });
     setError('');
+    setShowPassword(false);
     setShowEditModal(true);
   };
 
@@ -288,7 +297,15 @@ export default function Users() {
               </div>
               <div>
                 <label style={labelStyle}>Password</label>
-                <input required minLength={6} type="password" style={inputStyle} placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                <div style={{ position: 'relative' }}>
+                  <input required minLength={6} type={showPassword && isSuperAdmin ? 'text' : 'password'} style={{ ...inputStyle, paddingRight: 38 }} placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                  {isSuperAdmin && (
+                    <button type="button" onClick={() => setShowPassword(p => !p)} title={showPassword ? 'Hide password' : 'View password'}
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex' }}>
+                      <EyeIcon visible={showPassword} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Role</label>
@@ -328,7 +345,16 @@ export default function Users() {
               </div>
               <div>
                 <label style={labelStyle}>New Password (Leave blank to keep current)</label>
-                <input type="password" style={inputStyle} placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                <div style={{ position: 'relative' }}>
+                  <input type={showPassword && isSuperAdmin ? 'text' : 'password'} style={{ ...inputStyle, paddingRight: 38 }} placeholder="••••••••" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                  {isSuperAdmin && (
+                    <button type="button" onClick={() => setShowPassword(p => !p)} title={showPassword ? 'Hide password' : 'View password'}
+                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex' }}>
+                      <EyeIcon visible={showPassword} />
+                    </button>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: '#999', margin: '4px 0 0' }}>Passwords are securely encrypted and can't be viewed once saved — set a new one to view it here before saving.</p>
               </div>
               <div>
                 <label style={labelStyle}>Role</label>

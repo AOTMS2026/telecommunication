@@ -310,6 +310,11 @@ router.put('/:id', protect, async (req, res) => {
     const body = { ...req.body };
     if (Array.isArray(body.courseInterest)) body.courseInterest = body.courseInterest[0] || undefined;
 
+    // Only Super Admin (admin role) may change a lead's phone number.
+    if ('phone' in body && body.phone !== lead.phone && req.user.role !== 'admin') {
+      delete body.phone;
+    }
+
     const before = {
       assignedTo: lead.assignedTo?.toString(),
       rating: lead.rating,

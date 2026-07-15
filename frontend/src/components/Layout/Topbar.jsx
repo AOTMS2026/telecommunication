@@ -1,7 +1,7 @@
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { followupsAPI, notificationsAPI } from '../../services/api';
+import { followupsAPI, notificationsAPI, authAPI } from '../../services/api';
 import logoImg from '../../assets/aotms-global-logo.png';
 
 // Module-level helper — no hoisting issues
@@ -15,6 +15,99 @@ function formatNotifTime(dateStr) {
   return `${Math.floor(diff / 86400000)}d ago`;
 }
 
+// ── Change Password Modal ───────────────────────────────────────────────────
+function ChangePasswordModal({ onClose }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const eyeIcon = (visible) => visible ? (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  ) : (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.6 21.6 0 0 1 5.06-6.06M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+  );
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError('Please fill in all fields');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('New password and confirmation do not match');
+      return;
+    }
+    setSaving(true);
+    try {
+      await authAPI.changePassword({ currentPassword, newPassword });
+      setSuccess(true);
+      setTimeout(() => onClose(), 1200);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputWrapStyle = { position: 'relative' };
+  const inputStyle = { width: '100%', padding: '10px 38px 10px 12px', border: '1px solid var(--theme-border-tint)', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' };
+  const eyeBtnStyle = { position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex' };
+  const labelStyle = { display: 'block', fontSize: 11, fontWeight: 700, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 380, padding: 24, boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--theme-text-strongest)', margin: 0 }}>Change Password</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#888', lineHeight: 1 }}>×</button>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>Current Password</label>
+            <div style={inputWrapStyle}>
+              <input type={showCurrent ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={inputStyle} placeholder="••••••••" autoComplete="current-password" />
+              <button type="button" onClick={() => setShowCurrent(p => !p)} style={eyeBtnStyle}>{eyeIcon(showCurrent)}</button>
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>New Password</label>
+            <div style={inputWrapStyle}>
+              <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} style={inputStyle} placeholder="At least 6 characters" autoComplete="new-password" />
+              <button type="button" onClick={() => setShowNew(p => !p)} style={eyeBtnStyle}>{eyeIcon(showNew)}</button>
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Confirm New Password</label>
+            <div style={inputWrapStyle}>
+              <input type={showNew ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={inputStyle} placeholder="Re-enter new password" autoComplete="new-password" />
+            </div>
+          </div>
+
+          {error && <p style={{ color: '#e53e3e', fontSize: 12, margin: 0 }}>{error}</p>}
+          {success && <p style={{ color: '#22a163', fontSize: 12, margin: 0, fontWeight: 600 }}>✓ Password changed successfully!</p>}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: 10, border: '1px solid var(--theme-border-tint)', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--theme-text-strongest)' }}>Cancel</button>
+            <button type="submit" disabled={saving || success} style={{ flex: 1, padding: 10, border: 'none', borderRadius: 10, background: 'var(--btn-gradient, linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%))', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (saving || success) ? 0.7 : 1 }}>
+              {saving ? 'Saving...' : 'Update Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Topbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -25,6 +118,7 @@ export default function Topbar() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showWorkspaceSettings, setShowWorkspaceSettings] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   // Track which followup IDs we've already alerted so we don't repeat
@@ -154,7 +248,7 @@ export default function Topbar() {
 
   // Decide which module a notification should open when clicked
   const notifTarget = (n) => {
-    const taskTypes = ['task_created', 'task_assigned', 'task_edited', 'task_overdue'];
+    const taskTypes = ['task_created', 'task_assigned', 'task_edited', 'task_overdue', 'task_reminder'];
     if (taskTypes.includes(n.type)) {
       const tab = n.data?.taskType === 'todo' ? 'Todo' : 'Call Followups';
       return `/tasks?tab=${encodeURIComponent(tab)}`;
@@ -197,6 +291,12 @@ export default function Topbar() {
     if (type === 'task_created') return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
     );
+    if (type === 'task_reminder') return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    );
+    if (type === 'task_overdue') return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    );
     return (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
     );
@@ -210,6 +310,8 @@ export default function Topbar() {
     if (type === 'call_initiated') return '#e0f7fa';
     if (type === 'followup') return 'var(--theme-surface-tint)';
     if (type === 'task_created') return 'var(--theme-surface-tint)';
+    if (type === 'task_reminder') return '#fff8e6';
+    if (type === 'task_overdue') return '#fff0f0';
     if (type === 'campaign') return '#fff8e6';
     return '#f3f4f6';
   };
@@ -260,6 +362,11 @@ export default function Topbar() {
       label: 'Profile',
       icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>),
       onClick: () => { setShowProfile(false); navigate('/profile'); }
+    },
+    {
+      label: 'Change Password',
+      icon: (<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>),
+      onClick: () => { setShowProfile(false); setShowChangePassword(true); }
     },
     {
       label: 'Message Templates',
@@ -582,6 +689,10 @@ export default function Topbar() {
           </div>
         </div>
       </header>
+
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
     </>
   );
 }

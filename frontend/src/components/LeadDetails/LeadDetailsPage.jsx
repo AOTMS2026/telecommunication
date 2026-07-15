@@ -820,12 +820,26 @@ export default function LeadDetailsPage({
                       ['Email', 'email', 'email', false],
                       ['Location', 'location', 'text', false],
                       ['Last Qualification', 'lastQualification', 'text', false],
-                    ].map(([label, field, type, required]) => (
-                      <div key={field}>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">{label}</label>
-                        <input type={type} className="input-field w-full border border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={editForm[field]} onChange={e => setEditForm({ ...editForm, [field]: e.target.value })} required={required} />
-                      </div>
-                    ))}
+                    ].map(([label, field, type, required]) => {
+                      const isPhoneField = field === 'phone';
+                      const locked = isPhoneField && !isSuperAdmin;
+                      return (
+                        <div key={field}>
+                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                            {label}{locked && <span className="normal-case font-medium text-gray-400"> (only Super Admin can edit)</span>}
+                          </label>
+                          <input
+                            type={type}
+                            className={`input-field w-full border border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${locked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                            value={editForm[field]}
+                            onChange={e => setEditForm({ ...editForm, [field]: e.target.value })}
+                            required={required}
+                            readOnly={locked}
+                            title={locked ? 'Only Super Admin can edit the phone number' : undefined}
+                          />
+                        </div>
+                      );
+                    })}
                     <div>
                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">Budget (INR)</label>
                       <input type="number" className="input-field w-full border border-gray-200 rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={editForm.budget} onChange={e => setEditForm({ ...editForm, budget: e.target.value })} placeholder="Enter budget amount" min={0} />

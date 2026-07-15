@@ -241,6 +241,36 @@ async function notifyTaskOverdue({ followup }) {
   }
 }
 
+/**
+ * Notify the assignee that a task/follow-up is coming up soon (before it's
+ * due), so they get a heads-up rather than only finding out once it's late.
+ * Called by the reminder sweep in server.js — never called directly from
+ * request handlers.
+ */
+async function notifyTaskReminder({ followup }) {
+  try {
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'To-do task' : 'Call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+    const noteSnippet = followup.note ? `: "${followup.note.slice(0, 80)}"` : (followup.title ? `: "${followup.title.slice(0, 80)}"` : '');
+
+    const recipientId = followup.assignedTo?._id || followup.assignedTo;
+    if (!recipientId) return null;
+
+    return createNotification({
+      recipient: recipientId,
+      type: 'task_reminder',
+      title: '🔔 Task Due Soon',
+      message: `${taskLabel}${leadSuffix}${noteSnippet} is due soon`,
+      lead: followup.lead?._id || followup.lead,
+      data: { followupId: followup._id, taskType: followup.type, scheduledAt: followup.scheduledAt },
+    });
+  } catch (err) {
+    console.error('Failed to notify task reminder:', err.message);
+    return null;
+  }
+}
+
 module.exports = {
   createNotification,
   notifyWorkflowAction,
@@ -252,4 +282,5 @@ module.exports = {
   notifyAdminsTaskCreated,
   notifyAdminsTaskEdited,
   notifyTaskOverdue,
+  notifyTaskReminder,
 };

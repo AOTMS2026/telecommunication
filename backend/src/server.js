@@ -15,6 +15,7 @@ const { WebSocketServer } = require('ws');
 const { handleCall } = require('./services/aiCaller/orchestrator'); // NEW: in-process AI call orchestrator
 const { startSchedulePoller } = require('./services/workflowEngine');
 const { startOverdueTaskChecker } = require('./services/taskOverdueChecker');
+const { startTaskReminderChecker } = require('./services/taskReminderChecker');
 const campaignEngine = require('./services/aiCaller/campaignEngine');
 const callbackEngine = require('./services/aiCaller/callbackEngine');
 const { startSheetsAutoSyncPoller } = require('./services/sheetsAutoSync');
@@ -183,6 +184,7 @@ server.listen(PORT, () => {
   console.log(`🚀 AOTMS Server running on port ${PORT}`);
   startSchedulePoller(60 * 1000);
   startOverdueTaskChecker(5 * 60 * 1000);
+  startTaskReminderChecker(5 * 60 * 1000);
   campaignEngine.startPoller();
   callbackEngine.startPoller();
   startSheetsAutoSyncPoller(2 * 60 * 1000); // auto-import new Google Sheet rows every 2 minutes

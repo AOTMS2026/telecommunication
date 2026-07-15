@@ -107,9 +107,29 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// Enforce who a given user is allowed to assign a task to:
+// - admin (super admin): anyone
+// - manager: callers, or themselves
+// - caller: themselves only
+async function canAssignTo(actor, assigneeId) {
+  if (!assigneeId) return true; // falls back to actor as assignee
+  if (actor.role === 'admin') return true;
+  if (assigneeId.toString() === actor._id.toString()) return true;
+  if (actor.role === 'manager') {
+    const User = require('../models/User');
+    const assignee = await User.findById(assigneeId).select('role');
+    return assignee?.role === 'caller';
+  }
+  return false; // callers can only assign to themselves
+}
+
 // POST /api/followups — create a task/follow-up
 router.post('/', protect, async (req, res) => {
   try {
+    if (req.body.assignedTo && !(await canAssignTo(req.user, req.body.assignedTo))) {
+      return res.status(403).json({ message: 'You are not allowed to assign tasks to this user' });
+    }
+
     const followup = await FollowUp.create({
       ...req.body,
       assignedTo: req.body.assignedTo || req.user._id,
@@ -133,6 +153,23 @@ router.post('/', protect, async (req, res) => {
 // PUT /api/followups/:id
 router.put('/:id', protect, async (req, res) => {
   try {
+    if (req.body.assignedTo && !(await canAssignTo(req.user, req.body.assignedTo))) {
+      return res.status(403).json({ message: 'You are not allowed to assign tasks to this user' });
+    }
+
+    const existing = await FollowUp.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Follow-up not found' });
+
+    // Callers never get edit rights on a task's details — view only. The one
+    // exception is marking it complete, which is a status-only update.
+    if (req.user.role === 'caller') {
+      const bodyKeys = Object.keys(req.body).filter(k => k !== 'completedAt');
+      const isStatusOnlyUpdate = bodyKeys.length === 1 && bodyKeys[0] === 'status' && req.body.status === 'done';
+      if (!isStatusOnlyUpdate) {
+        return res.status(403).json({ message: 'You can only view this task. You may still mark it complete.' });
+      }
+    }
+
     const update = { ...req.body };
     if (update.status === 'done' && !update.completedAt) {
       update.completedAt = new Date();

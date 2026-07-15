@@ -20,6 +20,11 @@ const followUpSchema = new mongoose.Schema({
   // Set once an overdue notification has been sent for this task, so the
   // background job never sends duplicate "task overdue" alerts.
   overdueNotifiedAt: { type: Date },
+  // Set once a "due soon" reminder notification has been sent for this task,
+  // so the background job never sends duplicate reminders.
+  reminderNotifiedAt: { type: Date },
+  // How many minutes before scheduledAt the reminder should fire. Defaults to 30.
+  reminderMinutesBefore: { type: Number, default: 30 },
 }, { timestamps: true });
 
 // Indexes for frequent query patterns
