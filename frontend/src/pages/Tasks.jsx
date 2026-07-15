@@ -331,6 +331,11 @@ function AddTaskModal({ type, onClose, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Recurrence — "None" keeps the old single-task behaviour. Any other
+  // frequency needs an end date so we know how far out to generate tasks.
+  const [repeatFrequency, setRepeatFrequency] = useState('none');
+  const [repeatEndDate, setRepeatEndDate] = useState('');
+
   const [users, setUsers] = useState([]);
   const [assignedTo, setAssignedTo] = useState(currentUser?._id || '');
   const [assignedBy, setAssignedBy] = useState(currentUser?._id || '');
@@ -394,6 +399,14 @@ function AddTaskModal({ type, onClose, onCreated }) {
       setError('Please choose a due date & time');
       return;
     }
+    if (repeatFrequency !== 'none' && !repeatEndDate) {
+      setError('Please choose an end date for the repeating task');
+      return;
+    }
+    if (repeatFrequency !== 'none' && new Date(repeatEndDate) < new Date(scheduledAt)) {
+      setError('Repeat end date must be after the due date');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -408,6 +421,15 @@ function AddTaskModal({ type, onClose, onCreated }) {
       if (canAssign) {
         payload.assignedTo = assignedTo || currentUser._id;
         payload.assignedBy = assignedBy || currentUser._id;
+      }
+      // Recurrence — backend pre-generates one task per occurrence (e.g. one
+      // per day) up to and including the end date, so the task reappears
+      // fresh ("upcoming") on every scheduled day even after today's is done.
+      if (repeatFrequency !== 'none') {
+        payload.recurrence = {
+          frequency: repeatFrequency,
+          endDate: new Date(repeatEndDate + 'T23:59:59').toISOString(),
+        };
       }
       const res = await followupsAPI.create(payload);
       onCreated(res.data.followup);  // notify parent first (sets forFilter / triggers fetch)
@@ -525,6 +547,35 @@ function AddTaskModal({ type, onClose, onCreated }) {
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Repeat</label>
+            <select
+              value={repeatFrequency}
+              onChange={e => setRepeatFrequency(e.target.value)}
+              style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
+            >
+              <option value="none">Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+            {repeatFrequency !== 'none' && (
+              <div style={{ marginTop: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Repeat Until</label>
+                <input
+                  type="date"
+                  value={repeatEndDate}
+                  min={scheduledAt ? scheduledAt.slice(0, 10) : undefined}
+                  onChange={e => setRepeatEndDate(e.target.value)}
+                  style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                />
+                <div style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>
+                  A fresh task will be created for each {repeatFrequency === 'daily' ? 'day' : repeatFrequency === 'weekly' ? 'week' : 'month'} up to this date — e.g. set it a month out for a daily task all through the month.
+                </div>
+              </div>
+            )}
           </div>
 
           {canAssign && (
