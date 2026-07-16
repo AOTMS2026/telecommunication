@@ -1,19 +1,9 @@
 // backend/src/services/aiCaller/sarvamClient.js
 //
-// STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true.
-// TTS: bulbul:v2 model over WebSocket (wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v2).
+// STT: saaras:v3 model, sample_rate=8000, high_vad_sensitivity=true (confirmed working)
+// TTS: bulbul:v3 model over WebSocket (wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3).
 //
-// BUG FIX (this pass): STT was calling model: 'saaras:v2' — that model
-// name does not exist in Sarvam's current API (their models are
-// 'saaras:v3' [current/recommended] and 'saaras:v2.5' [legacy, being
-// deprecated] — never a bare 'v2'). Every transcription request was
-// rejected with 400 Bad Request as a result, which is why STT failed on
-// literally every attempt in the last test call, immediately, with no
-// intermittent success. Switched to 'saaras:v3' and added the matching
-// mode: 'transcribe' parameter (only meaningful for v3, ignored otherwise,
-// and 'transcribe' is the default anyway — set explicitly for clarity).
-//
-// ROOT CAUSE FIX (prior pass) — "TTS opens, then stops after generation
+// ROOT CAUSE FIX (this pass) — "TTS opens, then stops after generation
 // completes": the persistent session socket had NO way to tell an in-flight
 // speak() call that the socket had died. If Sarvam idle-closed the WS mid
 // utterance (or it dropped for any other reason), speak() just sat there —
@@ -43,7 +33,7 @@ const FormData = require('form-data');
 const WebSocket = require('ws');
 
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
-const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v2&send_completion_event=true';
+const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3&send_completion_event=true';
 const TTS_KEEPALIVE_MS = 15000; // must stay well under Sarvam's own idle-close window
 
 function getSarvamKey() {
@@ -86,6 +76,11 @@ function buildWavBuffer(pcm16Bytes, sampleRate = 8000, channels = 1, bitsPerSamp
 }
 
 // ─── STT ─────────────────────────────────────────────────────────────────────
+// BUG FIX: language_code used to be hardcoded to 'te-IN' regardless of the
+// caller's actual language, so English speech was transcribed as phonetic
+// Telugu script (e.g. "yeah can you tell me about your company" became
+// "యా కెన్ యు ప్లీజ్ టెల్ మీ అబౌట్ యువర్ కంపెనీ"). Pass the resolved
+// language when known, and fall back to auto-detect ('unknown') otherwise.
 async function transcribeAudio(pcm16Bytes, { signal, languageCode } = {}) {
   if (!pcm16Bytes || pcm16Bytes.length < 320) return '';
   if (signal?.aborted) return '';
@@ -95,9 +90,8 @@ async function transcribeAudio(pcm16Bytes, { signal, languageCode } = {}) {
 
   const form = new FormData();
   form.append('file', wavBuf, { filename: 'audio.wav', contentType: 'audio/wav' });
-  form.append('language_code', languageCode || 'unknown'); // 'unknown' = Sarvam auto-detects (documented, valid)
-  form.append('model', 'saaras:v3'); // was 'saaras:v2' — not a real model name, caused 400 on every call
-  form.append('mode', 'transcribe'); // only meaningful for v3; explicit for clarity (this is the default anyway)
+  form.append('language_code', languageCode || 'unknown'); // 'unknown' = Sarvam auto-detects
+  form.append('model', 'saaras:v3');
   form.append('sample_rate', '8000');
   form.append('high_vad_sensitivity', 'true');
 
@@ -248,6 +242,9 @@ function createTtsSession(languageCode = 'te-IN') {
   let openPromise = null;
   let closed = false;
   let keepaliveTimer = null;
+  // The speak() call currently waiting on `socket`, if any. Lets the
+  // socket's own 'close'/'error' handlers immediately unblock an in-flight
+  // speak() instead of leaving it to hang until its 15s overallTimer.
   let activeCall = null;
 
   function clearKeepalive() {
@@ -281,7 +278,7 @@ function createTtsSession(languageCode = 'te-IN') {
           type: 'config',
           data: {
             target_language_code: languageCode,
-            speaker: 'anushka',
+            speaker: 'priya',
             pace: 1.15,
             output_audio_codec: 'linear16',
             speech_sample_rate: 8000,
@@ -299,8 +296,13 @@ function createTtsSession(languageCode = 'te-IN') {
 
       sock.on('close', (code, reasonBuf) => {
         console.log(`[sarvam-tts] session ws closed code=${code} reason=${reasonBuf ? reasonBuf.toString() : ''}`);
-        openPromise = null;
+        openPromise = null; // next speak() call will transparently reconnect
         clearKeepalive();
+        // BUG FIX: previously nothing told an in-flight speak() that the
+        // socket it was listening on had just died — it sat waiting for
+        // messages that could never arrive until its own 15s timer fired,
+        // which is longer than orchestrator.js's 12s turn timeout, so the
+        // WHOLE turn got aborted first. Unblock it here immediately.
         if (activeCall) activeCall.onSocketDown();
       });
     });
@@ -347,6 +349,9 @@ function createTtsSession(languageCode = 'te-IN') {
         if (settled) return;
         settled = true;
         cleanup();
+        // Speak whatever audio we already got rather than hanging the turn;
+        // if nothing arrived at all, reject so the caller can react (and the
+        // next speak() call will transparently reconnect via open()).
         if (receivedAny) resolve();
         else reject(Object.assign(new Error('Sarvam TTS socket closed unexpectedly'), { name: 'SocketClosed' }));
       };
@@ -366,15 +371,30 @@ function createTtsSession(languageCode = 'te-IN') {
           clearTimeout(idleTimer);
           idleTimer = setTimeout(finish, 1500);
         } else if (data.type === 'event') {
+          // BUG FIX: this used to require data.data.event_type === 'final'
+          // (or absent) before treating the utterance as done. Real
+          // completion events didn't match that shape, so this branch
+          // almost never fired — EVERY sentence fell through to the 1500ms
+          // idle-timer fallback below as its only way to finish, adding up
+          // to 1.5s of pure dead air after every sentence in a reply.
+          // Sarvam's own "event" message IS the completion signal — trust
+          // it unconditionally, same as synthesizeSpeech() already does.
           clearTimeout(idleTimer);
           finish();
         } else if (data.type === 'error') {
+          // BUG FIX ("voice stuck / not coming mid-call"): this used to
+          // only log and keep waiting — if Sarvam then never sent a real
+          // completion event for this utterance, speak() just hung until
+          // the 15s overallTimer, which is LONGER than orchestrator.js's
+          // 12s turn timeout, so the whole turn got force-aborted first.
+          // Caller heard nothing for that sentence and no clear reason why.
+          // Fail this utterance immediately instead of waiting it out.
           const msg = data.data?.message || raw.toString().slice(0, 300);
           console.log(`[sarvam-tts] session error frame: ${msg}`);
           if (settled) return;
           settled = true;
           cleanup();
-          if (receivedAny) resolve();
+          if (receivedAny) resolve(); // speak whatever audio already arrived
           else reject(Object.assign(new Error(`Sarvam TTS error: ${msg}`), { name: 'SarvamTtsError' }));
         }
       };
@@ -410,6 +430,14 @@ function createTtsSession(languageCode = 'te-IN') {
     try { socket?.close(); } catch {}
   }
 
+  // COLD-START FIX: open() was previously only ever triggered lazily, on
+  // the first speak() call — so even after orchestrator.js started calling
+  // createTtsSession() earlier, the actual WebSocket handshake to Sarvam
+  // still didn't begin until the first sentence was ready to be spoken,
+  // adding its own connection-setup time to the critical path before Sara
+  // could say a word. warm() kicks off that handshake immediately (and can
+  // be called well before any text exists), so by the time speak() is
+  // actually called the socket is usually already open.
   function warm() {
     if (closed) return;
     open().catch((err) => {
