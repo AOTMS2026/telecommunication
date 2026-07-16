@@ -33,7 +33,7 @@ const FormData = require('form-data');
 const WebSocket = require('ws');
 
 const SARVAM_STT_URL = 'https://api.sarvam.ai/speech-to-text';
-const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v3&send_completion_event=true';
+const SARVAM_TTS_WS_URL = 'wss://api.sarvam.ai/text-to-speech/ws?model=bulbul:v2&send_completion_event=true';
 const TTS_KEEPALIVE_MS = 15000; // must stay well under Sarvam's own idle-close window
 
 function getSarvamKey() {
@@ -91,7 +91,7 @@ async function transcribeAudio(pcm16Bytes, { signal, languageCode } = {}) {
   const form = new FormData();
   form.append('file', wavBuf, { filename: 'audio.wav', contentType: 'audio/wav' });
   form.append('language_code', languageCode || 'unknown'); // 'unknown' = Sarvam auto-detects
-  form.append('model', 'saaras:v3');
+  form.append('model', 'saaras:v2');
   form.append('sample_rate', '8000');
   form.append('high_vad_sensitivity', 'true');
 
@@ -278,7 +278,7 @@ function createTtsSession(languageCode = 'te-IN') {
           type: 'config',
           data: {
             target_language_code: languageCode,
-            speaker: 'priya',
+            speaker: 'pooja',
             pace: 1.15,
             output_audio_codec: 'linear16',
             speech_sample_rate: 8000,
