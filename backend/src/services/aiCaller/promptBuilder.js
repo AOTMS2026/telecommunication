@@ -209,7 +209,7 @@ const COMPANY_KNOWLEDGE = `COMPANY FACTS (use these specific facts confidently �
 - Mode: both Online and Offline available — student's choice.
 - Standard course structure (applies unless a specific course's own details below say otherwise):
   - Duration: 3 months.
-  - Daily class: 1.5 hours — 1 hour theory + 30 minutes hands-on practice.
+  - Daily class: 2 hours — 1 hour theory + 30 minutes hands-on practice.
   - Last 15 days of the course: a real-time project, including how to push/deploy it via GitHub.
   - On completion: a government-verified certificate covering the course and the real-time project experience.
   - This is a training course with a certificate, NOT an internship.
