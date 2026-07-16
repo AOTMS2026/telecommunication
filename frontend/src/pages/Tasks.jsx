@@ -13,6 +13,7 @@ const TEXT_MUTED = '#888';
 const STATUS_COLORS = {
   upcoming: { bg: '#fff8e6', color: '#b45309' },
   pending:  { bg: '#fff8e6', color: '#b45309' },
+  pending_approval: { bg: '#eef2ff', color: '#4338ca' },
   done:     { bg: '#e8f8f0', color: '#22a163' },
   late:     { bg: '#fff0f0', color: '#e53e3e' },
   cancelled:{ bg: '#f3f4f6', color: '#6b7280' },
@@ -24,73 +25,8 @@ const PRIORITY_COLORS = {
   low:    { bg: '#e8f8f0', color: '#22a163' },
 };
 
-// ── 12-hour Time Picker (hour / minute / AM-PM) ─────────────────────────────
-// Native <input type="time"> renders in 24h format in most locales/browsers,
-// so we build our own to guarantee an explicit AM/PM control.
-function TimeInput12h({ value, onChange }) {
-  // value / onChange operate on 24-hour "HH:MM" strings, same as before.
-  const [hh24, mm] = value ? value.split(':') : ['09', '00'];
-  const hh24Num = parseInt(hh24, 10) || 0;
-  const period = hh24Num >= 12 ? 'PM' : 'AM';
-  let hh12 = hh24Num % 12;
-  if (hh12 === 0) hh12 = 12;
-
-  const commit = (newHh12, newMm, newPeriod) => {
-    let h = parseInt(newHh12, 10) % 12;
-    if (newPeriod === 'PM') h += 12;
-    const hhStr = String(h).padStart(2, '0');
-    const mmStr = String(newMm).padStart(2, '0');
-    onChange(`${hhStr}:${mmStr}`);
-  };
-
-  const selectStyle = {
-    border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 8px',
-    fontSize: 13, outline: 'none', background: '#fff', cursor: 'pointer'
-  };
-
-  return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      <select
-        value={hh12}
-        onChange={e => commit(e.target.value, mm, period)}
-        style={{ ...selectStyle, width: 58 }}
-      >
-        {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
-          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
-        ))}
-      </select>
-      <span style={{ color: TEXT_MUTED, fontWeight: 700 }}>:</span>
-      <select
-        value={mm}
-        onChange={e => commit(hh12, e.target.value, period)}
-        style={{ ...selectStyle, width: 58 }}
-      >
-        {Array.from({ length: 60 }, (_, i) => i).map(m => (
-          <option key={m} value={String(m).padStart(2, '0')}>{String(m).padStart(2, '0')}</option>
-        ))}
-      </select>
-      <div style={{ display: 'flex', border: '1px solid #bae6fd', borderRadius: 10, overflow: 'hidden' }}>
-        {['AM', 'PM'].map(p => (
-          <button
-            type="button"
-            key={p}
-            onClick={() => commit(hh12, mm, p)}
-            style={{
-              border: 'none', padding: '9px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              background: period === p ? GRADIENT : '#fff',
-              color: period === p ? '#fff' : TEXT_MAIN,
-            }}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Edit Modal ────────────────────────────────────────────────────────────────
-function EditModal({ task, onClose, onSaved, readOnly = false }) {
+function EditModal({ task, onClose, onSaved }) {
   const [form, setForm] = useState({
     note: task.note || task.description || '',
     scheduledAt: task.scheduledAt ? task.scheduledAt.slice(0, 16) : '',
@@ -102,7 +38,6 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
   const [error, setError] = useState('');
 
   const handleSave = async () => {
-    if (readOnly) return;
     setSaving(true);
     setError('');
     try {
@@ -126,15 +61,9 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 420, padding: 24, boxShadow: '0 8px 40px rgba(91,63,199,0.18)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>{readOnly ? 'View Task' : 'Edit Follow-up'}</h3>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, margin: 0 }}>Edit Follow-up</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: TEXT_MUTED, lineHeight: 1 }}>×</button>
         </div>
-
-        {readOnly && (
-          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '9px 14px', marginBottom: 16, fontSize: 12, color: '#9a5b13', fontWeight: 500 }}>
-            👁 View only. You can mark this task complete, but only a manager or admin can edit its details.
-          </div>
-        )}
 
         {task.lead?.name && (
           <div style={{ background: '#e0f7ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: PURPLE, fontWeight: 600 }}>
@@ -149,13 +78,12 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
               value={form.note}
               onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
               rows={3}
-              disabled={readOnly}
-              style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box', background: readOnly ? '#f9fafb' : '#fff', color: readOnly ? '#6b7280' : TEXT_MAIN }}
+              style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 12px', fontSize: 13, resize: 'none', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           <div>
             <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Due Date & Time</label>
-            <div style={{ display: 'flex', gap: 8, opacity: readOnly ? 0.6 : 1, pointerEvents: readOnly ? 'none' : 'auto' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="date"
                 value={form.scheduledAt ? form.scheduledAt.slice(0, 10) : ''}
@@ -163,15 +91,16 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
                   const timePart = form.scheduledAt ? form.scheduledAt.slice(11, 16) : '09:00';
                   setForm(f => ({ ...f, scheduledAt: e.target.value + 'T' + timePart }));
                 }}
-                disabled={readOnly}
                 style={{ flex: 1, border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
-              <TimeInput12h
-                value={form.scheduledAt ? form.scheduledAt.slice(11, 16) : '09:00'}
-                onChange={time => {
+              <input
+                type="time"
+                value={form.scheduledAt ? form.scheduledAt.slice(11, 16) : ''}
+                onChange={e => {
                   const datePart = form.scheduledAt ? form.scheduledAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
-                  setForm(f => ({ ...f, scheduledAt: datePart + 'T' + time }));
+                  setForm(f => ({ ...f, scheduledAt: datePart + 'T' + e.target.value }));
                 }}
+                style={{ width: 110, border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -181,8 +110,7 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
               <select
                 value={form.priority}
                 onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                disabled={readOnly}
-                style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', background: readOnly ? '#f9fafb' : '#fff', color: readOnly ? '#6b7280' : TEXT_MAIN }}
+                style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
               >
                 <option value="high">High</option>
                 <option value="medium">Medium</option>
@@ -195,18 +123,14 @@ function EditModal({ task, onClose, onSaved, readOnly = false }) {
         {error && <p style={{ color: '#e53e3e', fontSize: 12, marginTop: 10 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #bae6fd', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>
-            {readOnly ? 'Close' : 'Cancel'}
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', border: '1px solid #bae6fd', borderRadius: 10, background: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: TEXT_MAIN }}>Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: GRADIENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
           </button>
-          {!readOnly && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              style={{ flex: 1, padding: '10px', border: 'none', borderRadius: 10, background: GRADIENT, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -350,28 +274,6 @@ function AddTaskModal({ type, onClose, onCreated }) {
         setUsers([]);
       });
   }, [canAssign]);
-
-  // Who can be picked in "Assigned To":
-  // - Super Admin (admin role) can assign to everyone
-  // - Manager can only assign to callers (and themselves)
-  // - Caller can only assign to themselves
-  const assignableUsers = (() => {
-    if (currentUser?.role === 'admin') return users;
-    if (currentUser?.role === 'manager') {
-      return users.filter(u => u.role === 'caller' || u._id === currentUser._id);
-    }
-    return users.filter(u => u._id === currentUser?._id);
-  })();
-
-  // If the currently selected assignee falls outside the allowed list
-  // (e.g. role loaded after selection), snap back to the current user.
-  useEffect(() => {
-    if (!assignableUsers.length) return;
-    if (!assignableUsers.some(u => u._id === assignedTo)) {
-      setAssignedTo(currentUser?._id || assignableUsers[0]._id);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users]);
 
   // Debounced lead search — optional for Call Followups, just helps link a lead if you want
   useEffect(() => {
@@ -526,12 +428,14 @@ function AddTaskModal({ type, onClose, onCreated }) {
                 }}
                 style={{ flex: 1, border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
-              <TimeInput12h
-                value={scheduledAt ? scheduledAt.slice(11, 16) : '09:00'}
-                onChange={time => {
+              <input
+                type="time"
+                value={scheduledAt ? scheduledAt.slice(11, 16) : ''}
+                onChange={e => {
                   const datePart = scheduledAt ? scheduledAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
-                  setScheduledAt(datePart + 'T' + time);
+                  setScheduledAt(datePart + 'T' + e.target.value);
                 }}
+                style={{ width: 110, border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -587,15 +491,12 @@ function AddTaskModal({ type, onClose, onCreated }) {
                   onChange={e => setAssignedTo(e.target.value)}
                   style={{ width: '100%', border: '1px solid #bae6fd', borderRadius: 10, padding: '9px 12px', fontSize: 13, outline: 'none' }}
                 >
-                  {assignableUsers.map(u => (
+                  {users.map(u => (
                     <option key={u._id} value={u._id}>
                       {u.name}{u._id === currentUser?._id ? ' (You)' : ''}
                     </option>
                   ))}
                 </select>
-                {currentUser?.role === 'manager' && (
-                  <p style={{ fontSize: 10.5, color: TEXT_MUTED, margin: '4px 0 0' }}>Managers can assign tasks to callers or themselves.</p>
-                )}
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 5 }}>Assigned By</label>
@@ -671,10 +572,7 @@ export default function Tasks() {
   }, [searchParams]);
   const [forFilter, setForFilter] = useState('Me');
   const [dueFilter, setDueFilter] = useState(null);
-  // Completed ("done") tasks are no longer mixed into the active list — they
-  // live under the History view instead (see historyMode below).
-  const [statusFilter, setStatusFilter] = useState(['pending', 'late', 'cancelled']);
-  const [historyMode, setHistoryMode] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(['pending', 'late', 'done', 'cancelled']);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdditional, setShowAdditional] = useState(false);
@@ -685,6 +583,7 @@ export default function Tasks() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState(null);
+  const [actionBusyId, setActionBusyId] = useState(null);
   const [descriptionPopup, setDescriptionPopup] = useState(null);
   const [teamUsers, setTeamUsers] = useState([]);
   const [teamMemberFilter, setTeamMemberFilter] = useState('');
@@ -692,62 +591,46 @@ export default function Tasks() {
   const teamDropRef = useRef(null);
   const { user: currentUser } = useAuth();
   const canDelete = currentUser?.role === 'manager' || currentUser?.role === 'admin';
-  const [markingCompleteId, setMarkingCompleteId] = useState(null);
-
-  // Callers never get edit rights on tasks — they can only view them (and
-  // mark them complete via the checkmark action). Only managers/admins edit.
-  const canEditTask = () => currentUser?.role !== 'caller';
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
-      // ── History view: only ever shows completed ("done") tasks ──────────
-      if (historyMode) {
-        const res = await followupsAPI.getAll({
-          forMe: forFilter === 'Me',
-          due: dueFilter ? dueFilter.toLowerCase().replace(' ', '_') : undefined,
-          status: 'done',
-          type: activeTab === 'Call Followups' ? 'call_followup' : 'todo',
-          ...(teamMemberFilter ? { callerId: teamMemberFilter } : {}),
-        });
-        let items = res.data.followups || res.data.tasks || [];
-        items = items.filter(t => t.status === 'done');
-        if (priorityFilter) items = items.filter(t => t.priority === priorityFilter);
-        setTasks(items);
-        return;
-      }
-
-      const isAll = statusFilter.length === 3; // pending + late + cancelled selected = no filter
+      const isAll = statusFilter.length === 4; // all 4 options selected = no filter
       const wantsLate = statusFilter.includes('late');
       const wantsPending = statusFilter.includes('pending');
+      const wantsDone = statusFilter.includes('done');
       const wantsCancelled = statusFilter.includes('cancelled');
 
-      // Build DB-level statuses to fetch — 'done' is intentionally excluded;
-      // completed tasks only ever show up under History.
+      // Build DB-level statuses to fetch
       const dbStatuses = [];
       if (wantsPending || wantsLate) dbStatuses.push('upcoming');
+      if (wantsDone) dbStatuses.push('done');
       if (wantsCancelled) dbStatuses.push('cancelled');
+      // Tasks awaiting the assignedBy person's approval need to stay visible
+      // regardless of which status checkboxes are ticked, otherwise they'd
+      // silently vanish from filtered views while someone is waiting on them.
+      dbStatuses.push('pending_approval');
 
       const res = await followupsAPI.getAll({
         forMe: forFilter === 'Me',
         due: dueFilter ? dueFilter.toLowerCase().replace(' ', '_') : undefined,
-        status: dbStatuses.join(','),
+        status: isAll ? undefined : dbStatuses.join(','),
         type: activeTab === 'Call Followups' ? 'call_followup' : 'todo',
         ...(teamMemberFilter ? { callerId: teamMemberFilter } : {}),
       });
       let items = res.data.followups || res.data.tasks || [];
-      // Safety net: never show completed tasks in the active view.
-      items = items.filter(t => t.status !== 'done');
 
       // Refine upcoming into pending vs late on the frontend
       if (!isAll) {
         if (wantsLate && !wantsPending) {
           items = items.filter(t =>
+            (t.status === 'done' && wantsDone) ||
             (t.status === 'cancelled' && wantsCancelled) ||
             (t.status === 'upcoming' && new Date(t.scheduledAt) < new Date())
           );
         } else if (wantsPending && !wantsLate) {
           items = items.filter(t =>
+            (t.status === 'done' && wantsDone) ||
             (t.status === 'cancelled' && wantsCancelled) ||
             (t.status === 'upcoming' && new Date(t.scheduledAt) >= new Date())
           );
@@ -765,7 +648,7 @@ export default function Tasks() {
       setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, forFilter, dueFilter, statusFilter.join(','), priorityFilter, teamMemberFilter, historyMode]);
+  }, [activeTab, forFilter, dueFilter, statusFilter.join(','), priorityFilter, teamMemberFilter]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
@@ -804,33 +687,8 @@ export default function Tasks() {
   };
 
   const handleEditSaved = (updated) => {
-    setTasks(prev => {
-      // Task just got marked done while viewing the active list → it now
-      // belongs in History, so drop it from here instead of leaving it in place.
-      if (!historyMode && updated.status === 'done') {
-        return prev.filter(t => t._id !== updated._id);
-      }
-      // Task got reopened while viewing History → it no longer belongs here.
-      if (historyMode && updated.status !== 'done') {
-        return prev.filter(t => t._id !== updated._id);
-      }
-      return prev.map(t => t._id === updated._id ? { ...t, ...updated } : t);
-    });
+    setTasks(prev => prev.map(t => t._id === updated._id ? { ...t, ...updated } : t));
     setEditingTask(null);
-  };
-
-  const handleMarkComplete = async (taskId) => {
-    setMarkingCompleteId(taskId);
-    try {
-      await followupsAPI.update(taskId, { status: 'done' });
-      // Completed tasks live under History, so drop it out of the active list.
-      setTasks(prev => prev.filter(t => t._id !== taskId));
-    } catch (err) {
-      console.error('Failed to mark task complete:', err);
-      alert(err.response?.data?.message || 'Failed to mark task complete');
-    } finally {
-      setMarkingCompleteId(null);
-    }
   };
 
   const handleDelete = async (taskId) => {
@@ -843,6 +701,48 @@ export default function Tasks() {
       alert(err.response?.data?.message || 'Failed to delete task');
     } finally {
       setDeletingTaskId(null);
+    }
+  };
+
+  // Assignee marks their own task complete. If it was assigned by someone
+  // else, the backend holds it as 'pending_approval' and notifies that
+  // person instead of closing it out right away.
+  const handleComplete = async (taskId) => {
+    try {
+      setActionBusyId(taskId);
+      const res = await followupsAPI.update(taskId, { status: 'done' });
+      setTasks(prev => prev.map(t => t._id === taskId ? res.data.followup : t));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to mark task complete');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  // Assigner confirms a completed task — finalizes it as 'done'.
+  const handleApprove = async (taskId) => {
+    try {
+      setActionBusyId(taskId);
+      const res = await followupsAPI.approve(taskId);
+      setTasks(prev => prev.map(t => t._id === taskId ? res.data.followup : t));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to approve task');
+    } finally {
+      setActionBusyId(null);
+    }
+  };
+
+  // Assigner sends a completed task back to the assignee instead of approving it.
+  const handleReject = async (taskId) => {
+    const reason = window.prompt('Optional: why are you sending this back?') || '';
+    try {
+      setActionBusyId(taskId);
+      const res = await followupsAPI.reject(taskId, reason);
+      setTasks(prev => prev.map(t => t._id === taskId ? res.data.followup : t));
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reject task');
+    } finally {
+      setActionBusyId(null);
     }
   };
 
@@ -881,7 +781,6 @@ export default function Tasks() {
           task={editingTask}
           onClose={() => setEditingTask(null)}
           onSaved={handleEditSaved}
-          readOnly={!canEditTask(editingTask)}
         />
       )}
 
@@ -937,50 +836,24 @@ export default function Tasks() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #bae6fd', marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-          {['Call Followups', 'Todo'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => { setActiveTab(tab); setHistoryMode(false); }}
-              style={{
-                padding: '9px 20px', border: 'none', background: 'none',
-                cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                color: (!historyMode && activeTab === tab) ? PURPLE : TEXT_MUTED,
-                borderBottom: (!historyMode && activeTab === tab) ? `2px solid ${PURPLE}` : '2px solid transparent',
-                marginBottom: -2, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 7
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderBottom: '2px solid #bae6fd', marginBottom: 20 }}>
+        {['Call Followups', 'Todo'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            style={{
+              padding: '9px 20px', border: 'none', background: 'none',
+              cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              color: activeTab === tab ? PURPLE : TEXT_MUTED,
+              borderBottom: activeTab === tab ? `2px solid ${PURPLE}` : '2px solid transparent',
+              marginBottom: -2, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 7
+            }}
+          >
+            {tab}
 
-        {/* HISTORY — completed tasks move here instead of cluttering the active list */}
-        <button
-          onClick={() => setHistoryMode(p => !p)}
-          title="View completed tasks"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 16px', border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: 600,
-            color: historyMode ? PURPLE : TEXT_MUTED,
-            borderBottom: historyMode ? `2px solid ${PURPLE}` : '2px solid transparent',
-            marginBottom: -2, transition: 'all 0.15s'
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
-          </svg>
-          History
-        </button>
+          </button>
+        ))}
       </div>
-
-      {historyMode && (
-        <div style={{ background: '#e8f8f0', border: '1px solid #bbf7d0', borderRadius: 10, padding: '9px 14px', marginBottom: 14, fontSize: 12, color: '#166534', fontWeight: 500 }}>
-          ✅ Showing completed {activeTab === 'Call Followups' ? 'call follow-ups' : 'to-dos'}. Mark a task as "Upcoming" again from Edit to move it back to the active list.
-        </div>
-      )}
 
       {/* Filters bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
@@ -1089,42 +962,40 @@ export default function Tasks() {
           </div>
         </div>
 
-        {!historyMode && (
-          <>
-            <div style={{ width: 1, height: 20, background: '#bae6fd' }} />
+        <div style={{ width: 1, height: 20, background: '#bae6fd' }} />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Status:</span>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                border: `1px solid ${statusFilter.length < 3 ? PURPLE : '#bae6fd'}`,
-                borderRadius: 6,
-                background: statusFilter.length < 3 ? '#e0f7ff' : '#fff',
-                padding: '5px 10px', cursor: 'pointer',
-              }}>
-                <select
-                  value={statusFilter.length === 1 ? statusFilter[0] : statusFilter.length === 3 ? 'all' : 'custom'}
-                  onChange={e => {
-                    const val = e.target.value;
-                    if (val === 'all') setStatusFilter(['pending', 'late', 'cancelled']);
-                    else if (val === 'pending') setStatusFilter(['pending']);
-                    else if (val === 'late') setStatusFilter(['late']);
-                    else if (val === 'cancelled') setStatusFilter(['cancelled']);
-                  }}
-                  style={{ border: 'none', outline: 'none', background: 'none', fontSize: 12, color: statusFilter.length < 3 ? PURPLE : TEXT_MAIN, cursor: 'pointer', fontWeight: statusFilter.length < 3 ? 600 : 400 }}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="pending">⏳ Upcoming</option>
-                  <option value="late">🔴 Late / Overdue</option>
-                  <option value="cancelled">❌ Cancelled</option>
-                </select>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5">
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </div>
-            </div>
-          </>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Status:</span>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            border: `1px solid ${statusFilter.length < 4 ? PURPLE : '#bae6fd'}`,
+            borderRadius: 6,
+            background: statusFilter.length < 4 ? '#e0f7ff' : '#fff',
+            padding: '5px 10px', cursor: 'pointer',
+          }}>
+            <select
+              value={statusFilter.length === 1 ? statusFilter[0] : statusFilter.length === 4 ? 'all' : 'custom'}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'all') setStatusFilter(['pending', 'late', 'done', 'cancelled']);
+                else if (val === 'pending') setStatusFilter(['pending']);
+                else if (val === 'late') setStatusFilter(['late']);
+                else if (val === 'done') setStatusFilter(['done']);
+                else if (val === 'cancelled') setStatusFilter(['cancelled']);
+              }}
+              style={{ border: 'none', outline: 'none', background: 'none', fontSize: 12, color: statusFilter.length < 4 ? PURPLE : TEXT_MAIN, cursor: 'pointer', fontWeight: statusFilter.length < 4 ? 600 : 400 }}
+            >
+              <option value="all">All Statuses</option>
+              <option value="pending">⏳ Upcoming</option>
+              <option value="late">🔴 Late / Overdue</option>
+              <option value="done">✅ Done</option>
+              <option value="cancelled">❌ Cancelled</option>
+            </select>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2.5">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
 
         <div ref={additionalRef} style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
           <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Additional Filters:</span>
@@ -1189,43 +1060,39 @@ export default function Tasks() {
 
         <div style={{ flex: 1 }} />
 
-        {!historyMode && (
-          <>
-            {/* NEW TASK — text button beside Upload */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: GRADIENT, border: 'none', borderRadius: 7, cursor: 'pointer',
-                fontSize: 12, color: '#fff', fontWeight: 600, padding: '6px 12px'
-              }}
-              title="Create new task"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              New Task
-            </button>
+        {/* NEW TASK — text button beside Upload */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: GRADIENT, border: 'none', borderRadius: 7, cursor: 'pointer',
+            fontSize: 12, color: '#fff', fontWeight: 600, padding: '6px 12px'
+          }}
+          title="Create new task"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Task
+        </button>
 
-            {/* UPLOAD — bulk import tasks via Excel/CSV */}
-            <button
-              onClick={() => setShowUploadModal(true)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 12, color: PURPLE, fontWeight: 600
-              }}
-              title="Upload tasks from Excel/CSV"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              Upload
-            </button>
-          </>
-        )}
+        {/* UPLOAD — bulk import tasks via Excel/CSV */}
+        <button
+          onClick={() => setShowUploadModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, color: PURPLE, fontWeight: 600
+          }}
+          title="Upload tasks from Excel/CSV"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Upload
+        </button>
 
         {/* DOWNLOAD — exports real filtered data as CSV */}
         <button
@@ -1389,7 +1256,8 @@ export default function Tasks() {
                     {(() => {
                       const isLate = task.status === 'upcoming' && new Date(task.scheduledAt) < new Date();
                       const displayStatus = isLate ? 'late' : task.status;
-                      const displayLabel = isLate ? 'Late' : (task.status || 'upcoming');
+                      const rawLabel = isLate ? 'Late' : (task.status || 'upcoming');
+                      const displayLabel = rawLabel === 'pending_approval' ? 'Pending Approval' : rawLabel;
                       return (
                         <span style={{
                           fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10,
@@ -1418,43 +1286,63 @@ export default function Tasks() {
                   {/* Actions */}
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      {/* Edit / View — callers get view-only on tasks assigned to them by someone else */}
+                      {/* Complete — shown to the assignee while the task is still open */}
+                      {(task.assignedTo?._id || task.assignedTo) === currentUser?._id &&
+                        ['upcoming', 'late'].includes(task.status) && (
+                        <button
+                          title="Mark Complete"
+                          onClick={() => handleComplete(task._id)}
+                          disabled={actionBusyId === task._id}
+                          style={{ background: 'none', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s', opacity: actionBusyId === task._id ? 0.5 : 1 }}
+                          onMouseEnter={e => e.currentTarget.style.borderColor = '#22a163'}
+                          onMouseLeave={e => e.currentTarget.style.borderColor = '#bbf7d0'}
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22a163" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </button>
+                      )}
+                      {/* Approve / Reject — shown to the assignedBy person once the assignee has marked it done */}
+                      {task.status === 'pending_approval' &&
+                        (task.assignedBy?._id || task.assignedBy) === currentUser?._id && (
+                        <>
+                          <button
+                            title="Approve completion"
+                            onClick={() => handleApprove(task._id)}
+                            disabled={actionBusyId === task._id}
+                            style={{ background: '#e8f8f0', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', opacity: actionBusyId === task._id ? 0.5 : 1 }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22a163" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          </button>
+                          <button
+                            title="Send back (not approved)"
+                            onClick={() => handleReject(task._id)}
+                            disabled={actionBusyId === task._id}
+                            style={{ background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', opacity: actionBusyId === task._id ? 0.5 : 1 }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2.5">
+                              <line x1="18" y1="6" x2="6" y2="18"/>
+                              <line x1="6" y1="6" x2="18" y2="18"/>
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      {/* Edit */}
                       <button
-                        title={canEditTask(task) ? 'Edit' : 'View only'}
+                        title="Edit"
                         onClick={() => setEditingTask(task)}
                         style={{ background: 'none', border: '1px solid #bae6fd', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = PURPLE}
                         onMouseLeave={e => e.currentTarget.style.borderColor = '#bae6fd'}
                       >
-                        {canEditTask(task) ? (
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                          </svg>
-                        ) : (
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-                          </svg>
-                        )}
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
                       </button>
-
-                      {/* Mark Complete — moves the task straight to History */}
-                      {!historyMode && (
-                        <button
-                          title="Mark as complete"
-                          onClick={() => handleMarkComplete(task._id)}
-                          disabled={markingCompleteId === task._id}
-                          style={{ background: 'none', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 7px', cursor: 'pointer', transition: 'border-color 0.15s', opacity: markingCompleteId === task._id ? 0.5 : 1 }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = '#22a163'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = '#bbf7d0'}
-                        >
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22a163" strokeWidth="2.5">
-                            <polyline points="3 12 9 18 21 6"/>
-                          </svg>
-                        </button>
-                      )}
-
-                      {/* Delete — only for admin / manager */}
+                      {/* Delete — only for admin / admin */}
                       {canDelete && (
                         <button
                           title="Delete"

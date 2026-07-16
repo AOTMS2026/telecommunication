@@ -10,13 +10,21 @@ const followUpSchema = new mongoose.Schema({
   // Who created / delegated this task (defaults to the creator, but can be overridden by admins)
   assignedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   scheduledAt: { type: Date, required: true },
-  status: { type: String, enum: ['upcoming', 'done', 'late', 'cancelled'], default: 'upcoming' },
+  // 'pending_approval' = the assignee marked it done, but the person who
+  // assigned it (assignedBy) hasn't confirmed/approved it yet. It only
+  // becomes 'done' once approved.
+  status: { type: String, enum: ['upcoming', 'pending_approval', 'done', 'late', 'cancelled'], default: 'upcoming' },
   // FIX BUG-03: added type field so Tasks page "To-Do" tab works
   type: { type: String, enum: ['call_followup', 'todo'], default: 'call_followup' },
   note: { type: String, default: '' },
   title: { type: String, default: '' },       // for todo tasks
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   completedAt: { type: Date },
+  // Who actually clicked "complete" (the assignee, usually)
+  completedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // Who approved the completion (the assignedBy person), and when
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvedAt: { type: Date },
   // Set once an overdue notification has been sent for this task, so the
   // background job never sends duplicate "task overdue" alerts.
   overdueNotifiedAt: { type: Date },
@@ -31,11 +39,6 @@ const followUpSchema = new mongoose.Schema({
     endDate: { type: Date }, // last date an occurrence can be scheduled on (inclusive)
   },
   recurringGroupId: { type: mongoose.Schema.Types.ObjectId }, // shared by every occurrence in a series
-  // Set once a "due soon" reminder notification has been sent for this task,
-  // so the background job never sends duplicate reminders.
-  reminderNotifiedAt: { type: Date },
-  // How many minutes before scheduledAt the reminder should fire. Defaults to 30.
-  reminderMinutesBefore: { type: Number, default: 30 },
 }, { timestamps: true });
 
 // Indexes for frequent query patterns

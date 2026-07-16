@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const FollowUp = require('../models/FollowUp');
 const Lead = require('../models/Lead');
 const { protect, authorize } = require('../middleware/auth');
-const { notifyAdminsTaskCreated, notifyAdminsTaskEdited } = require('../services/notificationService');
+const { notifyAdminsTaskCreated, notifyAdminsTaskEdited, notifyAssignerTaskPendingApproval, notifyAssigneeTaskApproved, notifyAssigneeTaskRejected } = require('../services/notificationService');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -135,29 +135,9 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// Enforce who a given user is allowed to assign a task to:
-// - admin (super admin): anyone
-// - manager: callers, or themselves
-// - caller: themselves only
-async function canAssignTo(actor, assigneeId) {
-  if (!assigneeId) return true; // falls back to actor as assignee
-  if (actor.role === 'admin') return true;
-  if (assigneeId.toString() === actor._id.toString()) return true;
-  if (actor.role === 'manager') {
-    const User = require('../models/User');
-    const assignee = await User.findById(assigneeId).select('role');
-    return assignee?.role === 'caller';
-  }
-  return false; // callers can only assign to themselves
-}
-
-// POST /api/followups — create a task/follow-up
+// POST /api/followups — create a task/follow-up (optionally recurring)
 router.post('/', protect, async (req, res) => {
   try {
-    if (req.body.assignedTo && !(await canAssignTo(req.user, req.body.assignedTo))) {
-      return res.status(403).json({ message: 'You are not allowed to assign tasks to this user' });
-    }
-
     const { recurrence, ...body } = req.body;
     const baseDoc = {
       ...body,
@@ -216,40 +196,119 @@ router.post('/', protect, async (req, res) => {
 // PUT /api/followups/:id
 router.put('/:id', protect, async (req, res) => {
   try {
-    if (req.body.assignedTo && !(await canAssignTo(req.user, req.body.assignedTo))) {
-      return res.status(403).json({ message: 'You are not allowed to assign tasks to this user' });
-    }
-
     const existing = await FollowUp.findById(req.params.id);
     if (!existing) return res.status(404).json({ message: 'Follow-up not found' });
 
-    // Callers never get edit rights on a task's details — view only. The one
-    // exception is marking it complete, which is a status-only update.
-    if (req.user.role === 'caller') {
-      const bodyKeys = Object.keys(req.body).filter(k => k !== 'completedAt');
-      const isStatusOnlyUpdate = bodyKeys.length === 1 && bodyKeys[0] === 'status' && req.body.status === 'done';
-      if (!isStatusOnlyUpdate) {
-        return res.status(403).json({ message: 'You can only view this task. You may still mark it complete.' });
+    const update = { ...req.body };
+
+    if (update.status === 'done') {
+      const assignerId = existing.assignedBy ? existing.assignedBy.toString() : null;
+      const isSelfAssigned = !assignerId || assignerId === req.user._id.toString();
+
+      if (isSelfAssigned) {
+        // No one else to approve it — completing it is final, same as before.
+        if (!update.completedAt) update.completedAt = new Date();
+        update.completedBy = req.user._id;
+      } else {
+        // Someone else assigned this task — don't close it out yet. Flip it
+        // to 'pending_approval' instead of 'done' until the assignedBy person
+        // confirms it. This is what "notify assignedBy, hold until they
+        // approve" means in practice.
+        update.status = 'pending_approval';
+        update.completedAt = new Date();
+        update.completedBy = req.user._id;
       }
     }
 
-    const update = { ...req.body };
-    if (update.status === 'done' && !update.completedAt) {
-      update.completedAt = new Date();
-    }
     const followup = await FollowUp.findByIdAndUpdate(req.params.id, update, { new: true })
       .populate('lead', 'name phone status')
       .populate('assignedTo', 'name email')
       .populate('assignedBy', 'name email');
 
-    if (!followup) return res.status(404).json({ message: 'Follow-up not found' });
-
     // Notify admins when a caller edits — fire-and-forget
     fireAndForget(() => notifyAdminsTaskEdited({ followup, performedByUser: req.user }));
+
+    // If the task just moved into pending_approval, alert the assignedBy person
+    if (update.status === 'pending_approval') {
+      fireAndForget(() => notifyAssignerTaskPendingApproval({ followup, performedByUser: req.user }));
+    }
 
     res.json({ followup });
   } catch (err) {
     console.error('[PUT /followups/:id]', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /api/followups/:id/approve — the assignedBy person (or an admin/manager)
+// confirms a completed task, finalizing its status as 'done'.
+router.put('/:id/approve', protect, async (req, res) => {
+  try {
+    const existing = await FollowUp.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Task not found' });
+
+    const assignerId = existing.assignedBy ? existing.assignedBy.toString() : null;
+    const isAssigner = assignerId && assignerId === req.user._id.toString();
+    const isAdmin = ['manager', 'admin'].includes(req.user.role);
+    if (!isAssigner && !isAdmin) {
+      return res.status(403).json({ message: 'Only the person who assigned this task can approve it' });
+    }
+    if (existing.status !== 'pending_approval') {
+      return res.status(400).json({ message: 'Task is not awaiting approval' });
+    }
+
+    const followup = await FollowUp.findByIdAndUpdate(
+      req.params.id,
+      { status: 'done', approvedAt: new Date(), approvedBy: req.user._id },
+      { new: true }
+    )
+      .populate('lead', 'name phone status')
+      .populate('assignedTo', 'name email')
+      .populate('assignedBy', 'name email');
+
+    fireAndForget(() => notifyAssigneeTaskApproved({ followup, performedByUser: req.user }));
+
+    res.json({ followup });
+  } catch (err) {
+    console.error('[PUT /followups/:id/approve]', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PUT /api/followups/:id/reject — the assignedBy person (or an admin/manager)
+// sends a completed task back to the assignee instead of approving it.
+router.put('/:id/reject', protect, async (req, res) => {
+  try {
+    const existing = await FollowUp.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Task not found' });
+
+    const assignerId = existing.assignedBy ? existing.assignedBy.toString() : null;
+    const isAssigner = assignerId && assignerId === req.user._id.toString();
+    const isAdmin = ['manager', 'admin'].includes(req.user.role);
+    if (!isAssigner && !isAdmin) {
+      return res.status(403).json({ message: 'Only the person who assigned this task can reject it' });
+    }
+    if (existing.status !== 'pending_approval') {
+      return res.status(400).json({ message: 'Task is not awaiting approval' });
+    }
+
+    // Reopen it — 'upcoming' if still due in the future, otherwise 'late'
+    const reopenStatus = new Date(existing.scheduledAt) < new Date() ? 'late' : 'upcoming';
+
+    const followup = await FollowUp.findByIdAndUpdate(
+      req.params.id,
+      { status: reopenStatus, completedAt: null, completedBy: null },
+      { new: true }
+    )
+      .populate('lead', 'name phone status')
+      .populate('assignedTo', 'name email')
+      .populate('assignedBy', 'name email');
+
+    fireAndForget(() => notifyAssigneeTaskRejected({ followup, performedByUser: req.user, reason: req.body?.reason }));
+
+    res.json({ followup });
+  } catch (err) {
+    console.error('[PUT /followups/:id/reject]', err);
     res.status(500).json({ message: err.message });
   }
 });

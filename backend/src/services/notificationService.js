@@ -242,31 +242,88 @@ async function notifyTaskOverdue({ followup }) {
 }
 
 /**
- * Notify the assignee that a task/follow-up is coming up soon (before it's
- * due), so they get a heads-up rather than only finding out once it's late.
- * Called by the reminder sweep in server.js — never called directly from
- * request handlers.
+ * Notify the person who assigned a task (assignedBy) that the assignee has
+ * marked it complete and it's now waiting on their approval.
  */
-async function notifyTaskReminder({ followup }) {
+async function notifyAssignerTaskPendingApproval({ followup, performedByUser }) {
   try {
-    const isTodo = followup.type === 'todo';
-    const taskLabel = isTodo ? 'To-do task' : 'Call follow-up';
-    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
-    const noteSnippet = followup.note ? `: "${followup.note.slice(0, 80)}"` : (followup.title ? `: "${followup.title.slice(0, 80)}"` : '');
+    const assignerId = followup.assignedBy?._id || followup.assignedBy;
+    if (!assignerId) return null;
+    if (assignerId.toString() === performedByUser?._id?.toString()) return null; // self-assigned, no approval needed
 
-    const recipientId = followup.assignedTo?._id || followup.assignedTo;
-    if (!recipientId) return null;
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'to-do task' : 'call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+    const noteSnippet = (followup.note || followup.title) ? `: "${(followup.note || followup.title).slice(0, 80)}"` : '';
 
     return createNotification({
-      recipient: recipientId,
-      type: 'task_reminder',
-      title: '🔔 Task Due Soon',
-      message: `${taskLabel}${leadSuffix}${noteSnippet} is due soon`,
+      recipient: assignerId,
+      type: 'task_pending_approval',
+      title: '✅ Task Marked Complete — Approval Needed',
+      message: `${performedByUser?.name || 'Someone'} marked a ${taskLabel}${leadSuffix}${noteSnippet} as complete. Review and approve it.`,
       lead: followup.lead?._id || followup.lead,
-      data: { followupId: followup._id, taskType: followup.type, scheduledAt: followup.scheduledAt },
+      performedBy: performedByUser?._id,
+      data: { followupId: followup._id, taskType: followup.type },
     });
   } catch (err) {
-    console.error('Failed to notify task reminder:', err.message);
+    console.error('Failed to notify assigner of task pending approval:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Notify the assignee that their completed task was approved by the assignedBy person.
+ */
+async function notifyAssigneeTaskApproved({ followup, performedByUser }) {
+  try {
+    const assigneeId = followup.assignedTo?._id || followup.assignedTo;
+    if (!assigneeId) return null;
+    if (assigneeId.toString() === performedByUser?._id?.toString()) return null;
+
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'to-do task' : 'call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+
+    return createNotification({
+      recipient: assigneeId,
+      type: 'task_approved',
+      title: '🎉 Task Approved',
+      message: `${performedByUser?.name || 'Admin'} approved your completed ${taskLabel}${leadSuffix}`,
+      lead: followup.lead?._id || followup.lead,
+      performedBy: performedByUser?._id,
+      data: { followupId: followup._id, taskType: followup.type },
+    });
+  } catch (err) {
+    console.error('Failed to notify assignee of task approval:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Notify the assignee that their completed task was rejected/reopened by the assignedBy person.
+ */
+async function notifyAssigneeTaskRejected({ followup, performedByUser, reason }) {
+  try {
+    const assigneeId = followup.assignedTo?._id || followup.assignedTo;
+    if (!assigneeId) return null;
+    if (assigneeId.toString() === performedByUser?._id?.toString()) return null;
+
+    const isTodo = followup.type === 'todo';
+    const taskLabel = isTodo ? 'to-do task' : 'call follow-up';
+    const leadSuffix = followup.lead?.name ? ` for lead ${followup.lead.name}` : '';
+    const reasonSuffix = reason ? ` — reason: "${reason.slice(0, 80)}"` : '';
+
+    return createNotification({
+      recipient: assigneeId,
+      type: 'task_rejected',
+      title: '↩️ Task Sent Back',
+      message: `${performedByUser?.name || 'Admin'} did not approve your ${taskLabel}${leadSuffix}${reasonSuffix}. Please review and complete it again.`,
+      lead: followup.lead?._id || followup.lead,
+      performedBy: performedByUser?._id,
+      data: { followupId: followup._id, taskType: followup.type },
+    });
+  } catch (err) {
+    console.error('Failed to notify assignee of task rejection:', err.message);
     return null;
   }
 }
@@ -282,5 +339,7 @@ module.exports = {
   notifyAdminsTaskCreated,
   notifyAdminsTaskEdited,
   notifyTaskOverdue,
-  notifyTaskReminder,
+  notifyAssignerTaskPendingApproval,
+  notifyAssigneeTaskApproved,
+  notifyAssigneeTaskRejected,
 };
