@@ -31,6 +31,13 @@ const styles = `
   .fp-success { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; padding: 11px 14px; background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 9px; color: #276749; font-size: 13px; font-weight: 500; animation: slideIn 0.3s ease both; }
   .fp-back { display: block; margin-top: 20px; text-align: center; font-size: 13px; color: ${PURPLE}; text-decoration: none; font-weight: 600; }
   .fp-back:hover { opacity: 0.75; }
+
+  @media (max-width: 480px) {
+    .fp-root { padding: 20px 16px; }
+    .fp-title { font-size: 22px; }
+    .fp-input { font-size: 16px; padding: 11px 12px; }
+    .fp-btn { padding: 13px; font-size: 14px; }
+  }
 `;
 
 export default function ForgotPassword() {

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import useBreakpoint from '../../hooks/useBreakpoint';
+import { useSidebar } from '../../context/SidebarContext';
 
 const ACTIVE_BG = '#e0f2fe';
 const ACTIVE_COLOR = '#0369a1';
@@ -53,11 +55,21 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false);
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
+  const isTablet = bp === 'tablet';
+  const { mobileOpen, closeMobile } = useSidebar();
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const isOpen = isMobile ? mobileOpen : hoverOpen;
   const [automationsOpen, setAutomationsOpen] = useState(false);
   const [addLeadsOpen, setAddLeadsOpen] = useState(false);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'manager';
+
+  const goTo = (path) => {
+    navigate(path);
+    if (isMobile) closeMobile();
+  };
 
   const isActive = (path) => {
     if (path === '/leads') return location.pathname === '/leads';
@@ -78,7 +90,7 @@ export default function Sidebar() {
     const active = isActive(to);
     return (
       <div
-        onClick={() => navigate(to)}
+        onClick={() => goTo(to)}
         title={!isOpen ? label : ''}
         style={{
           display: 'flex', alignItems: 'center',
@@ -125,7 +137,7 @@ export default function Sidebar() {
   const ExpandGroup = ({ icon, label, isActiveGroup, open, setOpen, children }) => (
     <div style={{ margin: '1px 5px' }}>
       <div
-        onClick={() => isOpen && setOpen(o => !o)}
+        onClick={() => (isOpen || isMobile) && setOpen(o => !o)}
         title={!isOpen ? label : ''}
         style={{
           display: 'flex', alignItems: 'center',
@@ -161,7 +173,7 @@ export default function Sidebar() {
     const active = location.pathname === to || (location.pathname.startsWith(to) && to.length > 1);
     return (
       <div
-        onClick={() => navigate(to)}
+        onClick={() => goTo(to)}
         style={{
           display: 'flex', alignItems: 'center', gap: 8,
           padding: '6px 10px', borderRadius: 6, cursor: 'pointer', margin: '1px 4px',
@@ -180,20 +192,30 @@ export default function Sidebar() {
     );
   };
 
+  const topOffset = isMobile ? 56 : 64;
+
   return (
-    <div
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-      style={{
-        position: 'fixed', top: 64, left: 0, bottom: 0,
-        width: isOpen ? EXPANDED_W : COLLAPSED_W,
-        zIndex: 99,
-        transition: 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
-      }}
-    >
+    <>
+      {isMobile && mobileOpen && (
+        <div
+          onClick={closeMobile}
+          style={{ position: 'fixed', top: topOffset, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.45)', zIndex: 98 }}
+        />
+      )}
+      <div
+        onMouseEnter={() => { if (!isMobile) setHoverOpen(true); }}
+        onMouseLeave={() => { if (!isMobile) setHoverOpen(false); }}
+        style={{
+          position: 'fixed', top: topOffset, left: 0, bottom: 0,
+          width: isMobile ? EXPANDED_W : (isOpen ? EXPANDED_W : COLLAPSED_W),
+          zIndex: 99,
+          transform: isMobile ? (mobileOpen ? 'translateX(0)' : 'translateX(-100%)') : 'none',
+          transition: isMobile ? 'transform 0.25s cubic-bezier(0.4,0,0.2,1)' : 'width 0.22s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
       <div style={{
         position: 'absolute', top: 0, left: 0, bottom: 0,
-        width: isOpen ? EXPANDED_W : COLLAPSED_W,
+        width: isMobile ? EXPANDED_W : (isOpen ? EXPANDED_W : COLLAPSED_W),
         background: '#ffffff',
         borderRight: `1px solid ${BORDER_COLOR}`,
         display: 'flex', flexDirection: 'column',
@@ -258,7 +280,7 @@ export default function Sidebar() {
 
         <div style={{ borderTop: `1px solid ${BORDER_COLOR}`, padding: '6px 5px 10px' }}>
           <div
-            onClick={logout}
+            onClick={() => { logout(); if (isMobile) closeMobile(); }}
             title={!isOpen ? 'Logout' : ''}
             style={{
               display: 'flex', alignItems: 'center',
@@ -275,6 +297,7 @@ export default function Sidebar() {
           {isOpen && <div style={{ fontSize: 9, color: '#d1d5db', textAlign: 'center', marginTop: 4 }}>v189.1</div>}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

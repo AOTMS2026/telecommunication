@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { followupsAPI, notificationsAPI, authAPI } from '../../services/api';
 import logoImg from '../../assets/aotms-global-logo.png';
+import useBreakpoint from '../../hooks/useBreakpoint';
+import { useSidebar } from '../../context/SidebarContext';
 
 // Module-level helper — no hoisting issues
 function formatNotifTime(dateStr) {
@@ -112,6 +114,9 @@ export default function Topbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const bp = useBreakpoint();
+  const isMobile = bp === 'mobile';
+  const { toggleMobile } = useSidebar();
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
 
   const [now, setNow] = useState(new Date());
@@ -394,18 +399,33 @@ export default function Topbar() {
   return (
     <>
       <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: 64,
+        position: 'fixed', top: 0, left: 0, right: 0, height: isMobile ? 56 : 64,
         background: 'linear-gradient(90deg, #ffb37c 0%, #38bdf8 100%)',
         borderBottom: '1px solid #38bdf8',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 16px 0 10px', zIndex: 100
+        padding: isMobile ? '0 10px' : '0 16px 0 10px', zIndex: 100
       }}>
-        {/* Left: logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {/* Left: hamburger (mobile) + logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, minWidth: 0 }}>
+          {isMobile && (
+            <button
+              onClick={toggleMobile}
+              aria-label="Toggle menu"
+              style={{
+                width: 34, height: 34, flexShrink: 0, borderRadius: 8, border: 'none',
+                background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+          )}
           <img
             src={logoImg}
             alt="AOTMS Global Pvt. Ltd"
-            style={{ height: 50, objectFit: 'contain' }}
+            style={{ height: isMobile ? 34 : 50, objectFit: 'contain', flexShrink: 0 }}
           />
 
           {isAdminLike && (
@@ -432,8 +452,10 @@ export default function Topbar() {
                 <div
                   ref={gearDropRef}
                   style={{
-                    position: 'absolute', top: 36, left: 0,
-                    width: 220, background: '#fff',
+                    position: isMobile ? 'fixed' : 'absolute',
+                    top: isMobile ? 60 : 36, left: isMobile ? 8 : 0,
+                    width: isMobile ? 'auto' : 220, maxWidth: isMobile ? 'calc(100vw - 16px)' : 220, minWidth: isMobile ? 200 : 'auto',
+                    background: '#fff',
                     border: '1px solid var(--theme-border-tint)', borderRadius: 12,
                     boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb),0.14)',
                     zIndex: 200, overflow: 'hidden',
@@ -473,11 +495,13 @@ export default function Topbar() {
         </div>
 
         {/* Right: time + clock + bell + avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ textAlign: 'right', marginRight: 4 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>{timeStr}</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)' }}>{dateStr}</div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 8, flexShrink: 0 }}>
+          {!isMobile && (
+            <div style={{ textAlign: 'right', marginRight: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#ffffff' }}>{timeStr}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)' }}>{dateStr}</div>
+            </div>
+          )}
 
           {/* Clock icon — navigates to Follow-up Calls */}
           <div
@@ -485,7 +509,7 @@ export default function Topbar() {
             title="View Follow-up Calls"
             style={{
               width: 30, height: 30, border: '1px solid rgba(255,255,255,0.35)', borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              display: isMobile ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', transition: 'all 0.15s',
               background: 'transparent'
             }}
@@ -533,8 +557,11 @@ export default function Topbar() {
               <div
                 ref={dropRef}
                 style={{
-                  position: 'absolute', top: 36, right: -8,
-                  width: 320, background: '#fff',
+                  position: isMobile ? 'fixed' : 'absolute',
+                  top: isMobile ? 60 : 36, right: isMobile ? 8 : -8,
+                  left: isMobile ? 8 : 'auto',
+                  width: isMobile ? 'auto' : 320, maxWidth: isMobile ? 'calc(100vw - 16px)' : 320,
+                  background: '#fff',
                   border: '1px solid var(--theme-border-tint)', borderRadius: 12,
                   boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb),0.12)',
                   zIndex: 200, overflow: 'hidden',
@@ -640,8 +667,10 @@ export default function Topbar() {
               <div
                 ref={profileDropRef}
                 style={{
-                  position: 'absolute', top: 38, right: 0,
-                  width: 240, background: '#fff',
+                  position: isMobile ? 'fixed' : 'absolute',
+                  top: isMobile ? 60 : 38, right: isMobile ? 8 : 0,
+                  width: isMobile ? 'auto' : 240, maxWidth: isMobile ? 'calc(100vw - 16px)' : 240, minWidth: isMobile ? 220 : 'auto',
+                  background: '#fff',
                   border: '1px solid var(--theme-border-tint)', borderRadius: 14,
                   boxShadow: '0 8px 32px rgba(var(--theme-primary-rgb),0.14)',
                   zIndex: 200, overflow: 'hidden',

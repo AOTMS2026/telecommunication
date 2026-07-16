@@ -1,6 +1,17 @@
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
+    screens: {
+      xs: '400px',
+      sm: '640px',
+      md: '768px',
+      tablet: '640px',
+      laptop: '1024px',
+      lg: '1024px',
+      xl: '1280px',
+      desktop: '1440px',
+      '2xl': '1440px',
+    },
     extend: {
       colors: {
         primary: {

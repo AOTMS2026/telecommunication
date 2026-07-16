@@ -73,7 +73,7 @@ const styles = `
   .lw-logo-area { position: relative; z-index: 5; animation: fadeInUp 0.6s ease 0.1s both; }
   .lw-logo-img { width: 220px; height: auto; object-fit: contain; display: block; filter: drop-shadow(0 2px 14px rgba(0,0,0,0.25)); }
   .lw-right-logo-area { display: flex; justify-content: center; margin-top: -44px; margin-bottom: 8px; animation: fadeInUp 0.6s ease 0.1s both; }
-  .lw-right-logo-img { width: 340px; height: auto; object-fit: contain; display: block; }
+  .lw-right-logo-img { width: 340px; max-width: 100%; height: auto; object-fit: contain; display: block; }
 
   .lw-headline { position: relative; z-index: 5; animation: fadeInUp 0.6s ease 0.2s both; }
   .lw-headline h2 { font-size: 27px; font-weight: 900; color: #fff; line-height: 1.18; letter-spacing: -0.5px; margin-bottom: 8px; }
@@ -260,6 +260,23 @@ const styles = `
   .lw-spinner { width: 17px; height: 17px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
 
   .lw-footer { margin-top: 20px; text-align: center; font-size: 11px; color: var(--theme-primary-pale); animation: fadeInUp 0.5s ease 0.7s both; }
+
+  /* ── RESPONSIVE: tablet & mobile ── */
+  @media (max-width: 860px) and (min-width: 481px) {
+    .lw-right { padding: 32px 24px; }
+  }
+  @media (max-width: 480px) {
+    .lw-right { padding: 24px 16px; }
+    .lw-right-logo-area { margin-top: 0; margin-bottom: 4px; }
+    .lw-right-logo-img { width: 220px; }
+    .lw-portal-badge { margin-bottom: 16px; padding: 4px 11px; }
+    .lw-welcome { margin-bottom: 18px; }
+    .lw-welcome h1 { font-size: 21px; }
+    .lw-welcome p { font-size: 12.5px; }
+    .lw-form { gap: 14px; }
+    .lw-input { font-size: 16px; padding: 11px 12px 11px 38px; }
+    .lw-btn { padding: 13px; font-size: 14px; }
+  }
 `;
 
 export default function Login() {
