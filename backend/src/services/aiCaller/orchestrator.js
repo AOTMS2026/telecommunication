@@ -26,9 +26,13 @@
 // completion in the background (which was causing overlapping audio and
 // "random" pauses when a stale turn's TTS landed after a new one started).
 
+<<<<<<< HEAD
 const axios = require('axios');
 const { transcribeAudio, createTtsSession } = require('./sarvamClient');
 const { getSarvamClient, AI_CALLER_CHAT_MODEL } = require('./sarvamChatClient');
+=======
+const { transcribeAudio, synthesizeSpeech, getAgentReply, getCallOutcome } = require('./geminiClient');
+>>>>>>> c00081b70b88921484bf3588843afd16a2a8ae0b
 const {
   buildSystemPrompt,
   buildWelcomeGreeting,
@@ -64,6 +68,7 @@ const TRANSFER_MARKER = '[[TRANSFER_TO_HR]]';
 // than to also spend a human's time on it this early.
 const MIN_CALL_DURATION_FOR_TRANSFER_MS = 3 * 60 * 1000;
 
+<<<<<<< HEAD
 // STALL detection: abort a turn only if NO progress (no STT result, no new
 // GPT sentence, no new TTS audio chunk) has happened for this long — i.e. a
 // genuine hang. This replaced a flat 12s ceiling on the WHOLE turn
@@ -347,6 +352,8 @@ async function getCallOutcome(outcomeExtractionPrompt, transcriptMessages) {
   }
 }
 
+=======
+>>>>>>> c00081b70b88921484bf3588843afd16a2a8ae0b
 // ─── RMS silence helper ─────────────────────────────────────────────────────
 
 function rms(pcm16Chunk) {
