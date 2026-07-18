@@ -231,18 +231,19 @@ function LeadViewCharts({ summary }) {
       </div>
 
       {/* Chart type tabs — matching source image */}
-      <div className="border-b border-gray-100 px-5">
-        <div className="flex gap-0 overflow-x-auto">
+      <div className="border-b border-gray-100 px-5 relative">
+        <div className="flex gap-0 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {CHART_TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setChartTab(tab)}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${chartTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${chartTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
               {tab}
             </button>
           ))}
         </div>
+        <div className="sm:hidden pointer-events-none absolute right-0 top-0 bottom-0 w-8" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.95))' }} />
       </div>
 
       {/* Controls */}

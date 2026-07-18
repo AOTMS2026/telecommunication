@@ -111,6 +111,16 @@ export default function StaleLeads() {
       </div>
 
       {/* Main content tables */}
+      <style>{`
+        @media (max-width: 640px) {
+          .sl-rtable thead { display: none; }
+          .sl-rtable, .sl-rtable tbody, .sl-rtable tr, .sl-rtable td { display: block; width: 100%; box-sizing: border-box; }
+          .sl-rtable tr { border: 1px solid var(--theme-border-tint); border-radius: 10px; margin-bottom: 10px; padding: 10px 12px; height: auto !important; }
+          .sl-rtable td { text-align: left !important; padding: 5px 0 !important; }
+          .sl-rtable td[data-label]::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #9ca3af; margin-bottom: 2px; }
+          .sl-rtable td:first-child::before { content: none; }
+        }
+      `}</style>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
         {/* Table 1: Stale Leads */}
         <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 12, padding: 20 }}>
@@ -121,7 +131,7 @@ export default function StaleLeads() {
             <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 Outstanding! No idle leads found in the system.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table className="sl-rtable" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${BORDER}`, color: TEXT_MUTED, height: 32 }}>
                     <th style={{ textAlign: 'left', fontWeight: 600, paddingBottom: 8 }}>Student Details</th>
@@ -142,19 +152,19 @@ export default function StaleLeads() {
                           <strong style={{ color: TEXT_MAIN }}>{lead.name}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>{lead.phone} • {lead.email || 'No email'}</div>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td data-label="Current Status" style={{ textAlign: 'center' }}>
                           <StatusBadge status={lead.status} />
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td data-label="Last Contacted" style={{ textAlign: 'center' }}>
                           <span style={{ color: RED, fontWeight: 700 }}>{idleTime} days idle</span>
                           <div style={{ fontSize: 10, color: TEXT_MUTED }}>
                             {lead.lastCalledAt ? `Last call: ${new Date(lead.lastCalledAt).toLocaleDateString()}` : `Created: ${new Date(lead.createdAt).toLocaleDateString()}`}
                           </div>
                         </td>
-                        <td style={{ textAlign: 'center', color: TEXT_MAIN }}>
+                        <td data-label="Assigned Caller" style={{ textAlign: 'center', color: TEXT_MAIN }}>
                           {lead.assignedTo?.name || <span style={{ color: AMBER, fontWeight: 600 }}>Unassigned</span>}
                         </td>
-                        <td style={{ textAlign: 'right', padding: '8px 0' }}>
+                        <td data-label="Quick Reassign" style={{ textAlign: 'right', padding: '8px 0' }}>
                           <select
                             disabled={updatingId === lead._id}
                             value={lead.assignedTo?._id || ''}
@@ -185,7 +195,7 @@ export default function StaleLeads() {
             <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 Awesome! No followups are overdue by 24 hours.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <table className="sl-rtable" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${BORDER}`, color: TEXT_MUTED, height: 32 }}>
                     <th style={{ textAlign: 'left', fontWeight: 600, paddingBottom: 8 }}>Lead Target</th>
@@ -204,19 +214,19 @@ export default function StaleLeads() {
                           <strong style={{ color: TEXT_MAIN }}>{fu.lead?.name || 'Unknown Lead'}</strong>
                           <div style={{ fontSize: 11, color: TEXT_MUTED }}>Status: {fu.lead?.status}</div>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td data-label="Scheduled Call Time" style={{ textAlign: 'center' }}>
                           <span style={{ color: AMBER, fontWeight: 700 }}>{hoursLate}h overdue</span>
                           <div style={{ fontSize: 10, color: TEXT_MUTED }}>
                             Scheduled: {new Date(fu.scheduledAt).toLocaleDateString()} {new Date(fu.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </td>
-                        <td style={{ textAlign: 'center', color: '#555', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fu.note}>
+                        <td data-label="Follow-up Note" style={{ textAlign: 'center', color: '#555', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={fu.note}>
                           {fu.note || 'No notes left.'}
                         </td>
-                        <td style={{ textAlign: 'center', color: TEXT_MAIN }}>
+                        <td data-label="Current Caller" style={{ textAlign: 'center', color: TEXT_MAIN }}>
                           {fu.assignedTo?.name || 'Unassigned'}
                         </td>
-                        <td style={{ textAlign: 'right', padding: '8px 0' }}>
+                        <td data-label="Quick Reassign" style={{ textAlign: 'right', padding: '8px 0' }}>
                           <select
                             disabled={updatingId === fu.lead?._id}
                             value={fu.assignedTo?._id || ''}

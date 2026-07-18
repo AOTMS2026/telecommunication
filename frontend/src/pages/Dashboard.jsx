@@ -507,7 +507,13 @@ export default function Dashboard() {
     const offset = circumference - (quotaPercentage / 100) * circumference;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="dash-caller-shell" style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden' }}>
+        <style>{`
+          @media (max-width: 640px) {
+            .dash-caller-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .dash-caller-shell [style*="grid-column"] { grid-column: auto !important; }
+          }
+        `}</style>
         {/* Banner Alert for Overdue Follow-ups */}
         {stats?.overdueFollowupsCount > 0 && (
           <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -817,7 +823,13 @@ export default function Dashboard() {
     const totalCalls = liveCallers.reduce((sum, c) => sum + c.callsToday, 0);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="dash-admin-shell" style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden' }}>
+        <style>{`
+          @media (max-width: 640px) {
+            .dash-admin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .dash-admin-shell [style*="grid-column"] { grid-column: auto !important; }
+          }
+        `}</style>
         {/* Warning panel for unassigned leads */}
         {adminStats?.unassignedCount > 0 && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -1259,7 +1271,13 @@ export default function Dashboard() {
     const leadConversionRate = totalLeadsCount > 0 ? Math.round((wonCount / totalLeadsCount) * 100) : 0;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="dash-superadmin-shell" style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden' }}>
+        <style>{`
+          @media (max-width: 640px) {
+            .dash-superadmin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            .dash-superadmin-shell [style*="grid-column"] { grid-column: auto !important; }
+          }
+        `}</style>
         {/* Stale Leads Alert Banner */}
         {(adminStats?.staleLeadsCount > 0 || adminStats?.overdue24hFollowupsCount > 0) && (
           <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -1784,9 +1802,14 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="dash-outer-shell" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100vw', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .dash-outer-shell { padding: 14px !important; }
+        }
+      `}</style>
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f3f1fb', paddingBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, display: 'flex', alignItems: 'center', gap: 8 }}>
             {isSuperAdmin ? 'Admin Desk' : isAdmin ? 'Manager Desk' : 'Caller Desk'}
