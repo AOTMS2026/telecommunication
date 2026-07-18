@@ -74,7 +74,14 @@ export default function Blocklist() {
   );
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="bl-shell" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .bl-shell { padding: 14px !important; }
+          .bl-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .bl-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       {/* Toast Notification */}
       {notification && (
         <div style={{

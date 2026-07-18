@@ -512,6 +512,8 @@ export default function Dashboard() {
           @media (max-width: 640px) {
             .dash-caller-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-caller-shell [style*="grid-column"] { grid-column: auto !important; }
+            .dash-caller-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-caller-shell table { min-width: 480px; }
           }
         `}</style>
         {/* Banner Alert for Overdue Follow-ups */}
@@ -828,6 +830,8 @@ export default function Dashboard() {
           @media (max-width: 640px) {
             .dash-admin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-admin-shell [style*="grid-column"] { grid-column: auto !important; }
+            .dash-admin-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-admin-shell table { min-width: 480px; }
           }
         `}</style>
         {/* Warning panel for unassigned leads */}
@@ -1276,6 +1280,8 @@ export default function Dashboard() {
           @media (max-width: 640px) {
             .dash-superadmin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-superadmin-shell [style*="grid-column"] { grid-column: auto !important; }
+            .dash-superadmin-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-superadmin-shell table { min-width: 480px; }
           }
         `}</style>
         {/* Stale Leads Alert Banner */}
@@ -1505,7 +1511,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Leaderboard widget with switch tabs */}
             <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justify: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <strong style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🏆 Productivity Leaderboard
                 </strong>

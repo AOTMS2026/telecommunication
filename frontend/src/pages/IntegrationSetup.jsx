@@ -175,7 +175,14 @@ export default function IntegrationSetup() {
   );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
+    <div className="is-shell" style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .is-shell { padding: 14px !important; }
+          .is-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .is-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <button
         onClick={() => navigate('/integrations')}
         style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: 14, fontWeight: 500, cursor: 'pointer', padding: 0, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}

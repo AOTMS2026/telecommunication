@@ -24,7 +24,14 @@ export default function AccessTokens() {
   useEffect(() => { load(); }, []);
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
+    <div className="at-shell" style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .at-shell { padding: 14px !important; }
+          .at-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .at-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: C.ink }}>Access Tokens ({meta.used}/{meta.max})</h2>

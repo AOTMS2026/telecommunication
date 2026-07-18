@@ -432,7 +432,14 @@ export default function IntegrationDetail() {
   const isRealWebhook = WEBHOOK_TYPES.includes(type);
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="id-shell" style={{ padding: '20px 28px', maxWidth: 1200, margin: '0 auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .id-shell { padding: 14px !important; }
+          .id-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .id-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <button onClick={() => navigate('/integrations')} style={{ background: 'none', border: 'none', color: 'var(--theme-primary-alt)', cursor: 'pointer', fontSize: 14, padding: 0 }}>
           ← Back to Integrations

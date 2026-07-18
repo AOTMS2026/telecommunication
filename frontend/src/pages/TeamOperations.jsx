@@ -93,9 +93,16 @@ export default function TeamOperations() {
   const notifications = data?.notifications || [];
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="teamops-shell" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .teamops-shell { padding: 14px !important; }
+          .teamops-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .teamops-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>Team Operations Console</h2>
           <p style={{ fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
@@ -113,7 +120,7 @@ export default function TeamOperations() {
       {/* Operations Quick Widgets */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e8f8f0', display: 'flex', alignItems: 'center', justify: 'center', color: GREEN, fontSize: 20 }}>🟢</div>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e8f8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: GREEN, fontSize: 20 }}>🟢</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Active Callers Now</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>
@@ -122,21 +129,21 @@ export default function TeamOperations() {
           </div>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fffbeb', display: 'flex', alignItems: 'center', justify: 'center', color: AMBER, fontSize: 20 }}>❓</div>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: AMBER, fontSize: 20 }}>❓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Unassigned Leads</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.unassignedCount || 0}</div>
           </div>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fff0f0', display: 'flex', alignItems: 'center', justify: 'center', color: RED, fontSize: 20 }}>⚠️</div>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 20 }}>⚠️</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Overdue Follow-ups</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.overdueFollowupsCount || 0}</div>
           </div>
         </div>
         <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justify: 'center', color: PURPLE, fontSize: 20 }}>🎓</div>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PURPLE, fontSize: 20 }}>🎓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Weekly Demos Scheduled</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{upcomingDemos.length}</div>
@@ -347,7 +354,7 @@ export default function TeamOperations() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {workload.map(item => (
-                  <div key={item.user?._id} style={{ display: 'flex', justify: 'space-between', alignItems: 'center', padding: '6px 12px', border: '1px solid var(--theme-surface-faint)', borderRadius: 6, background: 'var(--theme-surface-faint)', fontSize: 13 }}>
+                  <div key={item.user?._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', border: '1px solid var(--theme-surface-faint)', borderRadius: 6, background: 'var(--theme-surface-faint)', fontSize: 13 }}>
                     <strong style={{ color: TEXT_MAIN }}>{item.user?.name}</strong>
                     <span style={{ color: PURPLE, fontWeight: 700 }}>{item.count} callbacks</span>
                   </div>

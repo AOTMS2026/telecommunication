@@ -75,7 +75,14 @@ export default function StaleLeads() {
   }) || [];
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="sl-shell" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .sl-shell { padding: 14px !important; }
+          .sl-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .sl-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--theme-surface-faint3)', paddingBottom: 16 }}>
         <div>

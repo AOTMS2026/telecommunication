@@ -202,9 +202,14 @@ export default function Leads() {
   ].reduce((a, b) => a + b, 0);
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="leads-shell flex flex-col" style={{ height: 'calc(100vh - 64px)' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .leads-shell { height: auto !important; min-height: calc(100vh - 56px); }
+        }
+      `}</style>
       {/* Header */}
-      <div className="flex items-center justify-between flex-shrink-0 pb-4">
+      <div className="flex items-center justify-between flex-shrink-0 pb-4 flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-bold text-gray-900">All Leads</h1>
           <p className="text-xs text-gray-400 mt-0.5">{total} total leads</p>

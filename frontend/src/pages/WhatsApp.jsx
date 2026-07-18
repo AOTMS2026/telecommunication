@@ -1332,18 +1332,25 @@ export default function WhatsApp() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 48px)', background: BG }}>
+    <div className="wa-shell" style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 48px)', background: BG, maxWidth: '100%', overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .wa-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .wa-brand-text { display: none; }
+          .wa-top-header { padding: 0 12px !important; gap: 8px !important; }
+        }
+      `}</style>
 
       {/* Top header */}
-      <div style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+      <div className="wa-top-header" style={{ background: '#fff', borderBottom: `1px solid ${BORDER}`, padding: '0 24px', minHeight: 56, display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <div style={{ width: 34, height: 34, background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 34, height: 34, background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2" strokeLinecap="round">
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
             </svg>
           </div>
-          <div>
+          <div className="wa-brand-text">
             <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN, lineHeight: 1.2 }}>WhatsApp CRM</div>
             <div style={{ fontSize: 10, color: TEXT_MUTED }}>Business API</div>
           </div>

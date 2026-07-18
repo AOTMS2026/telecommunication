@@ -175,7 +175,14 @@ ${user?.name || ''}`;
   if (loading) return <div style={{ textAlign: 'center', padding: 60, color: C.sub }}>Loading…</div>;
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="mcp-shell" style={{ padding: '24px 28px', maxWidth: 1100, margin: '0 auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .mcp-shell { padding: 14px !important; }
+          .mcp-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .mcp-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
 
       {/* Page header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>

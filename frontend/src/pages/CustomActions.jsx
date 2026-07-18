@@ -173,7 +173,14 @@ export default function CustomActions() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="ca-shell" style={{ padding: 24, maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .ca-shell { padding: 14px !important; }
+          .ca-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .ca-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--theme-text-strongest2)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--theme-text-strongest2)" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>

@@ -600,7 +600,14 @@ export default function BulkImport() {
   // Render: Wizard Steps
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding:24, maxWidth:1000, margin:'0 auto' }}>
+    <div className="bi-shell" style={{ padding:24, maxWidth:1000, margin:'0 auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .bi-shell { padding: 14px !important; }
+          .bi-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .bi-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>
         <span style={{ fontSize:28 }}>📊</span>
         <h2 style={{ margin:0, color:TEXT_MAIN, fontSize:22 }}>Import Leads</h2>

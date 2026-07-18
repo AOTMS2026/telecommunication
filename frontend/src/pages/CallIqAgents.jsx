@@ -119,7 +119,14 @@ function AgentEditor({ initial, onClose, onSaved }) {
   };
 
   return (
-    <div style={{ padding: '20px 28px', maxWidth: 780, margin: '0 auto' }}>
+    <div className="cia-shell" style={{ padding: '20px 28px', maxWidth: 780, margin: '0 auto', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .cia-shell { padding: 14px !important; }
+          .cia-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .cia-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
         <button onClick={onClose} style={{ ...btnGhost, padding: '6px 12px' }}>←</button>
         <h3 style={{ margin: 0, color: C.ink }}>Create AI Agent</h3>

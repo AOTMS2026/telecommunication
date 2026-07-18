@@ -584,7 +584,14 @@ export default function Campaigns() {
   const activeCampaigns = campaigns.filter(c => (c.progress || 0) < 100).length;
 
   return (
-    <div className="campaign-page" style={{ padding: '28px 28px 40px', background: BG, minHeight: 'calc(100vh - 64px)', boxSizing: 'border-box' }}>
+    <div className="campaign-page" style={{ padding: '28px 28px 40px', background: BG, minHeight: 'calc(100vh - 64px)', boxSizing: 'border-box', maxWidth: '100%', overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .campaign-page { padding: 14px !important; }
+          .campaign-page [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .campaign-page div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+        }
+      `}</style>
       <style>{globalStyles}</style>
 
       {/* ── Header ── */}

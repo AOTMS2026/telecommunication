@@ -316,7 +316,12 @@ export default function Leaderboard() {
   const allTabs = [...TABS, 'CUSTOM'];
 
   return (
-    <div style={{ padding: 24, background: BG, minHeight: '100vh' }}>
+    <div className="lb-shell" style={{ padding: 24, background: BG, minHeight: '100vh', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .lb-shell { padding: 14px !important; }
+        }
+      `}</style>
       {showDatePicker && (
         <DatePickerModal
           initial={customRange}
@@ -326,7 +331,7 @@ export default function Leaderboard() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN }}>🏆 Leaderboard</span>
           <button onClick={fetchData} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} title="Refresh">
@@ -380,7 +385,7 @@ export default function Leaderboard() {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--theme-border-tint)', background: '#fff', borderRadius: '12px 12px 0 0', padding: '0 8px' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--theme-border-tint)', background: '#fff', borderRadius: '12px 12px 0 0', padding: '0 8px', overflowX: 'auto' }}>
         {allTabs.map(tab => (
           <button key={tab} onClick={() => tab === 'CUSTOM' ? setShowDatePicker(true) : setActiveTab(tab)}
             style={{
@@ -389,7 +394,7 @@ export default function Leaderboard() {
               color: activeTab === tab ? PURPLE : TEXT_MUTED,
               borderBottom: activeTab === tab ? `2px solid ${PURPLE}` : '2px solid transparent',
               marginBottom: -2, transition: 'all 0.15s',
-              display: 'flex', alignItems: 'center', gap: 4,
+              display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0,
             }}>
             {tab === 'CUSTOM' && '📅 '}
             {tab}

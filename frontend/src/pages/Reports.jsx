@@ -214,7 +214,7 @@ function LeadViewCharts({ summary }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
       {/* Header row */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-gray-800">Lead View</h3>
           <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-lg">{total.toLocaleString()} leads</span>
@@ -452,9 +452,9 @@ export default function Reports() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-[var(--theme-surface-faint)] rounded-xl flex items-center justify-center">
+          <div className="w-9 h-9 bg-[var(--theme-surface-faint)] rounded-xl flex items-center justify-center flex-shrink-0">
             <BarChart2 className="w-5 h-5 text-[var(--theme-primary)]" />
           </div>
           <div>
@@ -473,7 +473,7 @@ export default function Reports() {
         <div className="flex gap-0 overflow-x-auto">
           {REPORT_TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${activeTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
+              className={`px-5 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors flex-shrink-0 ${activeTab === tab ? 'border-[var(--theme-primary)] text-[var(--theme-primary-dark)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
               {tab}
             </button>
           ))}
@@ -484,7 +484,7 @@ export default function Reports() {
       {activeTab === 'All' && (
         <div className="space-y-6">
           {/* Stats row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard icon={Phone} label="Calls Today" value={today.count || 0} sub={fmtDuration(today.duration)} color="indigo" />
             <StatCard icon={CheckCircle} label="Connected Today" value={today.connected || 0} sub="Answered calls" color="green" />
             <StatCard icon={Clock} label="Talk Time Today" value={fmtDuration(today.duration)} sub="Total duration" color="orange" />
@@ -661,7 +661,7 @@ export default function Reports() {
       {/* Bulk upload tasks */}
       {activeTab === 'Bulk upload tasks' && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-wrap gap-2">
             <h3 className="font-semibold text-gray-800">Bulk Upload Tasks</h3>
             <label style={{ background: 'var(--btn-gradient)' }} className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-white rounded-xl cursor-pointer hover:brightness-105 transition-all">
               <Download className="w-3.5 h-3.5" />
