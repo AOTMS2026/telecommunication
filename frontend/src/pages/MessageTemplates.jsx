@@ -127,7 +127,13 @@ export default function MessageTemplates() {
   };
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 0, height: 'calc(100vh - 64px)', boxSizing: 'border-box', overflow: 'hidden' }}>
+    <div className="msgtpl-shell" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 0, height: 'calc(100vh - 64px)', boxSizing: 'border-box', overflow: 'hidden' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .msgtpl-shell { height: auto !important; min-height: calc(100vh - 56px); overflow: visible !important; padding: 14px !important; }
+          .msgtpl-shell .tpl-list-panel, .msgtpl-shell .tpl-preview-panel { max-height: 70vh; overflow-y: auto !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--theme-text-strong)' }}>Message Templates</div>

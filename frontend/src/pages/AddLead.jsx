@@ -124,7 +124,7 @@ export default function AddLead() {
         {/* Basic info */}
         <div className="card p-5 space-y-4">
           <h3 className="font-semibold text-gray-800 text-sm">Basic Information</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Full Name" required>
               <input
                 className="input-field"
@@ -144,7 +144,7 @@ export default function AddLead() {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Phone" required>
               <div className="flex">
                 <span className="inline-flex items-center px-3 border border-r-0 border-gray-200 rounded-l-lg bg-gray-50 text-gray-500 text-sm">🇮🇳 +91</span>
@@ -182,7 +182,7 @@ export default function AddLead() {
         {/* Lead details */}
         <div className="card p-5 space-y-4">
           <h3 className="font-semibold text-gray-800 text-sm">Lead Details</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Lead Source">
               <select
                 className="input-field"
@@ -214,7 +214,7 @@ export default function AddLead() {
               />
             </Field>
           )}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <Field label="Interested Course">
               <select
                 className="input-field"
@@ -285,7 +285,7 @@ export default function AddLead() {
         {/* Dates */}
         <div className="card p-5 space-y-4">
           <h3 className="font-semibold text-gray-800 text-sm">Scheduling</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Next Follow-up">
               <input
                 type="datetime-local"
@@ -317,7 +317,7 @@ export default function AddLead() {
         {customFieldDefs.length > 0 && (
           <div className="card p-5 space-y-4">
             <h3 className="font-semibold text-gray-800 text-sm">Additional Information</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {customFieldDefs.map(cf => (
                 <Field key={cf._id} label={cf.name}>
                   {cf.type === 'dropdown' ? (
@@ -360,7 +360,7 @@ export default function AddLead() {
         {/* Assignment */}
         <div className="card p-5 space-y-4">
           <h3 className="font-semibold text-gray-800 text-sm">Assignment</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Assign To">
               <select className="input-field" value={form.assignedTo} onChange={e => set('assignedTo', e.target.value)}>
                 <option value="">Assign to me</option>

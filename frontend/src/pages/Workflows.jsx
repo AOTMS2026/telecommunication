@@ -219,8 +219,15 @@ export default function Workflows({kind='WORKFLOW'}){
   ];
 
   return(
-  <div style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
-    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
+  <div className="workflows-shell" style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
+    <style>{`
+      @media (max-width: 640px) {
+        .workflows-shell { padding: 14px !important; }
+        .workflows-shell .wf-col-header { display: none !important; }
+        .workflows-shell .wf-row { border: 1px solid var(--theme-border-tint); border-radius: 10px; margin-bottom: 8px; padding: 12px !important; }
+      }
+    `}</style>
+    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
       <div>
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink,display:'flex',alignItems:'center',gap:8}}>{title}<RefreshCw size={16} style={{color:C.sub,cursor:'pointer'}} onClick={load}/></h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>{isSchedule?'Automatically keep in touch with your leads':'To execute complex automations with ease'} <span style={{color:C.indigo,fontWeight:600,textDecoration:'underline',cursor:'pointer'}}>Learn More</span></p>
@@ -280,7 +287,7 @@ export default function Workflows({kind='WORKFLOW'}){
     {/* table */}
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
+      <div className="wf-col-header" style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
         <span>Name</span><span>Events</span><span>Status</span><span>Updated by</span><span>Total runs</span><span style={{textAlign:'right'}}>Actions</span>
       </div>
       {pageRows.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Flowcharts Found</div>
@@ -288,7 +295,7 @@ export default function Workflows({kind='WORKFLOW'}){
         const ev=EVENT_FLAT.find(e=>e.value===w.triggerEvent);
         const initials=(w.updatedBy?.name||w.createdBy?.name||'—').split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
         return(
-        <div key={w._id} style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<pageRows.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
+        <div key={w._id} className="wf-row" style={{display:'grid',gridTemplateColumns:'1.6fr 1.2fr .7fr .7fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<pageRows.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(w)}>{w.name}</span>
           <span><EventBadge ev={ev} triggerEvent={w.triggerEvent}/></span>
           <span><StatusToggle status={w.status} onToggle={async()=>{await workflowsAPI.setStatus(w._id,w.status==='published'?'draft':'published').catch(e=>alert(e.response?.data?.message||'Failed'));load();}}/></span>

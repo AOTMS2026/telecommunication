@@ -37,8 +37,15 @@ export default function ApiTemplates(){
   if(leadsFor) return <ImpactedLeads template={leadsFor} onClose={()=>setLeadsFor(null)}/>;
 
   return(
-  <div style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+  <div className="apitpl-shell" style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
+    <style>{`
+      @media (max-width: 640px) {
+        .apitpl-shell { padding: 14px !important; }
+        .apitpl-shell .at-col-header { display: none !important; }
+        .apitpl-shell .at-row { border: 1px solid var(--theme-border-tint); border-radius: 10px; margin-bottom: 8px; padding: 12px !important; }
+      }
+    `}</style>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:10}}>
       <div>
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>API Templates</h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>Create an API template once and use it everywhere</p>
@@ -47,14 +54,14 @@ export default function ApiTemplates(){
     </div>
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+      <div className="at-col-header" style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
         <span>Template Name</span><span>Endpoint URL</span><span>Variables Used</span><span>Workflow</span><span>Last Modified ↕</span><span>Last Modified By</span><span style={{textAlign:'right'}}>Actions</span>
       </div>
       {templates.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No API templates found, <span style={{color:C.indigo,cursor:'pointer',fontWeight:600}} onClick={()=>setEditing(blank())}>+ Create new</span></div>
       :templates.map((t,i)=>{
         const wfs=t.usedInWorkflows||[];
         return(
-        <div key={t._id} style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'14px 18px',alignItems:'center',borderBottom:i<templates.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
+        <div key={t._id} className="at-row" style={{display:'grid',gridTemplateColumns:'1.1fr 1.7fr .8fr 1.1fr 1fr 1fr 1fr',padding:'14px 18px',alignItems:'center',borderBottom:i<templates.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.indigo,cursor:'pointer'}} onClick={()=>setEditing(t)}>{t.name}</span>
           <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.endpointUrl}</span>
           <span style={{fontSize:13,color:C.sub}}>{t.variablesUsed?.length?t.variablesUsed.length:'None'}</span>

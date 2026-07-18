@@ -27,7 +27,14 @@ export default function Profile() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--theme-surface-faint3)', padding: '32px 0' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .profile-card { padding: 20px 18px !important; }
+          .profile-name-row { flex-direction: column !important; gap: 16px !important; }
+          .profile-name-row > div { width: 100% !important; }
+        }
+      `}</style>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--theme-primary)" strokeWidth="2" strokeLinecap="round">
@@ -39,9 +46,9 @@ export default function Profile() {
           <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--theme-text-strong)' }}>User</span>
         </div>
 
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--theme-border-tint)', padding: '32px 36px' }}>
+        <div className="profile-card" style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--theme-border-tint)', padding: '32px 36px' }}>
           {/* Name + Initials row */}
-          <div style={{ display: 'flex', gap: 20, marginBottom: 22 }}>
+          <div className="profile-name-row" style={{ display: 'flex', gap: 20, marginBottom: 22 }}>
             <div style={{ flex: 1 }}>
               <label style={labelStyle}>Name <span style={{ color: '#e53e3e' }}>*</span></label>
               <input

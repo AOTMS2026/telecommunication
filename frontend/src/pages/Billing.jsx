@@ -151,8 +151,8 @@ export default function Billing() {
       </div>
 
       {/* Table */}
-      <div style={{ background:'#fff', border:`1px solid ${BORDER}`, borderRadius:12, overflow:'hidden' }}>
-        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+      <div style={{ background:'#fff', border:`1px solid ${BORDER}`, borderRadius:12, overflow:'hidden', overflowX: 'auto' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth: 640 }}>
           <thead>
             <tr style={{ background:BLUE_L, borderBottom:`1px solid ${BORDER}` }}>
               {['Order ID','Date','Amount','Billing Cycle','Status','Actions'].map(h=>(

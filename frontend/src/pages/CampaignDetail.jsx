@@ -443,7 +443,13 @@ export default function CampaignDetail() {
   if (!campaign) return <div style={{ textAlign: 'center', padding: 48, color: MUTED }}>Campaign not found</div>;
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 64px)', fontFamily: 'inherit', overflow: 'hidden', boxSizing: 'border-box' }}>
+    <div className="campaign-detail-shell" style={{ display: 'flex', height: 'calc(100vh - 64px)', fontFamily: 'inherit', overflow: 'hidden', boxSizing: 'border-box' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .campaign-detail-shell { height: auto !important; min-height: calc(100vh - 56px); overflow: visible !important; }
+          .campaign-detail-shell > div { max-height: 70vh; overflow-y: auto !important; }
+        }
+      `}</style>
 
       {/* ─── LEFT PANEL: Student List ─────────────────────────────────────────── */}
       <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRight: `1px solid ${BORDER}`, borderTopLeftRadius: 12, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

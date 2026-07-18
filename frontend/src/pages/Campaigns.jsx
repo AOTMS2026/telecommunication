@@ -750,14 +750,14 @@ export default function Campaigns() {
       )}
 
       {/* ── Table ── */}
-      <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 24px rgba(var(--theme-primary-rgb),0.06)' }}>
+      <div style={{ background: SURFACE, border: `1.5px solid ${BORDER}`, borderRadius: 18, overflow: 'hidden', overflowX: 'auto', boxShadow: '0 4px 24px rgba(var(--theme-primary-rgb),0.06)' }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: 140, gap: 12 }}>
             <div className="spin" style={{ width: 30, height: 30, border: `3px solid ${PURPLE_LIGHT}`, borderTopColor: PURPLE, borderRadius: '50%' }} />
             <span style={{ fontSize: 12, color: TEXT_MUTED, fontWeight: 500 }}>Loading campaigns...</span>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead className="table-header">
               <tr style={{ borderBottom: `2px solid ${BORDER}`, background: GRADIENT_SUBTLE }}>
                 {[

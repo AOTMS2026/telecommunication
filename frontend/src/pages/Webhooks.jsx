@@ -30,8 +30,15 @@ export default function Webhooks(){
   if(editing) return <WebhookEditor initial={editing} events={events} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);load()}} />;
 
   return(
-  <div style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}}>
-    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
+  <div className="webhooks-shell" style={{padding:'24px 28px',maxWidth:1100,margin:'0 auto'}}>
+    <style>{`
+      @media (max-width: 640px) {
+        .webhooks-shell { padding: 14px !important; }
+        .webhooks-shell .wh-col-header { display: none !important; }
+        .webhooks-shell .wh-row { border: 1px solid var(--theme-border-tint); border-radius: 10px; margin-bottom: 8px; padding: 12px !important; }
+      }
+    `}</style>
+    <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:10}}>
       <div>
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>Webhook Management</h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>Manage inbound & outbound webhooks and connect to external systems</p>
@@ -50,11 +57,11 @@ export default function Webhooks(){
       </div>
     ):(
       <div style={{...card,overflow:'hidden'}}>
-        <div style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
+        <div className="wh-col-header" style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'12px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase'}}>
           <span>Name</span><span>URL</span><span>Events</span><span>Status</span><span style={{textAlign:'right'}}>Actions</span>
         </div>
         {hooks.map((h,i)=>(
-          <div key={h._id} style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'14px 18px',alignItems:'center',borderBottom:i<hooks.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
+          <div key={h._id} className="wh-row" style={{display:'grid',gridTemplateColumns:'1.4fr 2fr 1fr .8fr 150px',padding:'14px 18px',alignItems:'center',borderBottom:i<hooks.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
             <span style={{fontWeight:600,color:C.ink,cursor:'pointer'}} onClick={()=>setEditing(h)}>{h.name}</span>
             <span style={{fontSize:12,color:C.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h.url}</span>
             <span style={{fontSize:13,color:C.sub}}>{h.events?.length||0}</span>

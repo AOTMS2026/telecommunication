@@ -101,8 +101,15 @@ export default function Salesforms(){
   const filtered=forms.filter(f=>!statusFilter||f.status===statusFilter);
 
   return(
-  <div style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
-    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
+  <div className="salesforms-shell" style={{padding:'24px 28px',maxWidth:1180,margin:'0 auto'}}>
+    <style>{`
+      @media (max-width: 640px) {
+        .salesforms-shell { padding: 14px !important; }
+        .salesforms-shell .sf-col-header { display: none !important; }
+        .salesforms-shell .sf-row { border: 1px solid var(--theme-border-tint); border-radius: 10px; margin-bottom: 8px; padding: 12px !important; }
+      }
+    `}</style>
+    <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
       <div>
         <h2 style={{margin:0,fontSize:22,fontWeight:700,color:C.ink}}>Salesforms</h2>
         <p style={{margin:'4px 0 0',color:C.sub,fontSize:14}}>To automatically fill lead form data</p>
@@ -115,8 +122,8 @@ export default function Salesforms(){
         <button key={t} onClick={()=>setTab(t)} style={{background:'none',border:'none',padding:'8px 2px',cursor:'pointer',fontSize:14,fontWeight:600,textTransform:'capitalize',color:tab===t?C.indigo:C.sub,borderBottom:tab===t?`2.5px solid ${C.indigo}`:'2.5px solid transparent'}}>{t}</button>
       ))}
     </div>
-    <div style={{display:'flex',gap:12,marginBottom:14}}>
-      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search salesform by Name" style={{...inp,maxWidth:420}}/>
+    <div style={{display:'flex',gap:12,marginBottom:14,flexWrap:'wrap'}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search salesform by Name" style={{...inp,maxWidth:420,flex:'1 1 200px'}}/>
       <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{...inp,maxWidth:200}}>
         <option value="">Status</option><option value="published">Published</option><option value="draft">Draft</option>
       </select>
@@ -124,14 +131,14 @@ export default function Salesforms(){
 
     {loading?<div style={{textAlign:'center',padding:50,color:C.sub}}>Loading…</div>:(
     <div style={{...card,overflow:'hidden'}}>
-      <div style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
+      <div className="sf-col-header" style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'11px 18px',background:'var(--theme-surface-faint2)',borderBottom:`1px solid ${C.border}`,fontSize:11,fontWeight:700,color:C.sub,textTransform:'uppercase',letterSpacing:'.04em'}}>
         <span>Name</span><span>Events</span>
         {tab==='published'?<><span>Status</span><span>Status Updated On</span><span>Status Updated by</span></>:<><span>Updated On</span><span>Updated by</span></>}
         <span style={{textAlign:'right'}}>Actions</span>
       </div>
       {filtered.length===0?<div style={{padding:40,textAlign:'center',color:C.sub}}>No Salesforms Found</div>
       :filtered.map((f,i)=>(
-        <div key={f._id} style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
+        <div key={f._id} className="sf-row" style={{display:'grid',gridTemplateColumns: tab==='published'?'1.6fr 1.3fr 1fr 1.1fr 1.1fr .8fr':'1.6fr 1.3fr 1fr 1fr .8fr',padding:'13px 18px',alignItems:'center',borderBottom:i<filtered.length-1?'1px solid var(--theme-surface-faint5)':'none'}}>
           <span style={{fontWeight:600,color:C.indigo,cursor:'pointer'}} onClick={()=>setEditing(f)}>{f.name}</span>
           <span style={{fontSize:13,color:C.sub}}>{eventLabel(f)}</span>
           {tab==='published'?(<>

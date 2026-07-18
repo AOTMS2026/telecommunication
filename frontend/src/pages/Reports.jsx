@@ -566,7 +566,7 @@ export default function Reports() {
 
       {/* Tasks tab */}
       {activeTab === 'Tasks' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-semibold text-gray-800">Tasks</h3>
           </div>
@@ -615,7 +615,7 @@ export default function Reports() {
 
       {/* Call Summarization */}
       {activeTab === 'Call Summarization' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800">Call Summaries</h3>
           </div>
@@ -659,7 +659,7 @@ export default function Reports() {
 
       {/* Bulk upload tasks */}
       {activeTab === 'Bulk upload tasks' && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-800">Bulk Upload Tasks</h3>
             <label style={{ background: 'var(--btn-gradient)' }} className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-white rounded-xl cursor-pointer hover:brightness-105 transition-all">

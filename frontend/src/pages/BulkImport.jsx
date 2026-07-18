@@ -499,7 +499,8 @@ export default function BulkImport() {
           {loadingHistory ? (
             <p style={{ color:TEXT_MUTED, textAlign:'center', padding:32 }}>Loading…</p>
           ) : (
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13 }}>
+            <div style={{ overflowX: 'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth: 700 }}>
               <thead>
                 <tr style={{ borderBottom:`2px solid ${BORDER}` }}>
                   {['Import Name','File Name','Date','Campaign','Uploaded By','Leads','Status','Actions'].map(h=>(
@@ -531,6 +532,7 @@ export default function BulkImport() {
                 {!history.length&&<tr><td colSpan={7} style={{ padding:32, textAlign:'center', color:TEXT_MUTED }}>No imports yet.</td></tr>}
               </tbody>
             </table>
+            </div>
           )}
           {historyTotal>10&&(
             <div style={{ display:'flex', gap:8, justifyContent:'center', marginTop:16 }}>

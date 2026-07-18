@@ -35,6 +35,28 @@ const CORE_FEATURES = [
   'Role-based access & permission templates',
 ];
 
+const landingStyles = `
+  @media (max-width: 768px) {
+    .lp-logo { height: 56px !important; }
+    .lp-navlink-text { display: none !important; }
+    .lp-header-inner { padding: 8px 16px !important; }
+    .lp-hero-section { padding: 56px 20px 64px !important; }
+    .lp-hero-title { font-size: 30px !important; }
+    .lp-hero-sub { font-size: 14px !important; }
+    .lp-features-section, .lp-pricing-section { padding: 56px 16px !important; }
+    .lp-pricing-grid { grid-template-columns: 1fr !important; }
+    .lp-pricing-col { border-left: none !important; border-top: 1px solid #e2e8f0; }
+    .lp-pricing-col:first-child { border-top: none !important; }
+    .lp-cta-section { padding: 56px 16px !important; }
+  }
+  @media (max-width: 480px) {
+    .lp-hero-title { font-size: 25px !important; letter-spacing: -0.5px !important; }
+    .lp-hero-badge { font-size: 11px !important; padding: 5px 12px !important; }
+    .lp-cta-buttons { flex-direction: column !important; width: 100%; }
+    .lp-cta-buttons button { width: 100% !important; }
+  }
+`;
+
 export default function Landing() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -42,20 +64,22 @@ export default function Landing() {
   const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
-    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: '#0f172a', background: '#fff' }}>
+    <div style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: '#0f172a', background: '#fff', overflowX: 'hidden' }}>
+      <style>{landingStyles}</style>
       {/* NAVBAR */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(10px)', borderBottom: '1px solid #eef2f7' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <img src={logoImg} alt="AOTMS" style={{ height: 92, objectFit: 'contain' }} />
+        <div className="lp-header-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <img src={logoImg} alt="AOTMS" className="lp-logo" style={{ height: 92, objectFit: 'contain' }} />
           <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-            <a onClick={() => scrollTo('features')} style={navLink}>Features</a>
-            <a onClick={() => scrollTo('integrations')} style={navLink}>Integrations</a>
-            <a onClick={() => scrollTo('pricing')} style={navLink}>Pricing</a>
+            <a className="lp-navlink-text" onClick={() => scrollTo('features')} style={navLink}>Features</a>
+            <a className="lp-navlink-text" onClick={() => scrollTo('integrations')} style={navLink}>Integrations</a>
+            <a className="lp-navlink-text" onClick={() => scrollTo('pricing')} style={navLink}>Pricing</a>
             <button
               onClick={() => navigate(user ? '/dashboard' : '/login')}
               style={{
                 background: 'var(--btn-gradient)', color: '#fff', border: 'none', padding: '10px 22px',
                 borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(255,140,60,0.3)',
+                whiteSpace: 'nowrap',
               }}
             >
               {user ? 'Go to Dashboard' : 'Login'}
@@ -65,19 +89,19 @@ export default function Landing() {
       </header>
 
       {/* HERO */}
-      <section style={{ background: 'var(--btn-gradient)', backgroundImage: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 55%, #ff9d5c 100%)', padding: '90px 24px 100px', textAlign: 'center', color: '#fff' }}>
+      <section className="lp-hero-section" style={{ background: 'var(--btn-gradient)', backgroundImage: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 55%, #ff9d5c 100%)', padding: '90px 24px 100px', textAlign: 'center', color: '#fff' }}>
         <div style={{ maxWidth: 780, margin: '0 auto' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '6px 16px', fontSize: 12, fontWeight: 600, marginBottom: 22 }}>
+          <div className="lp-hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '6px 16px', fontSize: 12, fontWeight: 600, marginBottom: 22 }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#86efac' }} />
             All-in-one Telecom Sales CRM
           </div>
-          <h1 style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.15, letterSpacing: '-1px', marginBottom: 18 }}>
+          <h1 className="lp-hero-title" style={{ fontSize: 46, fontWeight: 900, lineHeight: 1.15, letterSpacing: '-1px', marginBottom: 18 }}>
             Manage Leads, Calls & Campaigns <br /> with <span style={{ background: 'linear-gradient(90deg, #fff 0%, #ffe8d6 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AOTMS CRM</span>
           </h1>
-          <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: 34 }}>
+          <p className="lp-hero-sub" style={{ fontSize: 16, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7, marginBottom: 34 }}>
             One dashboard for leads, dialer, call recordings, WhatsApp, automations and real integrations with the tools your telecom sales team already uses.
           </p>
-          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="lp-cta-buttons" style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button onClick={() => navigate('/login')} style={{ background: '#fff', color: '#e8672a', border: 'none', padding: '14px 30px', borderRadius: 10, fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>
               Get Started
             </button>
@@ -89,7 +113,7 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" style={{ padding: '90px 24px', maxWidth: 1200, margin: '0 auto' }}>
+      <section id="features" className="lp-features-section" style={{ padding: '90px 24px', maxWidth: 1200, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
           <h2 style={{ fontSize: 32, fontWeight: 900, marginBottom: 10 }}>Everything your sales team needs</h2>
           <p style={{ color: '#64748b', fontSize: 15 }}>Built for telecom sales, support and operations teams.</p>
@@ -124,14 +148,14 @@ export default function Landing() {
       </section>
 
       {/* PRICING */}
-      <section id="pricing" style={{ padding: '90px 24px', maxWidth: 1000, margin: '0 auto' }}>
+      <section id="pricing" className="lp-pricing-section" style={{ padding: '90px 24px', maxWidth: 1000, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 50 }}>
           <h2 style={{ fontSize: 32, fontWeight: 900, marginBottom: 10 }}>Simple, Transparent Pricing</h2>
           <p style={{ color: '#64748b', fontSize: 15 }}>Sales CRM Pricing — pick the plan that fits your team.</p>
         </div>
 
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 18, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr' }}>
-          <div style={{ padding: '32px 28px', background: '#fbfdff' }}>
+        <div className="lp-pricing-grid" style={{ border: '1px solid #e2e8f0', borderRadius: 18, overflow: 'hidden', display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr' }}>
+          <div className="lp-pricing-col" style={{ padding: '32px 28px', background: '#fbfdff' }}>
             <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 18 }}>Core CRM</h3>
             {CORE_FEATURES.map((c) => (
               <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, fontSize: 13.5, color: '#334155' }}>
@@ -142,7 +166,7 @@ export default function Landing() {
           </div>
 
           {PLANS.map((p) => (
-            <div key={p.name} style={{
+            <div key={p.name} className="lp-pricing-col" style={{
               padding: '32px 20px', textAlign: 'center', position: 'relative',
               background: p.highlight ? 'var(--theme-surface-tint)' : '#fff',
               borderLeft: '1px solid #e2e8f0',
@@ -172,7 +196,7 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '70px 24px', textAlign: 'center', backgroundImage: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 55%, #ff9d5c 100%)', color: '#fff' }}>
+      <section className="lp-cta-section" style={{ padding: '70px 24px', textAlign: 'center', backgroundImage: 'linear-gradient(135deg, #38bdf8 0%, #2563eb 55%, #ff9d5c 100%)', color: '#fff' }}>
         <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 14 }}>Ready to streamline your telecom sales?</h2>
         <p style={{ color: 'rgba(255,255,255,0.85)', marginBottom: 26, fontSize: 14 }}>Log in and start managing leads, calls and campaigns from one place.</p>
         <button onClick={() => navigate('/login')} style={{ background: '#fff', color: '#e8672a', border: 'none', padding: '14px 34px', borderRadius: 10, fontWeight: 800, fontSize: 15, cursor: 'pointer' }}>

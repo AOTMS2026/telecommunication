@@ -108,7 +108,7 @@ function FiltersTable({ leadsStats }) {
 
   return (
     <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, overflow: 'hidden', marginBottom: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '1px solid #f3f1fb' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px 10px', borderBottom: '1px solid #f3f1fb', flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={TEXT_MAIN} strokeWidth="2">
             <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -129,7 +129,8 @@ function FiltersTable({ leadsStats }) {
             <div style={{
               position: 'absolute', top: '110%', right: 0, zIndex: 200,
               background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12,
-              boxShadow: '0 8px 24px rgba(91,63,199,0.12)', padding: 16, minWidth: 260
+              boxShadow: '0 8px 24px rgba(91,63,199,0.12)', padding: 16, minWidth: 260,
+              maxWidth: 'calc(100vw - 48px)'
             }}>
               {/* Month navigation */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>

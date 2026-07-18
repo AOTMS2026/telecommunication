@@ -150,82 +150,69 @@ button.btn-primary,
 .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-/* ── Global responsive helpers (mobile / tablet / laptop / desktop) ── */
-html, body, #root { max-width: 100%; overflow-x: hidden; }
+/* ================= GLOBAL RESPONSIVE FIXES (mobile / tablet / laptop) ================= */
+html, body, #root { max-width: 100vw; overflow-x: hidden; }
 
-.responsive-page {
-  padding: 24px;
-  width: 100%;
-  box-sizing: border-box;
-}
-@media (max-width: 1023px) {
-  .responsive-page { padding: 16px; }
-}
-@media (max-width: 639px) {
-  .responsive-page { padding: 12px; }
-}
+/* Prevent iOS Safari auto-zoom on form focus */
+input, select, textarea { font-size: 16px; }
 
-.responsive-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+/* Collapse wide fixed-column grids progressively on smaller viewports */
+@media (max-width: 1024px) {
+  [style*="grid-template-columns: repeat(4"],
+  [style*="grid-template-columns: repeat(5"],
+  [style*="grid-template-columns: repeat(6"] { grid-template-columns: repeat(2, 1fr) !important; }
+  [style*="grid-template-columns: 1.3fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"] { grid-template-columns: 1fr 1fr !important; }
 }
-@media (max-width: 1279px) {
-  .responsive-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 1023px) {
-  .responsive-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-}
-@media (max-width: 639px) {
-  .responsive-grid { grid-template-columns: 1fr; gap: 10px; }
+@media (max-width: 640px) {
+  [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  img { max-width: 100%; }
 }
 
-.responsive-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.responsive-table-wrap table { min-width: 640px; width: 100%; }
-
-.responsive-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-@media (max-width: 639px) {
-  .responsive-toolbar { flex-direction: column; align-items: stretch; }
-  .responsive-toolbar > * { width: 100%; }
+/* Horizontally scrollable tables/wide panels so nothing gets clipped on mobile */
+@media (max-width: 768px) {
+  table { min-width: 640px; }
+  .card, .tpl-list-panel, .tpl-preview-panel { max-width: 100%; overflow-x: auto; }
 }
 
-.responsive-modal {
-  width: 100%;
-  max-width: 480px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-@media (max-width: 639px) {
-  .responsive-modal { max-width: calc(100vw - 24px); border-radius: 14px; }
+/* Tighten common outer-container paddings site-wide on small screens */
+@media (max-width: 640px) {
+  [style*="padding: 24px 28px"],
+  [style*="padding: 32px 32px"],
+  [style*="padding: 32px 36px"],
+  [style*="padding: 40px"] { padding: 16px !important; }
+  [style*="padding: 24px"] { padding: 14px !important; }
 }
 
-.responsive-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+/* Cap fixed-pixel modal/drawer/panel widths so they never overflow the viewport
+   (covers confirm dialogs, side drawers and detail panels built with a literal
+   width in px rather than percentage/maxWidth) */
+@media (max-width: 1024px) {
+  [style*="width: 860px"], [style*="width: 768px"] { width: calc(100vw - 48px) !important; max-width: 720px !important; }
 }
-@media (max-width: 767px) {
-  .responsive-form-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 640px) {
+  [style*="width: 640px"], [style*="width: 620px"], [style*="width: 600px"],
+  [style*="width: 580px"], [style*="width: 560px"], [style*="width: 520px"],
+  [style*="width: 500px"], [style*="width: 480px"], [style*="width: 460px"],
+  [style*="width: 440px"], [style*="width: 420px"], [style*="width: 400px"],
+  [style*="width: 380px"], [style*="width: 320px"], [style*="width: 300px"],
+  [style*="width: 280px"], [style*="width: 260px"], [style*="width: 240px"] {
+    width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
+  }
+  /* Two/three-panel flex layouts (chat list + conversation, list + detail,
+     sidebar + content) stack vertically on mobile instead of squeezing
+     a fixed-width side panel into the same row as the main content */
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 380px"]),
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 320px"]),
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 300px"]),
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 280px"]),
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 260px"]),
+  [style*="display: flex"]:has(> [style*="flex-shrink: 0"][style*="width: 240px"]) {
+    flex-direction: column !important;
+  }
 
-.hide-on-mobile { display: initial; }
-.show-on-mobile { display: none; }
-@media (max-width: 639px) {
-  .hide-on-mobile { display: none !important; }
-  .show-on-mobile { display: initial !important; }
-}
-
-@media (max-width: 639px) {
-  input, select, textarea, button { font-size: 16px !important; }
+  /* Header rows / toolbars built with justify-content:space-between wrap
+     onto a second line instead of squeezing title + buttons together */
+  [style*="justify-content: space-between"] { flex-wrap: wrap !important; row-gap: 8px; }
 }

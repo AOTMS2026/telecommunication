@@ -71,9 +71,15 @@ export default function WhatsAppBroadcasts({ onClose, waIntegrationId, workspace
   const filtered = useMemo(() => broadcasts, [broadcasts]);
 
   return (
-    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+    <div className="wab-shell" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .wab-shell { flex-direction: column; }
+          .wab-shell .wab-list-panel { width: 100% !important; min-width: 0 !important; max-height: 45vh; border-right: none !important; border-bottom: 1px solid #e5e7eb; }
+        }
+      `}</style>
       {/* LEFT: broadcast history list */}
-      <div style={{ width: 340, minWidth: 340, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+      <div className="wab-list-panel" style={{ width: 340, minWidth: 340, borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', background: '#fff' }}>
         <div style={{ padding: '14px 16px 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button onClick={onClose} style={iconBtnStyle}><ArrowLeft size={18} /></button>

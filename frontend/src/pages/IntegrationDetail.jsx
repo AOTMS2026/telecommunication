@@ -450,14 +450,14 @@ export default function IntegrationDetail() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--theme-border-tint)', marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--theme-border-tint)', marginBottom: 24, overflowX: 'auto' }}>
         {['overview', 'configuration', 'actions', 'leads'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)} style={{
             padding: '10px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14,
             fontWeight: activeTab === tab ? 600 : 400,
             color: activeTab === tab ? 'var(--theme-primary-alt)' : '#6b7280',
             borderBottom: activeTab === tab ? '2px solid var(--theme-primary-alt)' : '2px solid transparent',
-            marginBottom: -2, textTransform: 'capitalize',
+            marginBottom: -2, textTransform: 'capitalize', whiteSpace: 'nowrap',
           }}>
             {tab}
           </button>

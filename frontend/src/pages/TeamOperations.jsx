@@ -185,8 +185,8 @@ export default function TeamOperations() {
             {unassignedLeads.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 All leads have been assigned to callers!</div>
             ) : (
-              <div style={{ maxHeight: 280, overflowY: 'auto', border: '1px solid var(--theme-surface-tint)', borderRadius: 8 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <div style={{ maxHeight: 280, overflowY: 'auto', overflowX: 'auto', border: '1px solid var(--theme-surface-tint)', borderRadius: 8 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
                   <thead style={{ background: 'var(--theme-surface-faint)', position: 'sticky', top: 0 }}>
                     <tr style={{ borderBottom: `1px solid ${BORDER}`, color: TEXT_MUTED, height: 32 }}>
                       <th style={{ textAlign: 'left', fontWeight: 600, paddingLeft: 12 }}>Name</th>
@@ -233,8 +233,8 @@ export default function TeamOperations() {
             {detailedOverdueFollowups.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: TEXT_MUTED }}>🎉 No overdue followups across the team!</div>
             ) : (
-              <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <div style={{ maxHeight: 300, overflowY: 'auto', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${BORDER}`, color: TEXT_MUTED, height: 32 }}>
                       <th style={{ textAlign: 'left', fontWeight: 600 }}>Lead Name</th>

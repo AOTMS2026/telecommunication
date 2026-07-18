@@ -1251,8 +1251,8 @@ export default function Tasks() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: '1px solid #bae6fd', borderRadius: 12, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background: '#fff', border: '1px solid #bae6fd', borderRadius: 12, overflow: 'hidden', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e0f7ff' }}>
               {[

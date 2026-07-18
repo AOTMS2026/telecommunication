@@ -108,7 +108,14 @@ export default function Integrations() {
   );
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
+    <div className="integrations-shell" style={{ padding: '24px 28px', maxWidth: 1000, margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .integrations-shell { padding: 14px !important; }
+          .integrations-shell .int-col-header { display: none !important; }
+          .integrations-shell .int-row { border-bottom: 1px solid var(--theme-surface-faint5) !important; padding: 14px 12px !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--theme-text-strongest)' }}>Integrations</h2>
@@ -132,13 +139,13 @@ export default function Integrations() {
             Active Integration ({data.active.length})
           </h3>
           <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px', padding: '10px 20px', borderBottom: '1px solid var(--theme-surface-faint5)', background: 'var(--theme-surface-faint2)' }}>
+            <div className="int-col-header" style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px', padding: '10px 20px', borderBottom: '1px solid var(--theme-surface-faint5)', background: 'var(--theme-surface-faint2)' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>INTEGRATIONS</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STATUS</span>
               <span></span>
             </div>
             {data.active.map((integration, idx) => (
-              <div key={integration._id} style={{
+              <div key={integration._id} className="int-row" style={{
                 display: 'grid', gridTemplateColumns: '1fr 160px 120px',
                 padding: '14px 20px', alignItems: 'center',
                 borderBottom: idx < data.active.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none'
@@ -179,13 +186,13 @@ export default function Integrations() {
             Pending Setup ({data.pending.length})
           </h3>
           <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 140px', padding: '10px 20px', borderBottom: '1px solid var(--theme-surface-faint5)', background: 'var(--theme-surface-faint2)' }}>
+            <div className="int-col-header" style={{ display: 'grid', gridTemplateColumns: '1fr 160px 140px', padding: '10px 20px', borderBottom: '1px solid var(--theme-surface-faint5)', background: 'var(--theme-surface-faint2)' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>INTEGRATIONS</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>STATUS</span>
               <span></span>
             </div>
             {data.pending.map((integration, idx) => (
-              <div key={integration._id} style={{
+              <div key={integration._id} className="int-row" style={{
                 display: 'grid', gridTemplateColumns: '1fr 160px 140px',
                 padding: '14px 20px', alignItems: 'center',
                 borderBottom: idx < data.pending.length - 1 ? '1px solid var(--theme-surface-faint5)' : 'none'

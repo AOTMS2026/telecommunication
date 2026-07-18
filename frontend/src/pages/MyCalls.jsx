@@ -330,9 +330,9 @@ export default function MyCalls() {
   const isAdmin = user?.role === 'manager' || user?.role === 'admin';
 
   return (
-    <div className="flex gap-0" style={{ height: 'calc(100vh - 64px)' }}>
+    <div className="flex flex-col md:flex-row gap-0" style={{ height: 'calc(100vh - 64px)' }}>
       {/* Left: Call list */}
-      <div className="w-72 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col">
+      <div className="w-full md:w-72 flex-shrink-0 bg-white border-r border-gray-100 flex flex-col max-h-72 md:max-h-none overflow-y-auto md:overflow-visible">
         <div className="p-4 border-b border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-800 flex items-center gap-2">
@@ -490,7 +490,7 @@ export default function MyCalls() {
             </div>
 
             {/* Lead info */}
-            <div className="card p-5 grid grid-cols-2 gap-4">
+            <div className="card p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { label: 'Phone', value: selected.phone, copyable: true },
                 { label: 'Email', value: selected.email || 'Empty' },
