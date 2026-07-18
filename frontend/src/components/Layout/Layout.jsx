@@ -26,7 +26,7 @@ function LayoutInner() {
           width: `calc(100% - ${marginLeft}px)`,
           maxWidth: `calc(100% - ${marginLeft}px)`,
           overflowY: 'auto',
-          overflowX: 'hidden',
+          overflowX: 'auto',
           boxSizing: 'border-box',
           transition: 'margin-left 0.22s ease, width 0.22s ease',
         }}
