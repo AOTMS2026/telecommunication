@@ -114,6 +114,7 @@ export default function Fields() {
           .fl-shell { padding: 14px !important; }
           .fl-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .fl-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .fl-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>

@@ -81,6 +81,7 @@ export default function StaleLeads() {
           .sl-shell { padding: 14px !important; }
           .sl-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .sl-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .sl-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       {/* Header */}

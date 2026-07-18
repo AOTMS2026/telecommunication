@@ -181,6 +181,7 @@ export default function IntegrationSetup() {
           .is-shell { padding: 14px !important; }
           .is-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .is-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .is-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <button

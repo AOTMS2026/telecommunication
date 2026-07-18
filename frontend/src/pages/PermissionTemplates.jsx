@@ -159,6 +159,7 @@ export default function PermissionTemplates() {
           .pt-shell { padding: 14px !important; }
           .pt-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .pt-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .pt-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

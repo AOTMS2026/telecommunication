@@ -438,6 +438,7 @@ export default function IntegrationDetail() {
           .id-shell { padding: 14px !important; }
           .id-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .id-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .id-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>

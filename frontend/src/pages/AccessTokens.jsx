@@ -30,6 +30,7 @@ export default function AccessTokens() {
           .at-shell { padding: 14px !important; }
           .at-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .at-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .at-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>

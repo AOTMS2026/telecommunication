@@ -513,6 +513,7 @@ export default function Dashboard() {
             .dash-caller-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-caller-shell [style*="grid-column"] { grid-column: auto !important; }
             .dash-caller-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-caller-shell div[style*="display: flex"] > * { min-width: 0; }
             .dash-caller-shell table { min-width: 480px; }
           }
         `}</style>
@@ -831,6 +832,7 @@ export default function Dashboard() {
             .dash-admin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-admin-shell [style*="grid-column"] { grid-column: auto !important; }
             .dash-admin-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-admin-shell div[style*="display: flex"] > * { min-width: 0; }
             .dash-admin-shell table { min-width: 480px; }
           }
         `}</style>
@@ -1281,6 +1283,7 @@ export default function Dashboard() {
             .dash-superadmin-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
             .dash-superadmin-shell [style*="grid-column"] { grid-column: auto !important; }
             .dash-superadmin-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+            .dash-superadmin-shell div[style*="display: flex"] > * { min-width: 0; }
             .dash-superadmin-shell table { min-width: 480px; }
           }
         `}</style>

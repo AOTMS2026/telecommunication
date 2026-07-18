@@ -99,6 +99,7 @@ export default function TeamOperations() {
           .teamops-shell { padding: 14px !important; }
           .teamops-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .teamops-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .teamops-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       {/* Header */}

@@ -215,4 +215,11 @@ input, select, textarea { font-size: 16px; }
   /* Header rows / toolbars built with justify-content:space-between wrap
      onto a second line instead of squeezing title + buttons together */
   [style*="justify-content: space-between"] { flex-wrap: wrap !important; row-gap: 8px; }
+
+  /* THE REAL FIX for long headings/labels getting clipped instead of wrapping:
+     a bare text child inside a flex row defaults to min-width:auto (its full
+     content width), so flex-wrap alone does nothing for a single long text
+     item — it must also be allowed to shrink below its content width. */
+  div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+  div[style*="display: flex"] > * { min-width: 0; }
 }

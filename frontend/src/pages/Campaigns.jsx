@@ -590,6 +590,7 @@ export default function Campaigns() {
           .campaign-page { padding: 14px !important; }
           .campaign-page [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .campaign-page div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .campaign-page div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <style>{globalStyles}</style>

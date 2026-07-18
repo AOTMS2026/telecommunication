@@ -606,6 +606,7 @@ export default function BulkImport() {
           .bi-shell { padding: 14px !important; }
           .bi-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .bi-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .bi-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:24 }}>

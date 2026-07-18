@@ -1336,6 +1336,8 @@ export default function WhatsApp() {
       <style>{`
         @media (max-width: 640px) {
           .wa-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+          .wa-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .wa-shell div[style*="display: flex"] > * { min-width: 0; }
           .wa-brand-text { display: none; }
           .wa-top-header { padding: 0 12px !important; gap: 8px !important; }
         }

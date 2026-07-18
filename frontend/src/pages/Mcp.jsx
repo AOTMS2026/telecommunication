@@ -181,6 +181,7 @@ ${user?.name || ''}`;
           .mcp-shell { padding: 14px !important; }
           .mcp-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .mcp-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .mcp-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
 

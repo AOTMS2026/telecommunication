@@ -179,6 +179,7 @@ export default function CustomActions() {
           .ca-shell { padding: 14px !important; }
           .ca-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .ca-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .ca-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

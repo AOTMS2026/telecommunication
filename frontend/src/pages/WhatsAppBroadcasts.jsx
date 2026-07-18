@@ -133,6 +133,7 @@ export default function WhatsAppBroadcasts() {
         @media (max-width: 640px) {
           .wab-page-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .wab-page-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .wab-page-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '1px solid var(--theme-border-tint)', overflowX: 'auto' }}>

@@ -125,6 +125,7 @@ function AgentEditor({ initial, onClose, onSaved }) {
           .cia-shell { padding: 14px !important; }
           .cia-shell [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
           .cia-shell div[style*="display: flex"] { flex-wrap: wrap; row-gap: 6px; }
+          .cia-shell div[style*="display: flex"] > * { min-width: 0; }
         }
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
