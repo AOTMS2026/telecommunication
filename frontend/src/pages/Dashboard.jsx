@@ -38,7 +38,7 @@ function fmtDuration(sec) {
 }
 
 const StatCard = ({ icon, label, value, sub, bg, iconColor }) => (
-  <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxSizing: 'border-box', width: '100%' }}>
+  <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxSizing: 'border-box', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
     <div style={{ width: 48, height: 48, borderRadius: 12, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <span style={{ color: iconColor, display: 'flex' }}>{icon}</span>
     </div>
@@ -519,7 +519,7 @@ export default function Dashboard() {
         `}</style>
         {/* Banner Alert for Overdue Follow-ups */}
         {stats?.overdueFollowupsCount > 0 && (
-          <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontWeight: 'bold', fontSize: 18 }}>⚠️</div>
               <div>
@@ -540,7 +540,7 @@ export default function Dashboard() {
 
         {/* Action shortcut panel */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: PURPLE_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                 <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/><line x1="12" y1="19" x2="16" y2="19"/><line x1="14" y1="17" x2="14" y2="21"/>
@@ -550,7 +550,7 @@ export default function Dashboard() {
               Schedule a Callback
             </button>
           </div>
-          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s' }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, transition: 'all 0.2s', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: PURPLE_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/>
@@ -565,7 +565,7 @@ export default function Dashboard() {
         {/* KPIs row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
           {/* Progress Ring Card */}
-          <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="stat-card" style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
               <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
                 <circle cx={size/2} cy={size/2} r={radius} fill="transparent" stroke="#f3f0ff" strokeWidth={strokeWidth} />
@@ -602,7 +602,7 @@ export default function Dashboard() {
 
         {/* Priority calling queue and sidebar */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
-          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+          <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -684,7 +684,7 @@ export default function Dashboard() {
           {/* Demos and schedules */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Upcoming Demos with countdowns */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 My Upcoming Demos
@@ -735,7 +735,7 @@ export default function Dashboard() {
 
             {/* My Weekly Sparkline Trend */}
             {stats?.trendThisWeek && (
-              <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+              <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                 <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                   My Weekly Dial Trends
@@ -760,7 +760,7 @@ export default function Dashboard() {
             )}
 
             {/* Stage Distribution */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 <span style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 14 }}>My Leads by Stages</span>
@@ -838,7 +838,7 @@ export default function Dashboard() {
         `}</style>
         {/* Warning panel for unassigned leads */}
         {adminStats?.unassignedCount > 0 && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: AMBER, fontWeight: 'bold', fontSize: 18 }}>⚠️</div>
               <div>
@@ -879,7 +879,7 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Caller status */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Callers Activity & Live Status
@@ -955,7 +955,7 @@ export default function Dashboard() {
             </div>
 
             {/* Per-Caller Daily Progress Bars */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Per-Caller Daily Dial Targets (Quota: 30 Calls)
@@ -981,7 +981,7 @@ export default function Dashboard() {
             </div>
 
             {/* Overdue Follow-ups with inline reassignment */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 Overdue Follow-ups List & Reassignment
@@ -1030,7 +1030,7 @@ export default function Dashboard() {
             </div>
 
             {/* Caller workload Allocation table */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={AMBER} strokeWidth="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Caller Follow-up Workload Allocation (Due Today)
@@ -1073,7 +1073,7 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* In-App Operations Alerts Feed */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                 Operations Alerts Panel
@@ -1106,7 +1106,7 @@ export default function Dashboard() {
             </div>
 
             {/* Scheduled Demos */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 Demos Scheduled (This Week)
@@ -1133,7 +1133,7 @@ export default function Dashboard() {
             </div>
 
             {/* Daily call trends bar chart */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Daily Call Volume (Last 7 Days)
@@ -1153,7 +1153,7 @@ export default function Dashboard() {
             </div>
 
             {/* Call Outcome Pie Chart */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Global Call Outcomes Breakdown
@@ -1199,7 +1199,7 @@ export default function Dashboard() {
             </div>
 
             {/* Global Recent Activity Feed */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Global Recent Activities Timeline
@@ -1289,7 +1289,7 @@ export default function Dashboard() {
         `}</style>
         {/* Stale Leads Alert Banner */}
         {(adminStats?.staleLeadsCount > 0 || adminStats?.overdue24hFollowupsCount > 0) && (
-          <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ background: '#fff0f0', border: '1px solid #fecaca', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontWeight: 'bold', fontSize: 18 }}>⚠️</div>
               <div>
@@ -1309,7 +1309,7 @@ export default function Dashboard() {
         )}
 
         {/* Strategic KPIs Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <StatCard 
             icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
             label="Revenue Won (This Month)" 
@@ -1345,7 +1345,7 @@ export default function Dashboard() {
         </div>
 
         {/* Monthly targets progress block */}
-        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+        <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div>
               <strong style={{ color: TEXT_MAIN, fontSize: 14.5 }}>Team Monthly Goal Targets Progress</strong>
@@ -1372,7 +1372,7 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Conversion funnel visual block */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                 Lead Status Conversion Funnel
@@ -1423,7 +1423,7 @@ export default function Dashboard() {
             </div>
 
             {/* Campaign Performance Table */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GREEN} strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Campaign Performance Analytics (Click Row to Drill Down)
@@ -1477,7 +1477,7 @@ export default function Dashboard() {
             </div>
 
             {/* Global Recent Activity Feed */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 Global Recent Activities Timeline
@@ -1513,7 +1513,7 @@ export default function Dashboard() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Leaderboard widget with switch tabs */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <strong style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🏆 Productivity Leaderboard
@@ -1579,7 +1579,7 @@ export default function Dashboard() {
             </div>
 
             {/* Daily volume bar chart */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 600, color: TEXT_MAIN, fontSize: 13.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                 Daily Call Volume (Last 7 Days)
@@ -1599,7 +1599,7 @@ export default function Dashboard() {
             </div>
 
             {/* Call Outcome Pie Chart */}
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={PURPLE} strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 Global Call Outcomes Breakdown
@@ -1646,7 +1646,7 @@ export default function Dashboard() {
           </div>
 
           {/* Peak Calling Hours Heatmap Grid — REMOVED per product decision */}
-          {false && <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, gridColumn: 'span 2' }}>
+          {false && <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, gridColumn: 'span 2', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
             <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>🔥</span> Peak Calling Hours Connect Rate Heatmap (Asia/Kolkata)
             </div>
@@ -1719,7 +1719,7 @@ export default function Dashboard() {
 
           {/* Leads by Location and Source Charts */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, gridColumn: 'span 2' }}>
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>📍</span> Leads by Top Locations
               </div>
@@ -1746,7 +1746,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20 }}>
+            <div style={{ background: '#fff', border: '1px solid #e5e2f5', borderRadius: 12, padding: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <div style={{ fontWeight: 700, color: TEXT_MAIN, fontSize: 14.5, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span>🌐</span> Leads by Top Sources
               </div>
@@ -1990,7 +1990,7 @@ export default function Dashboard() {
                   {/* Right Column: Call Logger Form */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Dialing Workspace Timer */}
-                    <div style={{ background: '#f8f7ff', border: '1px solid #e8f0fe', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8f0fe', borderRadius: 10, padding: 14, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <span style={{ fontSize: 11, color: TEXT_MUTED, textTransform: 'uppercase', fontWeight: 700 }}>Talk Duration Timer</span>
                       <div style={{ fontSize: 32, fontWeight: 900, color: PURPLE, fontFamily: 'monospace', margin: '6px 0' }}>
                         {String(Math.floor(callDuration / 60)).padStart(2, '0')}:{String(callDuration % 60).padStart(2, '0')}
@@ -2191,15 +2191,15 @@ export default function Dashboard() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                   {/* User Stats Overview Row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Total Calls</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 4 }}>{userAnalysisData.stats.totalCalls}</div>
                     </div>
-                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Talk Duration</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 4 }}>{fmtDuration(userAnalysisData.stats.totalDuration)}</div>
                     </div>
-                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center' }}>
+                    <div style={{ background: '#f8f7ff', border: '1px solid #e8e5f8', borderRadius: 10, padding: 14, textAlign: 'center', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: 11, color: TEXT_MUTED }}>Connect Rate</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: GREEN, marginTop: 4 }}>
                         {userAnalysisData.stats.totalCalls > 0 ? Math.round((userAnalysisData.stats.connected / userAnalysisData.stats.totalCalls) * 100) : 0}%
@@ -2210,7 +2210,7 @@ export default function Dashboard() {
                   {/* Double Chart Row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
                     {/* Daily Volume Trends BarChart */}
-                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16 }}>
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN, marginBottom: 12 }}>Daily Call Volume (Last 7 Days)</div>
                       {userAnalysisData.dailyVolume?.length > 0 ? (
                         <ResponsiveContainer width="100%" height={140}>
@@ -2227,7 +2227,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Outcomes PieChart */}
-                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ border: '1px solid #e5e2f5', borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: TEXT_MAIN, marginBottom: 8 }}>Call Outcomes</div>
                       {userAnalysisData.outcomes?.length > 0 ? (
                         <>

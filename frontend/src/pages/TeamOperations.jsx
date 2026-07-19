@@ -120,7 +120,7 @@ export default function TeamOperations() {
 
       {/* Operations Quick Widgets */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e8f8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: GREEN, fontSize: 20 }}>🟢</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Active Callers Now</div>
@@ -129,21 +129,21 @@ export default function TeamOperations() {
             </div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fffbeb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: AMBER, fontSize: 20 }}>❓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Unassigned Leads</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.unassignedCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 20 }}>⚠️</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Overdue Follow-ups</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.overdueFollowupsCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--theme-surface-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: PURPLE, fontSize: 20 }}>🎓</div>
           <div>
             <div style={{ fontSize: 12, color: TEXT_MUTED }}>Weekly Demos Scheduled</div>

@@ -102,14 +102,14 @@ export default function StaleLeads() {
 
       {/* Overview stats cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: RED, fontSize: 20 }}>🛑</div>
           <div>
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>Leads Idle (3+ Days)</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: TEXT_MAIN, marginTop: 2 }}>{data?.staleLeadsCount || 0}</div>
           </div>
         </div>
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fff8e6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: AMBER, fontSize: 20 }}>⏰</div>
           <div>
             <div style={{ fontSize: 13, color: TEXT_MUTED }}>Follow-ups Overdue by 24h+</div>

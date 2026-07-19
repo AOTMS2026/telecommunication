@@ -77,7 +77,7 @@ function BarChart({ data, metric }) {
   ];
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '20px 24px', marginBottom: 20 }}>
+    <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '20px 24px', marginBottom: 20, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: TEXT_MAIN, marginBottom: 16 }}>
         📊 {metric} Comparison
       </div>
@@ -373,7 +373,7 @@ export default function Leaderboard() {
             { icon: '💰', label: 'Total Sales', value: totalSales, color: GREEN },
             { icon: '👥', label: 'Active Callers', value: filtered.length, color: 'var(--theme-primary)' },
           ].map(s => (
-            <div key={s.label} style={{ flex: '1 1 120px', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div key={s.label} style={{ flex: '1 1 120px', background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
               <span style={{ fontSize: 22 }}>{s.icon}</span>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -457,7 +457,7 @@ export default function Leaderboard() {
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       ) : filtered.length === 0 ? (
-        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '60px 24px', textAlign: 'center' }}>
+        <div style={{ background: '#fff', border: '1px solid var(--theme-border-tint)', borderRadius: 16, padding: '60px 24px', textAlign: 'center', maxWidth: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🏆</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: TEXT_MAIN, marginBottom: 8 }}>No data yet</div>
           <div style={{ fontSize: 13, color: TEXT_MUTED }}>
