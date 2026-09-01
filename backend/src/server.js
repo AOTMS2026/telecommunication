@@ -98,10 +98,8 @@ app.use('/api/notifications', apiLimiter, require('./routes/notifications'));
 app.use('/api/recordings', apiLimiter, require('./routes/recordings'));
 
 // ── Audio streaming with proper Range support and CORS headers ────────────────
-const RECORDINGS_DIR = process.env.RECORDINGS_DIR
-  || (process.env.NODE_ENV === 'production'
-    ? path.join('/var/data', 'recordings')
-    : path.join(__dirname, 'uploads', 'recordings'));
+const { getRecordingsDir } = require('./utils/recordingsStorage');
+const RECORDINGS_DIR = getRecordingsDir();
 
 app.use('/uploads/recordings', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', isAllowedOrigin(req.headers.origin) ? (req.headers.origin || '*') : 'null');

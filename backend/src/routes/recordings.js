@@ -10,17 +10,9 @@ const CallRecording = require('../models/CallRecording');
 const Lead = require('../models/Lead');
 const { protect } = require('../middleware/auth');
 const { transcribeAudioFile } = require('../services/transcriptionService');
+const { getRecordingsDir } = require('../utils/recordingsStorage');
 
-// ─── Storage setup ────────────────────────────────────────────────────────
-// UPLOAD_DIR points at Render's persistent disk mount (/var/data by default)
-// so files survive restarts/redeploys. Falls back to a local folder for dev.
-const UPLOAD_DIR = process.env.RECORDINGS_DIR
-  || (process.env.NODE_ENV === 'production'
-    ? path.join('/var/data', 'recordings')
-    : path.join(__dirname, '..', 'uploads', 'recordings'));
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+const UPLOAD_DIR = getRecordingsDir();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
