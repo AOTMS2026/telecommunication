@@ -4,11 +4,9 @@ const path = require('path');
 
 function getRecordingsDir() {
   const localDir = path.join(__dirname, '..', 'uploads', 'recordings');
-  const candidates = process.env.RECORDINGS_DIR
-    ? [process.env.RECORDINGS_DIR]
-    : process.env.NODE_ENV === 'production'
-      ? [path.join('/var/data', 'recordings'), path.join(os.tmpdir(), 'recordings')]
-      : [localDir];
+  const candidates = process.env.NODE_ENV === 'production'
+    ? [process.env.RECORDINGS_DIR || path.join('/var/data', 'recordings'), path.join(os.tmpdir(), 'recordings')]
+    : [process.env.RECORDINGS_DIR || localDir];
 
   for (const directory of candidates) {
     try {
