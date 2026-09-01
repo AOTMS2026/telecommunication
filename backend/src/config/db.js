@@ -15,16 +15,23 @@ const connectDB = async () => {
 
   try {
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const allowMemoryFallback = process.env.ALLOW_MEMORY_DB_FALLBACK === 'true';
 
     if (uri) {
       try {
         const conn = await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
         console.log(`MongoDB Connected: ${conn.connection.host}`);
       } catch (primaryErr) {
-        console.warn(`Primary MongoDB connection failed: ${primaryErr.message}. Falling back to local MongoDB memory server.`);
+        if (!allowMemoryFallback) {
+          throw new Error(`Primary MongoDB connection failed: ${primaryErr.message}`);
+        }
+        console.warn(`Primary MongoDB connection failed: ${primaryErr.message}. Falling back to local MongoDB memory server because ALLOW_MEMORY_DB_FALLBACK=true.`);
         await connectToMemoryServer();
       }
     } else {
+      if (!allowMemoryFallback) {
+        throw new Error('MONGODB_URI or MONGO_URI is required. Set ALLOW_MEMORY_DB_FALLBACK=true only for local development.');
+      }
       await connectToMemoryServer();
     }
 
