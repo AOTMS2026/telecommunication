@@ -46,8 +46,11 @@ function isAllowedOrigin(origin) {
   const o = normalizeOrigin(origin);
   const withWww = configuredOrigin.replace(/^https?:\/\//, m => m).replace(/^(https?:\/\/)(?!www\.)/, '$1www.');
   const withoutWww = configuredOrigin.replace(/^(https?:\/\/)www\./, '$1');
-  return o === configuredOrigin || o === withWww || o === withoutWww;
-}
+   const allowed = o === configuredOrigin || o === withWww || o === withoutWww;
+  // TEMP DEBUG — remove after confirming
+  console.log('[CORS DEBUG]', { incomingOrigin: o, configuredOrigin, withWww, withoutWww, allowed });
+  return allowed;
+}    
 
 app.use(cors({
   origin: (origin, callback) => callback(null, isAllowedOrigin(origin)),
