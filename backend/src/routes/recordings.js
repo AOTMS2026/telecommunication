@@ -317,7 +317,7 @@ function formatRecording(r) {
 }
 
 function absoluteUrl(relativePath) {
-  const base = process.env.BASE_URL || 'https://telecommunication-hfvm.onrender.com';
+  const base = process.env.BASE_URL || 'https://telecommunication-hfvm.onrender.com/';
   return `${base}${relativePath}`;
 }
 
