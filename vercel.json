@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://telecommunication-hm.onrender.com/api/:path*"
+      "destination": "https://telecommunication-l3oz.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
